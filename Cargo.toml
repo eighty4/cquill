@@ -1,0 +1,16 @@
+[package]
+name = "cquill-migrate"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.69"
+scylla = "0.7.0"
+tokio = { version = "1.25.0", features = ["full"] }
+
+[lib]
+name = "cquill"
+
+[[bin]]
+name = "cquill"
+path = "src/main.rs"
