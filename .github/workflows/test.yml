@@ -8,6 +8,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      scylladb:
+        image: scylladb/scylla
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd "cqlsh -e 'describe cluster'"
+          --health-start-period 30s
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable

@@ -9,7 +9,13 @@
 services:
   scylladb:
     container_name: cquill-scylladb
-    image: scylladb/scylla:5.2.0-rc1
+    image: scylladb/scylla
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
+      start_period: 30s
+      interval: 2s
+      timeout: 5s
+      retries: 30
     ports:
       - "7001:7001"   # inter-node gossip
       - "9042:9042"   # CQL protocol
