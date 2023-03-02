@@ -1,6 +1,6 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/eighty4/cquill/test.yml)](https://github.com/eighty4/cquill/actions/workflows/test.yml)
 
-# cquill - a CQL migration utility
+# cquill - a CQL migration utility for Apache Cassandra and ScyllaDB
 
 `cquill migrate` performs a migration using cql sources from the directory `./cql`.
 

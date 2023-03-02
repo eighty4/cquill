@@ -1,0 +1,17 @@
+---
+
+# admin utilities
+#  docker exec -it cquill-scylladb cqlsh
+#  docker exec -it cquill-scylladb nodetool
+
+# docs https://hub.docker.com/r/scylladb/scylla
+
+services:
+  scylladb:
+    container_name: cquill-scylladb
+    image: scylladb/scylla:5.2.0-rc1
+    ports:
+      - "7001:7001"   # inter-node gossip
+      - "9042:9042"   # CQL protocol
+      - "9180:9180"   # Prometheus metrics
+      - "10000:10000" # ScyllaDB API
