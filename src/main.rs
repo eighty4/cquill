@@ -4,7 +4,7 @@ extern crate tokio;
 
 use anyhow::Error;
 use clap::{Parser, Subcommand};
-use cquill::{KeyspaceOpts, MigrateOpts, ReplicationFactor};
+use cquill::{keyspace::*, migrate_cql, MigrateOpts};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -25,7 +25,7 @@ struct MigrateArgs {
     cql_dir: PathBuf,
     #[clap(long, value_name = "HISTORY_KEYSPACE", default_value = cquill::KEYSPACE)]
     history_keyspace: String,
-    #[clap(long, value_name = "HISTORY_REPLICATION", default_value = cquill::REPLICATION)]
+    #[clap(long, value_name = "HISTORY_REPLICATION", default_value = cquill::keyspace::REPLICATION)]
     history_replication: String,
     #[clap(long, value_name = "HISTORY_TABLE", default_value = cquill::TABLE)]
     history_table: String,
@@ -57,7 +57,7 @@ async fn main() {
 }
 
 async fn migrate(args: MigrateArgs) {
-    match cquill::migrate_cql(args.to_opts()).await {
+    match migrate_cql(args.to_opts()).await {
         Ok(migrated_cql) => {
             if migrated_cql.is_empty() {
                 println!("cql migration already up to date");
