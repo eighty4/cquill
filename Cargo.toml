@@ -19,4 +19,5 @@ scylla = "0.7.0"
 tokio = { version = "1.25.0", features = ["full"] }
 
 [dev-dependencies]
+rand = "0.8.5"
 temp-dir = "0.1.11"

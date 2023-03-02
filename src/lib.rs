@@ -1,11 +1,12 @@
 mod cql;
 pub mod keyspace;
+mod queries;
 
 extern crate anyhow;
 extern crate scylla;
 
-use crate::cql::create_keyspace_cql;
 use crate::keyspace::*;
+use crate::queries::*;
 use anyhow::{anyhow, Result};
 use scylla::Session;
 use std::{fs, path::PathBuf, str};
@@ -39,21 +40,22 @@ pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<PathBuf>> {
     Ok(Vec::new())
 }
 
-// todo
-//  check if keyspace already exists
-//  drop and recreate dev mode
-//  add keyspace composite key
+// todo drop and recreate dev mode
 async fn prepare_cquill_keyspace(
     session: &Session,
     keyspace: KeyspaceOpts,
-    table: String,
+    table_name: String,
 ) -> Result<()> {
-    session.query(create_keyspace_cql(&keyspace)?, ()).await?;
-    let create_table_cql = format!(
-        "create table {}.{} (id timeuuid primary key, ver int, name varchar)",
-        keyspace.name, table
-    );
-    session.query(create_table_cql, ()).await?;
+    let create_table: bool = match select_keyspace_table_names(session, &keyspace).await {
+        Ok(table_names) => !table_names.contains(&table_name),
+        Err(_) => {
+            create_keyspace(session, &keyspace).await?;
+            true
+        }
+    };
+    if create_table {
+        create_history_table(session, &keyspace, table_name).await?;
+    }
     Ok(())
 }
 

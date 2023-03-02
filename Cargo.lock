@@ -171,6 +171,7 @@ dependencies = [
  "anyhow",
  "clap",
  "lazy_static",
+ "rand",
  "regex",
  "scylla",
  "temp-dir",
