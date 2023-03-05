@@ -3,6 +3,11 @@ name = "cquill-migrate"
 version = "0.0.1"
 edition = "2021"
 
+[profile.release]
+lto = "fat"
+opt-level = 3
+strip = "symbols"
+
 [lib]
 name = "cquill"
 
