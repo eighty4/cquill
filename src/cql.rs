@@ -1,5 +1,3 @@
-extern crate anyhow;
-
 use crate::keyspace::{ReplicationFactor::*, *};
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;

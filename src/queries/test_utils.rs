@@ -1,6 +1,3 @@
-extern crate rand;
-extern crate scylla;
-
 use rand::Rng;
 use scylla::Session;
 

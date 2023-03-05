@@ -1,7 +1,3 @@
-extern crate anyhow;
-extern crate clap;
-extern crate tokio;
-
 use anyhow::Error;
 use clap::{Parser, Subcommand};
 use cquill::{keyspace::*, migrate_cql, MigrateOpts};

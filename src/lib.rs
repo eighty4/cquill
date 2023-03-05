@@ -2,9 +2,6 @@ mod cql;
 pub mod keyspace;
 mod queries;
 
-extern crate anyhow;
-extern crate scylla;
-
 use crate::keyspace::*;
 use crate::queries::*;
 use anyhow::{anyhow, Result};

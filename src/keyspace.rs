@@ -1,7 +1,3 @@
-extern crate anyhow;
-extern crate lazy_static;
-extern crate regex;
-
 use crate::keyspace::ReplicationFactor::*;
 use anyhow::anyhow;
 use lazy_static::lazy_static;

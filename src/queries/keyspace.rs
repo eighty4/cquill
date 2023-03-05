@@ -1,7 +1,3 @@
-extern crate anyhow;
-extern crate scylla;
-extern crate tokio;
-
 use super::*;
 use scylla::transport::session::IntoTypedRows;
 
