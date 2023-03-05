@@ -12,6 +12,14 @@ pub(crate) async fn create(session: &Session, keyspace_opts: &KeyspaceOpts) -> R
     Ok(())
 }
 
+#[allow(dead_code)]
+pub(crate) async fn drop(session: &Session, keyspace_opts: &KeyspaceOpts) -> Result<()> {
+    session
+        .query(format!("drop keyspace {}", keyspace_opts.name), ())
+        .await?;
+    Ok(())
+}
+
 pub(crate) async fn select_table_names(
     session: &Session,
     keyspace_opts: &KeyspaceOpts,
@@ -80,6 +88,22 @@ mod tests {
             .query(format!("drop keyspace {keyspace_name}"), ())
             .await
             .unwrap_or_else(|_| panic!("failed dropping keyspace {keyspace_name}"));
+    }
+
+    #[tokio::test]
+    async fn test_drop_keyspace() {
+        let session = test_utils::cql_session().await;
+        let keyspace_name = test_utils::keyspace_name();
+        let keyspace_opts = KeyspaceOpts::simple(keyspace_name.clone(), 1);
+        if create(&session, &keyspace_opts).await.is_err() {
+            panic!();
+        }
+        if drop(&session, &keyspace_opts).await.is_err() {
+            panic!();
+        }
+        if drop(&session, &keyspace_opts).await.is_ok() {
+            panic!();
+        }
     }
 
     #[tokio::test]
