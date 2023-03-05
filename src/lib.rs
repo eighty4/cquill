@@ -21,7 +21,7 @@ pub struct MigrateOpts {
     pub history_table: Option<String>,
 }
 
-/// migrate_cql performs a migration of all newly added cql scripts in [MigrateOpts::cql_dir]
+/// `migrate_cql` performs a migration of all newly added cql scripts in [MigrateOpts::cql_dir]
 /// since its last invocation. Migrated scripts are tracked in a cquill keyspace and history table
 /// specified with [MigrateOpts::history_keyspace] and [MigrateOpts::history_table]. A successful
 /// method result contains a vec of the cql script paths executed during this invocation.
@@ -46,15 +46,15 @@ async fn prepare_cquill_keyspace(
     keyspace: KeyspaceOpts,
     table_name: String,
 ) -> Result<()> {
-    let create_table: bool = match select_keyspace_table_names(session, &keyspace).await {
+    let create_table: bool = match queries::keyspace::select_table_names(session, &keyspace).await {
         Ok(table_names) => !table_names.contains(&table_name),
         Err(_) => {
-            create_keyspace(session, &keyspace).await?;
+            queries::keyspace::create(session, &keyspace).await?;
             true
         }
     };
     if create_table {
-        create_history_table(session, &keyspace, table_name).await?;
+        migrated::table::create(session, &keyspace, table_name).await?;
     }
     Ok(())
 }
