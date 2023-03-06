@@ -28,11 +28,11 @@ pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<PathBuf>> {
     // }
     let session = cql_session().await?;
 
-    let history_keyspace = opts
+    let cquill_keyspace = opts
         .history_keyspace
         .unwrap_or_else(|| KeyspaceOpts::simple(String::from(KEYSPACE), 1));
     let history_table = opts.history_table.unwrap_or_else(|| String::from(TABLE));
-    prepare_cquill_keyspace(&session, history_keyspace, &history_table).await?;
+    prepare_cquill_keyspace(&session, &cquill_keyspace, &history_table).await?;
 
     Ok(Vec::new())
 }
@@ -40,13 +40,13 @@ pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<PathBuf>> {
 // todo drop and recreate dev mode
 async fn prepare_cquill_keyspace(
     session: &Session,
-    keyspace: KeyspaceOpts,
+    keyspace: &KeyspaceOpts,
     table_name: &String,
 ) -> Result<()> {
     let create_table: bool = match table_names_from_session_metadata(session, &keyspace.name) {
         Ok(table_names) => !table_names.contains(table_name),
         Err(_) => {
-            queries::keyspace::create(session, &keyspace).await?;
+            queries::keyspace::create(session, keyspace).await?;
             true
         }
     };
@@ -116,12 +116,75 @@ mod tests {
         });
         let temp_dir_path = temp_dir.path().canonicalize().unwrap();
         println!("{}", temp_dir_path.to_string_lossy());
-        let result = cql_files_from_dir(&temp_dir_path);
-        assert!(result.is_ok());
-        let cql_files = result.unwrap();
-        assert_eq!(cql_files.len(), 1);
-        assert!(cql_files
-            .iter()
-            .any(|p| { p.file_name().unwrap() == "foo.cql" }));
+
+        match cql_files_from_dir(&temp_dir_path) {
+            Err(err) => {
+                println!("{err}");
+                panic!();
+            }
+            Ok(cql_files) => {
+                assert_eq!(cql_files.len(), 1);
+                assert!(cql_files
+                    .iter()
+                    .any(|p| { p.file_name().unwrap() == "foo.cql" }));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_prepare_cquill_keyspace_when_keyspace_does_not_exist() {
+        let session = cql_session().await.unwrap();
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
+        let table_name = String::from("table_name");
+
+        if let Err(err) = prepare_cquill_keyspace(&session, &keyspace_opts, &table_name).await {
+            println!("{err}");
+            panic!();
+        }
+        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+            Ok(table_names) => assert!(table_names.contains(&table_name)),
+            Err(_) => panic!(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_prepare_cquill_keyspace_when_table_does_not_exist() {
+        let session = cql_session().await.unwrap();
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
+        queries::keyspace::create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
+        let table_name = String::from("table_name");
+
+        if let Err(err) = prepare_cquill_keyspace(&session, &keyspace_opts, &table_name).await {
+            println!("{err}");
+            panic!();
+        }
+        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+            Ok(table_names) => assert!(table_names.contains(&table_name)),
+            Err(_) => panic!(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_prepare_cquill_keyspace_when_keyspace_and_table_exist() {
+        let session = cql_session().await.unwrap();
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
+        queries::keyspace::create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
+        let table_name = String::from("table_name");
+        migrated::table::create(&session, &keyspace_opts.name, &table_name)
+            .await
+            .expect("create table");
+
+        if let Err(err) = prepare_cquill_keyspace(&session, &keyspace_opts, &table_name).await {
+            println!("{err}");
+            panic!();
+        }
+        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+            Ok(table_names) => assert!(table_names.contains(&table_name)),
+            Err(_) => panic!(),
+        }
     }
 }
