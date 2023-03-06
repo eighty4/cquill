@@ -107,11 +107,11 @@ mod tests {
             .await
             .expect("create keyspace");
         let table_1 = String::from("project_1_cql");
-        let table_2 = String::from("project_2_cql");
-        migrated::table::create(&session, &keyspace_opts.name, table_1.clone())
+        migrated::table::create(&session, &keyspace_opts.name, &table_1)
             .await
             .unwrap();
-        migrated::table::create(&session, &keyspace_opts.name, table_2.clone())
+        let table_2 = String::from("project_2_cql");
+        migrated::table::create(&session, &keyspace_opts.name, &table_2)
             .await
             .unwrap();
         match select_table_names(&session, &keyspace_opts.name).await {

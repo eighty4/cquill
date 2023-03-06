@@ -3,7 +3,7 @@ use super::*;
 pub(crate) async fn create(
     session: &Session,
     keyspace_name: &String,
-    table_name: String,
+    table_name: &String,
 ) -> Result<()> {
     let cql = format!("create table {keyspace_name}.{table_name} (id timeuuid primary key, ver int, name varchar, hash varchar)");
     session.query(cql, ()).await?;
@@ -14,7 +14,7 @@ pub(crate) async fn create(
 pub(crate) async fn drop(
     session: &Session,
     keyspace_name: &String,
-    table_name: String,
+    table_name: &String,
 ) -> Result<()> {
     session
         .query(format!("drop table {keyspace_name}.{table_name}"), ())
@@ -33,7 +33,8 @@ mod tests {
         if keyspace::create(&session, &keyspace_opts).await.is_err() {
             panic!();
         }
-        if create(&session, &keyspace_opts.name, String::from("migrated_cql"))
+        let table_name = String::from("migrated_cql");
+        if create(&session, &keyspace_opts.name, &table_name)
             .await
             .is_err()
         {
@@ -53,19 +54,19 @@ mod tests {
             panic!();
         }
         let table_name = String::from("migrated_cql");
-        if create(&session, &keyspace_opts.name, table_name.clone())
+        if create(&session, &keyspace_opts.name, &table_name)
             .await
             .is_err()
         {
             panic!();
         }
-        if drop(&session, &keyspace_opts.name, table_name.clone())
+        if drop(&session, &keyspace_opts.name, &table_name)
             .await
             .is_err()
         {
             panic!();
         }
-        if drop(&session, &keyspace_opts.name, table_name)
+        if drop(&session, &keyspace_opts.name, &table_name)
             .await
             .is_ok()
         {
@@ -84,13 +85,14 @@ mod tests {
         if keyspace::create(&session, &keyspace_opts).await.is_err() {
             panic!();
         }
-        if create(&session, &keyspace_opts.name, String::from("migrated_cql"))
+        let table_name = String::from("migrated_cql");
+        if create(&session, &keyspace_opts.name, &table_name)
             .await
             .is_err()
         {
             panic!();
         }
-        if create(&session, &keyspace_opts.name, String::from("migrated_cql"))
+        if create(&session, &keyspace_opts.name, &table_name)
             .await
             .is_ok()
         {

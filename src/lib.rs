@@ -32,7 +32,7 @@ pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<PathBuf>> {
         .history_keyspace
         .unwrap_or_else(|| KeyspaceOpts::simple(String::from(KEYSPACE), 1));
     let history_table = opts.history_table.unwrap_or_else(|| String::from(TABLE));
-    prepare_cquill_keyspace(&session, history_keyspace, history_table).await?;
+    prepare_cquill_keyspace(&session, history_keyspace, &history_table).await?;
 
     Ok(Vec::new())
 }
@@ -41,11 +41,11 @@ pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<PathBuf>> {
 async fn prepare_cquill_keyspace(
     session: &Session,
     keyspace: KeyspaceOpts,
-    table_name: String,
+    table_name: &String,
 ) -> Result<()> {
     let create_table: bool =
         match queries::keyspace::select_table_names(session, &keyspace.name).await {
-            Ok(table_names) => !table_names.contains(&table_name),
+            Ok(table_names) => !table_names.contains(table_name),
             Err(_) => {
                 queries::keyspace::create(session, &keyspace).await?;
                 true
