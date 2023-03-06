@@ -2,33 +2,30 @@ use super::*;
 use scylla::transport::session::IntoTypedRows;
 
 pub(crate) async fn create(session: &Session, keyspace_opts: &KeyspaceOpts) -> Result<()> {
-    session
-        .query(create_keyspace_cql(keyspace_opts)?, ())
-        .await?;
+    let cql = create_keyspace_cql(keyspace_opts)?;
+    session.query(cql, ()).await?;
     Ok(())
 }
 
 #[allow(dead_code)]
-pub(crate) async fn drop(session: &Session, keyspace_opts: &KeyspaceOpts) -> Result<()> {
-    session
-        .query(format!("drop keyspace {}", keyspace_opts.name), ())
-        .await?;
+pub(crate) async fn drop(session: &Session, keyspace_name: &String) -> Result<()> {
+    let cql = format!("drop keyspace {keyspace_name}");
+    session.query(cql, ()).await?;
     Ok(())
 }
 
 pub(crate) async fn select_table_names(
     session: &Session,
-    keyspace_opts: &KeyspaceOpts,
+    keyspace_name: &String,
 ) -> Result<Vec<String>> {
     let cql = format!(
-        "select table_name from system_schema.tables where keyspace_name='{}'",
-        keyspace_opts.name
+        "select table_name from system_schema.tables where keyspace_name='{keyspace_name}'"
     );
-    let query_result = session.query(cql, &[]).await;
+    let query_result = session.query(cql, ()).await;
     match query_result {
         Err(err) => Err(anyhow!(
             "error selecting table names from keyspace {}: {}",
-            keyspace_opts.name,
+            keyspace_name,
             err.to_string(),
         )),
         Ok(query_result) => {
@@ -40,7 +37,7 @@ pub(crate) async fn select_table_names(
                         Err(err) => {
                             return Err(anyhow!(
                             "error reading table name rows from query result for keyspace {}: {}",
-                            keyspace_opts.name,
+                            keyspace_name,
                             err.to_string()))
                         }
                     }
@@ -94,10 +91,10 @@ mod tests {
         if create(&session, &keyspace_opts).await.is_err() {
             panic!();
         }
-        if drop(&session, &keyspace_opts).await.is_err() {
+        if drop(&session, &keyspace_opts.name).await.is_err() {
             panic!();
         }
-        if drop(&session, &keyspace_opts).await.is_ok() {
+        if drop(&session, &keyspace_opts.name).await.is_ok() {
             panic!();
         }
     }
@@ -105,18 +102,19 @@ mod tests {
     #[tokio::test]
     async fn test_select_keyspace_table_names() {
         let session = test_utils::cql_session().await;
-        let keyspace_name = test_utils::keyspace_name();
-        let keyspace_opts = KeyspaceOpts::simple(keyspace_name.clone(), 1);
-        create(&session, &keyspace_opts).await.unwrap();
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
+        create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
         let table_1 = String::from("project_1_cql");
         let table_2 = String::from("project_2_cql");
-        migrated::table::create(&session, &keyspace_opts, table_1.clone())
+        migrated::table::create(&session, &keyspace_opts.name, table_1.clone())
             .await
             .unwrap();
-        migrated::table::create(&session, &keyspace_opts, table_2.clone())
+        migrated::table::create(&session, &keyspace_opts.name, table_2.clone())
             .await
             .unwrap();
-        match select_table_names(&session, &keyspace_opts).await {
+        match select_table_names(&session, &keyspace_opts.name).await {
             Ok(table_names) => {
                 assert_eq!(table_names.len(), 2);
                 assert!(table_names.contains(&table_1));
@@ -128,8 +126,8 @@ mod tests {
             }
         }
         session
-            .query(format!("drop keyspace {keyspace_name}"), ())
+            .query(format!("drop keyspace {}", &keyspace_opts.name), ())
             .await
-            .unwrap_or_else(|_| panic!("failed dropping keyspace {keyspace_name}"));
+            .unwrap_or_else(|_| panic!("failed dropping keyspace {}", &keyspace_opts.name));
     }
 }
