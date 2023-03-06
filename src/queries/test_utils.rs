@@ -14,6 +14,7 @@ fn alphanumeric_str(len: u8) -> String {
     let mut rng = rand::thread_rng();
     (0..len)
         .map(|_| rng.sample(rand::distributions::Alphanumeric) as char)
+        .map(|c| c.to_ascii_lowercase())
         .collect()
 }
 
