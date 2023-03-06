@@ -1,7 +1,8 @@
 use crate::keyspace::ReplicationFactor::*;
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
+use scylla::Session;
 use std::collections::HashMap;
 use std::str::{FromStr, Split};
 
@@ -123,9 +124,25 @@ impl FromStr for ReplicationFactor {
     }
 }
 
+#[allow(dead_code)]
+pub(crate) fn table_names_from_session_metadata(
+    session: &Session,
+    keyspace_name: &String,
+) -> Result<Vec<String>> {
+    let cluster_data = session.get_cluster_data();
+    match cluster_data
+        .get_keyspace_info()
+        .get(keyspace_name.to_lowercase().as_str())
+    {
+        None => Err(anyhow!("keyspace {keyspace_name} does not exist")),
+        Some(keyspace) => Ok(keyspace.tables.keys().cloned().collect()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::queries;
 
     #[test]
     fn test_replication_factory_from_str_simple_default() {
@@ -247,5 +264,120 @@ mod tests {
             "{'class': 'NetworkTopologyStrategy', 'my datacenter': 3}",
             "datacenter my datacenter is not a valid name",
         );
+    }
+
+    #[tokio::test]
+    async fn test_table_names() {
+        let session = queries::test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        queries::keyspace::create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
+        let table_name = String::from("migrated_cql");
+        queries::migrated::table::create(&session, &keyspace_opts.name, &table_name)
+            .await
+            .expect("create table");
+
+        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+            Ok(table_names) => {
+                assert_eq!(table_names.len(), 1);
+                assert!(table_names.contains(&table_name))
+            }
+            Err(_) => panic!(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_table_names_from_session_metadata_normalizes_uppercase_keyspace_name() {
+        let session = queries::test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        queries::keyspace::create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
+        let table_name = String::from("migrated_cql");
+        queries::migrated::table::create(&session, &keyspace_opts.name, &table_name)
+            .await
+            .expect("create table");
+
+        match table_names_from_session_metadata(&session, &keyspace_opts.name.to_ascii_uppercase())
+        {
+            Ok(table_names) => {
+                assert_eq!(table_names.len(), 1);
+                assert!(table_names.contains(&table_name))
+            }
+            Err(_) => panic!(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_table_names_from_session_metadata_errors_when_keyspace_does_not_exist() {
+        let session = queries::test_utils::cql_session().await;
+        let keyspace_name = queries::test_utils::keyspace_name();
+
+        if table_names_from_session_metadata(&session, &keyspace_name).is_ok() {
+            panic!()
+        }
+    }
+
+    #[tokio::test]
+    async fn test_table_names_from_session_metadata_empty_vec_when_no_tables() {
+        let session = queries::test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        queries::keyspace::create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
+
+        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+            Ok(table_names) => assert!(table_names.is_empty()),
+            Err(_) => panic!(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_table_names_from_session_metadata_updated_after_drop_table() {
+        let session = queries::test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        queries::keyspace::create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
+        let table_name = String::from("migrated_cql");
+        queries::migrated::table::create(&session, &keyspace_opts.name, &table_name)
+            .await
+            .expect("create table");
+
+        session
+            .query(
+                format!("drop table {}.{table_name}", keyspace_opts.name),
+                (),
+            )
+            .await
+            .expect("drop table");
+
+        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+            Ok(table_names) => assert!(table_names.is_empty()),
+            Err(_) => panic!(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_table_names_from_session_metadata_updated_after_drop_keyspace() {
+        let session = queries::test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        queries::keyspace::create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
+        let table_name = String::from("migrated_cql");
+        queries::migrated::table::create(&session, &keyspace_opts.name, &table_name)
+            .await
+            .expect("create table");
+
+        session
+            .query(format!("drop keyspace {}", keyspace_opts.name), ())
+            .await
+            .expect("drop keyspace");
+
+        if table_names_from_session_metadata(&session, &keyspace_opts.name).is_ok() {
+            panic!()
+        }
     }
 }

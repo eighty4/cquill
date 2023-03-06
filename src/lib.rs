@@ -43,14 +43,13 @@ async fn prepare_cquill_keyspace(
     keyspace: KeyspaceOpts,
     table_name: &String,
 ) -> Result<()> {
-    let create_table: bool =
-        match queries::keyspace::select_table_names(session, &keyspace.name).await {
-            Ok(table_names) => !table_names.contains(table_name),
-            Err(_) => {
-                queries::keyspace::create(session, &keyspace).await?;
-                true
-            }
-        };
+    let create_table: bool = match table_names_from_session_metadata(session, &keyspace.name) {
+        Ok(table_names) => !table_names.contains(table_name),
+        Err(_) => {
+            queries::keyspace::create(session, &keyspace).await?;
+            true
+        }
+    };
     if create_table {
         migrated::table::create(session, &keyspace.name, table_name).await?;
     }

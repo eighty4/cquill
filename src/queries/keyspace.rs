@@ -14,6 +14,7 @@ pub(crate) async fn drop(session: &Session, keyspace_name: &String) -> Result<()
     Ok(())
 }
 
+#[allow(dead_code)]
 pub(crate) async fn select_table_names(
     session: &Session,
     keyspace_name: &String,
