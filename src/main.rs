@@ -12,11 +12,11 @@ struct CquillCli {
 
 #[derive(Subcommand)]
 enum CquillCommand {
-    Migrate(MigrateArgs),
+    Migrate(MigrateCliArgs),
 }
 
 #[derive(Parser, Debug)]
-struct MigrateArgs {
+struct MigrateCliArgs {
     #[clap(short = 'd', long, value_name = "CQL_DIR", default_value = "./cql")]
     cql_dir: PathBuf,
     #[clap(long, value_name = "HISTORY_KEYSPACE", default_value = cquill::KEYSPACE)]
@@ -27,7 +27,7 @@ struct MigrateArgs {
     history_table: String,
 }
 
-impl MigrateArgs {
+impl MigrateCliArgs {
     fn to_opts(&self) -> MigrateOpts {
         let replication_factor = match self.history_replication.parse::<ReplicationFactor>() {
             Ok(replication_factor) => replication_factor,
@@ -52,7 +52,7 @@ async fn main() {
     };
 }
 
-async fn migrate(args: MigrateArgs) {
+async fn migrate(args: MigrateCliArgs) {
     match migrate_cql(args.to_opts()).await {
         Ok(migrated_cql) => {
             if migrated_cql.is_empty() {
