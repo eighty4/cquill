@@ -63,7 +63,7 @@ fn cql_files_from_dir(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
             let mut result = Vec::new();
             for dir_entry in read_dir {
                 let path = dir_entry?.path();
-                if path.is_file() {
+                if path.is_file() && path.file_name().is_some() {
                     if let Some(extension) = path.extension() {
                         if extension == "cql" {
                             result.push(path);
