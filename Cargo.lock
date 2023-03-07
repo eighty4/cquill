@@ -171,11 +171,13 @@ dependencies = [
  "anyhow",
  "clap",
  "lazy_static",
+ "md5",
  "rand",
  "regex",
  "scylla",
  "temp-dir",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -532,6 +534,12 @@ checksum = "1a8cbbb2831780bc3b9c15a41f5b49222ef756b6730a95f3decfdd15903eb5a3"
 dependencies = [
  "twox-hash",
 ]
+
+[[package]]
+name = "md5"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
 name = "memchr"

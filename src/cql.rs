@@ -1,6 +1,50 @@
 use crate::keyspace::{ReplicationFactor::*, *};
 use anyhow::{anyhow, Result};
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
+
+lazy_static! {
+    static ref FILENAME_REGEX: Regex =
+        regex::Regex::new(r"^v(?P<version>[\d]{3})(?:[-_\da-zA-Z]*)?.cql$")
+            .expect("cql filename regex");
+}
+
+#[allow(dead_code)]
+pub(crate) struct CqlFile {
+    pub filename: String,
+    pub hash: String,
+    pub version: i16,
+}
+
+impl CqlFile {
+    #[allow(dead_code)]
+    pub fn from(path: PathBuf) -> Result<CqlFile> {
+        let filename = path.file_name().unwrap().to_string_lossy().to_string();
+        if !FILENAME_REGEX.is_match(filename.as_str()) {
+            return Err(anyhow!("{filename} is not a valid cql file name"));
+        }
+        let hash = match fs::read(&path) {
+            Err(err) => return Err(anyhow!("failed reading file {}: {err}", filename)),
+            Ok(file_content) => format!("{:x}", md5::compute(file_content)),
+        };
+        let version = FILENAME_REGEX
+            .captures(filename.as_str())
+            .unwrap()
+            .name("version")
+            .unwrap()
+            .as_str()
+            .parse::<i16>()
+            .unwrap();
+        Ok(CqlFile {
+            filename,
+            hash,
+            version,
+        })
+    }
+}
 
 pub(crate) fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String> {
     if keyspace_opts.name.is_empty() {
@@ -61,6 +105,32 @@ fn create_network_topology_strategy_keyspace_replication_map_str(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::io::Write;
+    use temp_dir::TempDir;
+
+    #[test]
+    fn test_cql_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let cql_file_path = temp_dir.path().join("v073-more_tables.cql");
+        let mut file = fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(&cql_file_path)
+            .expect("could not write file");
+        let cql_file_content = "create table big_business_data (id timeuuid primary key)";
+        file.write_all(cql_file_content.as_bytes())
+            .expect("write to file");
+
+        match CqlFile::from(cql_file_path) {
+            Err(_) => panic!(),
+            Ok(cql_file) => {
+                assert_eq!(cql_file.filename, String::from("v073-more_tables.cql"));
+                assert_eq!(cql_file.version, 73);
+                assert_eq!(cql_file.hash, "7f5b4bdccd3863f31be5c257ff497704");
+            }
+        }
+    }
 
     #[test]
     fn test_create_keyspace_cql_errors_with_empty_keyspace_name() {
