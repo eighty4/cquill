@@ -10,7 +10,6 @@ lazy_static! {
             .expect("cql filename regex");
 }
 
-#[allow(dead_code)]
 pub(crate) struct CqlFile {
     pub filename: String,
     pub hash: String,
@@ -18,13 +17,12 @@ pub(crate) struct CqlFile {
 }
 
 impl CqlFile {
-    #[allow(dead_code)]
-    pub fn from(path: PathBuf) -> Result<CqlFile> {
+    pub fn from(path: &PathBuf) -> Result<CqlFile> {
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
         if !FILENAME_REGEX.is_match(filename.as_str()) {
             return Err(anyhow!("{filename} is not a valid cql file name"));
         }
-        let hash = match fs::read(&path) {
+        let hash = match fs::read(path) {
             Err(err) => return Err(anyhow!("failed reading file {}: {err}", filename)),
             Ok(file_content) => format!("{:x}", md5::compute(file_content)),
         };
@@ -64,7 +62,7 @@ mod tests {
         file.write_all(cql_file_content.as_bytes())
             .expect("write to file");
 
-        match CqlFile::from(cql_file_path) {
+        match CqlFile::from(&cql_file_path) {
             Err(_) => panic!(),
             Ok(cql_file) => {
                 assert_eq!(cql_file.filename, String::from("v073-more_tables.cql"));

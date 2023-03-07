@@ -1,5 +1,6 @@
 mod cql;
 pub mod keyspace;
+mod migrate;
 mod queries;
 
 use crate::keyspace::*;
@@ -23,9 +24,7 @@ pub struct MigrateOpts {
 /// specified with [MigrateOpts::history_keyspace] and [MigrateOpts::history_table]. A successful
 /// method result contains a vec of the cql script paths executed during this invocation.
 pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<PathBuf>> {
-    // if cql_files_from_dir(&opts.cql_dir)?.is_empty() {
-    //     return Ok(Vec::new());
-    // }
+    let cql_files = cql_files_from_dir(&opts.cql_dir)?;
     let session = cql_session().await?;
 
     let cquill_keyspace = opts
@@ -34,7 +33,15 @@ pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<PathBuf>> {
     let history_table = opts.history_table.unwrap_or_else(|| String::from(TABLE));
     prepare_cquill_keyspace(&session, &cquill_keyspace, &history_table).await?;
 
-    Ok(Vec::new())
+    migrate::perform(
+        &session,
+        cql_files,
+        migrate::MigrateArgs {
+            history_keyspace: cquill_keyspace.name,
+            history_table,
+        },
+    )
+    .await
 }
 
 // todo drop and recreate dev mode
@@ -56,7 +63,6 @@ async fn prepare_cquill_keyspace(
     Ok(())
 }
 
-#[allow(dead_code)]
 fn cql_files_from_dir(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
     return match fs::read_dir(cql_dir) {
         Ok(read_dir) => {
