@@ -90,7 +90,7 @@ async fn prepare_cquill_keyspace(
 }
 
 fn cql_files_from_dir(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
-    return match fs::read_dir(cql_dir) {
+    match fs::read_dir(cql_dir) {
         Ok(read_dir) => {
             let mut result = Vec::new();
             for dir_entry in read_dir {
@@ -116,7 +116,7 @@ fn cql_files_from_dir(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
             "could not find directory '{}'",
             cql_dir.to_string_lossy()
         )),
-    };
+    }
 }
 
 async fn cql_session(node_address: String) -> Result<Session> {
