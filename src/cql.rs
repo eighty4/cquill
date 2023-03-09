@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 lazy_static! {
     static ref FILENAME_REGEX: Regex =
-        regex::Regex::new(r"^v(?P<version>[\d]{3})(?:[-_\da-zA-Z]*)?.cql$")
+        regex::Regex::new(r"^[Vv](?P<version>[\d]{3})(?:[-_\da-zA-Z]*)?.cql$")
             .expect("cql filename regex");
 }
 
@@ -48,6 +48,14 @@ mod tests {
     use std::fs;
     use std::io::Write;
     use temp_dir::TempDir;
+
+    #[test]
+    fn test_cql_filename_regex() {
+        assert!(FILENAME_REGEX.is_match("v000.cql"));
+        assert!(FILENAME_REGEX.is_match("v001-init-schema.cql"));
+        assert!(FILENAME_REGEX.is_match("V002_add_column_families.cql"));
+        assert!(!FILENAME_REGEX.is_match("init-schema.cql"));
+    }
 
     #[test]
     fn test_cql_file() {
