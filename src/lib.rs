@@ -9,14 +9,39 @@ use anyhow::{anyhow, Result};
 use scylla::Session;
 use std::{fs, path::PathBuf, str};
 
+const NODE_ADDRESS: &str = "127.0.0.1:9042";
+
 pub const KEYSPACE: &str = "cquill";
 
 pub const TABLE: &str = "migrated_cql";
 
 pub struct MigrateOpts {
+    pub cassandra_opts: Option<CassandraOpts>,
     pub cql_dir: PathBuf,
     pub history_keyspace: Option<KeyspaceOpts>,
     pub history_table: Option<String>,
+}
+
+#[derive(Default)]
+pub struct CassandraOpts {
+    pub cassandra_host: Option<String>,
+}
+
+impl CassandraOpts {
+    pub fn node_address(&self) -> String {
+        let node_address = match &self.cassandra_host {
+            None => match std::env::var("CASSANDRA_NODE") {
+                Ok(host) => host,
+                Err(_) => NODE_ADDRESS.to_string(),
+            },
+            Some(cassandra_host) => cassandra_host.clone(),
+        };
+        if node_address.contains(':') {
+            node_address
+        } else {
+            format!("{node_address}:9042")
+        }
+    }
 }
 
 /// `migrate_cql` performs a migration of all newly added cql scripts in [MigrateOpts::cql_dir]
@@ -25,7 +50,8 @@ pub struct MigrateOpts {
 /// method result contains a vec of the cql script paths executed during this invocation.
 pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<PathBuf>> {
     let cql_files = cql_files_from_dir(&opts.cql_dir)?;
-    let session = cql_session().await?;
+    let node_address = opts.cassandra_opts.unwrap_or_default().node_address();
+    let session = cql_session(node_address).await?;
 
     let cquill_keyspace = opts
         .history_keyspace
@@ -93,15 +119,14 @@ fn cql_files_from_dir(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
     };
 }
 
-async fn cql_session() -> Result<Session> {
-    let node_address = "127.0.0.1:9042";
+async fn cql_session(node_address: String) -> Result<Session> {
     let connecting = scylla::SessionBuilder::new()
-        .known_node(node_address)
+        .known_node(&node_address)
         .build()
         .await;
     match connecting {
         Ok(session) => Ok(session),
-        Err(_) => Err(anyhow!("could not connect to {}", node_address)),
+        Err(_) => Err(anyhow!("could not connect to {}", &node_address)),
     }
 }
 
@@ -137,9 +162,25 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_cassandra_opts_provides_node_address() {
+        let without_host = CassandraOpts {
+            cassandra_host: None,
+        };
+        let with_host = CassandraOpts {
+            cassandra_host: Some("localhost".to_string()),
+        };
+        let with_port = CassandraOpts {
+            cassandra_host: Some("localhost:9043".to_string()),
+        };
+        assert_eq!(without_host.node_address(), "127.0.0.1:9042");
+        assert_eq!(with_host.node_address(), "localhost:9042");
+        assert_eq!(with_port.node_address(), "localhost:9043");
+    }
+
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_keyspace_does_not_exist() {
-        let session = cql_session().await.unwrap();
+        let session = cql_session(NODE_ADDRESS.to_string()).await.unwrap();
         let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         let table_name = String::from("table_name");
 
@@ -155,7 +196,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_table_does_not_exist() {
-        let session = cql_session().await.unwrap();
+        let session = cql_session(NODE_ADDRESS.to_string()).await.unwrap();
         let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
@@ -174,7 +215,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_keyspace_and_table_exist() {
-        let session = cql_session().await.unwrap();
+        let session = cql_session(NODE_ADDRESS.to_string()).await.unwrap();
         let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await

@@ -1,6 +1,6 @@
 use anyhow::Error;
 use clap::{Parser, Subcommand};
-use cquill::{keyspace::*, migrate_cql, MigrateOpts};
+use cquill::{keyspace::*, migrate_cql, CassandraOpts, MigrateOpts};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -34,6 +34,7 @@ impl MigrateCliArgs {
             Err(err) => error_exit(err),
         };
         MigrateOpts {
+            cassandra_opts: Some(CassandraOpts::default()),
             cql_dir: self.cql_dir.clone(),
             history_keyspace: Some(KeyspaceOpts {
                 name: self.history_keyspace.clone(),
