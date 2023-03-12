@@ -54,16 +54,16 @@ async fn main() {
 }
 
 async fn migrate(args: MigrateCliArgs) {
-    match migrate_cql(args.to_opts()).await {
+    let opts = args.to_opts();
+    let version = std::env::var("CARGO_PKG_VERSION").unwrap_or_default();
+    let cql_dir = opts.cql_dir.to_string_lossy();
+    println!("CQuill {version}\nMigrating CQL files from {cql_dir}");
+    match migrate_cql(opts).await {
         Ok(migrated_cql) => {
             if migrated_cql.is_empty() {
                 println!("cql migration already up to date");
             } else if migrated_cql.len() == 1 {
-                println!(
-                    "migrated {} cql file: {}",
-                    migrated_cql.len(),
-                    migrated_cql[0].to_string_lossy()
-                );
+                println!("migrated 1 cql file: {}", migrated_cql[0].to_string_lossy());
             } else {
                 println!("migrated {} cql files:", migrated_cql.len());
                 migrated_cql.iter().for_each(|p| {
