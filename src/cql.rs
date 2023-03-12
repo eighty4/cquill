@@ -11,14 +11,14 @@ lazy_static! {
             .expect("cql filename regex");
 }
 
-pub(crate) struct CqlFile {
+pub struct CqlFile {
     pub filename: String,
     pub hash: String,
     pub version: i16,
 }
 
 impl CqlFile {
-    pub fn from(path: &PathBuf) -> Result<CqlFile> {
+    pub fn from_path(path: &PathBuf) -> Result<CqlFile> {
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
         if !FILENAME_REGEX.is_match(filename.as_str()) {
             return Err(anyhow!("{filename} is not a valid cql file name"));
@@ -43,33 +43,37 @@ impl CqlFile {
     }
 }
 
-pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
+pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
     match fs::read_dir(cql_dir) {
+        Err(_) => Err(anyhow!(
+            "could not find directory '{}'",
+            cql_dir.to_string_lossy()
+        )),
         Ok(read_dir) => {
-            let mut result = Vec::new();
+            let mut cql_file_paths = Vec::new();
             for dir_entry in read_dir {
                 let path = dir_entry?.path();
                 if path.is_file() && path.file_name().is_some() {
                     if let Some(extension) = path.extension() {
                         if extension == "cql" {
-                            result.push(path);
+                            cql_file_paths.push(path);
                         }
                     }
                 }
             }
-            if result.is_empty() {
+            if cql_file_paths.is_empty() {
                 return Err(anyhow!(
                     "no cql files found in directory '{}'",
                     cql_dir.to_string_lossy()
                 ));
             }
-            result.sort();
-            Ok(result)
+            cql_file_paths.sort();
+            let mut cql_files = Vec::with_capacity(cql_file_paths.len());
+            for path in cql_file_paths {
+                cql_files.push(CqlFile::from_path(&path)?);
+            }
+            Ok(cql_files)
         }
-        Err(_) => Err(anyhow!(
-            "could not find directory '{}'",
-            cql_dir.to_string_lossy()
-        )),
     }
 }
 
@@ -105,7 +109,7 @@ mod tests {
         file.write_all(cql_file_content.as_bytes())
             .expect("write to file");
 
-        match CqlFile::from(&cql_file_path) {
+        match CqlFile::from_path(&cql_file_path) {
             Err(_) => panic!(),
             Ok(cql_file) => {
                 assert_eq!(cql_file.filename, String::from("v073-more_tables.cql"));
@@ -118,7 +122,7 @@ mod tests {
     #[test]
     fn test_files_from_dir() {
         let temp_dir = TempDir::new().unwrap();
-        ["foo.cql", "foo.sh", "foo.sql"]
+        ["v001.cql", "foo.sh", "foo.sql"]
             .iter()
             .for_each(|f| make_file(temp_dir.path().join(f)));
         let temp_dir_path = temp_dir.path().canonicalize().unwrap();
@@ -130,9 +134,23 @@ mod tests {
             }
             Ok(cql_files) => {
                 assert_eq!(cql_files.len(), 1);
-                assert!(cql_files
-                    .iter()
-                    .any(|p| { p.file_name().unwrap() == "foo.cql" }));
+                assert!(cql_files.iter().any(|p| { p.filename == "v001.cql" }));
+            }
+        }
+    }
+
+    #[test]
+    fn test_files_from_dir_errors_with_cql_name() {
+        let temp_dir = TempDir::new().unwrap();
+        ["foo.cql", "foo.sh", "foo.sql"]
+            .iter()
+            .for_each(|f| make_file(temp_dir.path().join(f)));
+        let temp_dir_path = temp_dir.path().canonicalize().unwrap();
+
+        match files_from_dir(&temp_dir_path) {
+            Ok(_) => panic!(),
+            Err(err) => {
+                assert_eq!(err.to_string(), "foo.cql is not a valid cql file name");
             }
         }
     }

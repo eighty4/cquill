@@ -14,12 +14,11 @@ pub(crate) struct MigrateArgs {
 
 pub(crate) async fn perform(
     session: &Session,
-    cql_files: Vec<PathBuf>,
+    cql_files: Vec<CqlFile>,
     args: MigrateArgs,
-) -> Result<Vec<PathBuf>> {
-    for path in &cql_files {
-        let cql_file = CqlFile::from(path)?;
-        for cql_statement in read_statements(path)? {
+) -> Result<Vec<CqlFile>> {
+    for cql_file in &cql_files {
+        for cql_statement in read_statements(&PathBuf::from(&cql_file.filename))? {
             // println!("\n---\n{cql_statement}\n---");
             session.query(cql_statement, ()).await?;
         }
@@ -28,7 +27,7 @@ pub(crate) async fn perform(
             session,
             &args.history_keyspace,
             &args.history_table,
-            &cql_file,
+            cql_file,
         )
         .await?;
     }

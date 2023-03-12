@@ -65,11 +65,11 @@ async fn migrate(args: MigrateCliArgs) {
             if migrated_cql.is_empty() {
                 println!("cql migration already up to date");
             } else if migrated_cql.len() == 1 {
-                println!("migrated 1 cql file: {}", migrated_cql[0].to_string_lossy());
+                println!("migrated 1 cql file: {}", migrated_cql[0].filename);
             } else {
                 println!("migrated {} cql files:", migrated_cql.len());
                 migrated_cql.iter().for_each(|p| {
-                    println!("  {}", p.file_name().unwrap().to_string_lossy());
+                    println!("  {}", p.filename);
                 });
             }
         }
