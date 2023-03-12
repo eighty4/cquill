@@ -1,13 +1,15 @@
+use std::{fs, path::PathBuf, str};
+
+use anyhow::{anyhow, Result};
+use scylla::Session;
+
+use crate::keyspace::*;
+use crate::queries::*;
+
 mod cql;
 pub mod keyspace;
 mod migrate;
 mod queries;
-
-use crate::keyspace::*;
-use crate::queries::*;
-use anyhow::{anyhow, Result};
-use scylla::Session;
-use std::{fs, path::PathBuf, str};
 
 const NODE_ADDRESS: &str = "127.0.0.1:9042";
 
@@ -132,8 +134,9 @@ async fn cql_session(node_address: String) -> Result<Session> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use temp_dir::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_cql_files_from_dir() {

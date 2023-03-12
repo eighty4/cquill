@@ -1,7 +1,9 @@
+use std::path::PathBuf;
+
 use anyhow::Error;
 use clap::{Parser, Subcommand};
+
 use cquill::{keyspace::*, migrate_cql, CassandraOpts, MigrateOpts};
-use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(author, version, about)]

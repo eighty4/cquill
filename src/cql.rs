@@ -1,8 +1,9 @@
+use std::fs;
+use std::path::PathBuf;
+
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::fs;
-use std::path::PathBuf;
 
 lazy_static! {
     static ref FILENAME_REGEX: Regex =
@@ -44,10 +45,12 @@ impl CqlFile {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
     use std::io::Write;
+
     use temp_dir::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_cql_filename_regex() {

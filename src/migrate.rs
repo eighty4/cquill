@@ -1,9 +1,11 @@
-use crate::cql::CqlFile;
-use crate::queries;
-use anyhow::Result;
-use scylla::Session;
 use std::fs;
 use std::path::PathBuf;
+
+use anyhow::Result;
+use scylla::Session;
+
+use crate::cql::CqlFile;
+use crate::queries;
 
 pub(crate) struct MigrateArgs {
     pub history_keyspace: String,

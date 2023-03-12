@@ -1,10 +1,12 @@
-use crate::keyspace::ReplicationFactor::*;
+use std::collections::HashMap;
+use std::str::{FromStr, Split};
+
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
 use scylla::Session;
-use std::collections::HashMap;
-use std::str::{FromStr, Split};
+
+use crate::keyspace::ReplicationFactor::*;
 
 pub const REPLICATION: &str = "{ 'class': 'SimpleStrategy', 'replication_factor': 1 }";
 
@@ -76,7 +78,7 @@ impl FromStr for ReplicationFactor {
                 (_, _) => {
                     return Err(anyhow!(
                         "not a valid key-value pair in keyspace replication object"
-                    ))
+                    ));
                 }
             }
         }
@@ -141,8 +143,9 @@ pub(crate) fn table_names_from_session_metadata(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::queries;
+
+    use super::*;
 
     #[test]
     fn test_replication_factory_from_str_simple_default() {

@@ -1,6 +1,7 @@
-use crate::cql::CqlFile;
 use anyhow::Result;
 use scylla::Session;
+
+use crate::cql::CqlFile;
 
 #[allow(dead_code)]
 pub(crate) async fn insert(
@@ -18,11 +19,13 @@ pub(crate) async fn insert(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::keyspace::KeyspaceOpts;
-    use crate::queries::{migrated::table, *};
     use scylla::transport::session::IntoTypedRows;
     use uuid::Uuid;
+
+    use crate::keyspace::KeyspaceOpts;
+    use crate::queries::{migrated::table, *};
+
+    use super::*;
 
     #[tokio::test]
     async fn test_insert() {

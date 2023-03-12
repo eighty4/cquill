@@ -1,7 +1,10 @@
-use super::*;
-use crate::keyspace::ReplicationFactor::*;
-use scylla::transport::session::IntoTypedRows;
 use std::collections::HashMap;
+
+use scylla::transport::session::IntoTypedRows;
+
+use crate::keyspace::ReplicationFactor::*;
+
+use super::*;
 
 pub(crate) async fn create(session: &Session, keyspace_opts: &KeyspaceOpts) -> Result<()> {
     let cql = create_keyspace_cql(keyspace_opts)?;
@@ -41,7 +44,7 @@ pub(crate) async fn select_table_names(
                             return Err(anyhow!(
                             "error reading table name rows from query result for keyspace {}: {}",
                             keyspace_name,
-                            err.to_string()))
+                            err.to_string()));
                         }
                     }
                 }
