@@ -43,12 +43,44 @@ impl CqlFile {
     }
 }
 
+pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
+    match fs::read_dir(cql_dir) {
+        Ok(read_dir) => {
+            let mut result = Vec::new();
+            for dir_entry in read_dir {
+                let path = dir_entry?.path();
+                if path.is_file() && path.file_name().is_some() {
+                    if let Some(extension) = path.extension() {
+                        if extension == "cql" {
+                            result.push(path);
+                        }
+                    }
+                }
+            }
+            if result.is_empty() {
+                return Err(anyhow!(
+                    "no cql files found in directory '{}'",
+                    cql_dir.to_string_lossy()
+                ));
+            }
+            result.sort();
+            Ok(result)
+        }
+        Err(_) => Err(anyhow!(
+            "could not find directory '{}'",
+            cql_dir.to_string_lossy()
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
     use std::io::Write;
 
     use temp_dir::TempDir;
+
+    use crate::test_utils::make_file;
 
     use super::*;
 
@@ -79,6 +111,28 @@ mod tests {
                 assert_eq!(cql_file.filename, String::from("v073-more_tables.cql"));
                 assert_eq!(cql_file.version, 73);
                 assert_eq!(cql_file.hash, "7f5b4bdccd3863f31be5c257ff497704");
+            }
+        }
+    }
+
+    #[test]
+    fn test_files_from_dir() {
+        let temp_dir = TempDir::new().unwrap();
+        ["foo.cql", "foo.sh", "foo.sql"]
+            .iter()
+            .for_each(|f| make_file(temp_dir.path().join(f)));
+        let temp_dir_path = temp_dir.path().canonicalize().unwrap();
+
+        match files_from_dir(&temp_dir_path) {
+            Err(err) => {
+                println!("{err}");
+                panic!();
+            }
+            Ok(cql_files) => {
+                assert_eq!(cql_files.len(), 1);
+                assert!(cql_files
+                    .iter()
+                    .any(|p| { p.file_name().unwrap() == "foo.cql" }));
             }
         }
     }

@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, str};
+use std::{path::PathBuf, str};
 
 use anyhow::{anyhow, Result};
 use scylla::Session;
@@ -53,7 +53,7 @@ impl CassandraOpts {
 /// specified with [MigrateOpts::history_keyspace] and [MigrateOpts::history_table]. A successful
 /// method result contains a vec of the cql script paths executed during this invocation.
 pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<PathBuf>> {
-    let cql_files = cql_files_from_dir(&opts.cql_dir)?;
+    let cql_files = cql::files_from_dir(&opts.cql_dir)?;
     let node_address = opts.cassandra_opts.unwrap_or_default().node_address();
     let session = cql_session(node_address).await?;
 
@@ -93,36 +93,6 @@ async fn prepare_cquill_keyspace(
     Ok(())
 }
 
-fn cql_files_from_dir(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
-    match fs::read_dir(cql_dir) {
-        Ok(read_dir) => {
-            let mut result = Vec::new();
-            for dir_entry in read_dir {
-                let path = dir_entry?.path();
-                if path.is_file() && path.file_name().is_some() {
-                    if let Some(extension) = path.extension() {
-                        if extension == "cql" {
-                            result.push(path);
-                        }
-                    }
-                }
-            }
-            if result.is_empty() {
-                return Err(anyhow!(
-                    "no cql files found in directory '{}'",
-                    cql_dir.to_string_lossy()
-                ));
-            }
-            result.sort();
-            Ok(result)
-        }
-        Err(_) => Err(anyhow!(
-            "could not find directory '{}'",
-            cql_dir.to_string_lossy()
-        )),
-    }
-}
-
 async fn cql_session(node_address: String) -> Result<Session> {
     let connecting = scylla::SessionBuilder::new()
         .known_node(&node_address)
@@ -136,33 +106,7 @@ async fn cql_session(node_address: String) -> Result<Session> {
 
 #[cfg(test)]
 mod tests {
-    use temp_dir::TempDir;
-
-    use crate::test_utils::make_file;
-
     use super::*;
-
-    #[test]
-    fn test_cql_files_from_dir() {
-        let temp_dir = TempDir::new().unwrap();
-        ["foo.cql", "foo.sh", "foo.sql"]
-            .iter()
-            .for_each(|f| make_file(temp_dir.path().join(f)));
-        let temp_dir_path = temp_dir.path().canonicalize().unwrap();
-
-        match cql_files_from_dir(&temp_dir_path) {
-            Err(err) => {
-                println!("{err}");
-                panic!();
-            }
-            Ok(cql_files) => {
-                assert_eq!(cql_files.len(), 1);
-                assert!(cql_files
-                    .iter()
-                    .any(|p| { p.file_name().unwrap() == "foo.cql" }));
-            }
-        }
-    }
 
     #[test]
     fn test_cassandra_opts_provides_node_address() {
