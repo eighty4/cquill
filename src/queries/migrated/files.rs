@@ -1,9 +1,9 @@
 use anyhow::Result;
-use scylla::Session;
+use scylla::{IntoTypedRows, Session};
+use uuid::Uuid;
 
 use crate::cql::CqlFile;
 
-#[allow(dead_code)]
 pub(crate) async fn insert(
     session: &Session,
     keyspace: &String,
@@ -15,6 +15,32 @@ pub(crate) async fn insert(
     let values = (&cql_file.version, &cql_file.filename, &cql_file.hash);
     session.query(cql, values).await?;
     Ok(())
+}
+
+#[allow(dead_code)]
+pub(crate) async fn select_all(
+    session: &Session,
+    keyspace: &String,
+    table: &String,
+) -> Result<Vec<CqlFile>> {
+    let cql = format!("select id, name, hash, ver from {keyspace}.{table}");
+    let query_result = session.query(cql, ()).await?;
+    let mut result = Vec::new();
+    if let Some(rows) = query_result.rows {
+        for row_result in rows.into_typed::<(Uuid, String, String, i16)>() {
+            let row_values = row_result.unwrap();
+            let filename = row_values.1;
+            let hash = row_values.2;
+            let version = row_values.3;
+            result.push(CqlFile {
+                filename,
+                version,
+                hash,
+            })
+        }
+    }
+    result.sort_by(|a, b| a.version.cmp(&b.version));
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -75,5 +101,89 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[tokio::test]
+    async fn test_select_all_when_empty() {
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
+        keyspace::create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
+        let table_name = String::from("table_name");
+        table::create(&session, &keyspace_opts.name, &table_name)
+            .await
+            .expect("create table");
+
+        let migrated_cql_files = select_all(&session, &keyspace_opts.name, &table_name)
+            .await
+            .expect("select all migrated cql files");
+        assert!(migrated_cql_files.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_select_all_returns_ordered() {
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
+        keyspace::create(&session, &keyspace_opts)
+            .await
+            .expect("create keyspace");
+        let table_name = String::from("table_name");
+        table::create(&session, &keyspace_opts.name, &table_name)
+            .await
+            .expect("create table");
+        insert(
+            &session,
+            &keyspace_opts.name,
+            &table_name,
+            &CqlFile {
+                version: 1,
+                hash: "7f5b4bdccd3863f31be5c257ff497704".to_string(),
+                filename: "v001-more_cql.cql".to_string(),
+            },
+        )
+        .await
+        .unwrap();
+        insert(
+            &session,
+            &keyspace_opts.name,
+            &table_name,
+            &CqlFile {
+                version: 2,
+                hash: "8f5b4bdccd3863f31be5c257ff497704".to_string(),
+                filename: "v002-more_cql.cql".to_string(),
+            },
+        )
+        .await
+        .unwrap();
+        insert(
+            &session,
+            &keyspace_opts.name,
+            &table_name,
+            &CqlFile {
+                version: 3,
+                hash: "9f5b4bdccd3863f31be5c257ff497704".to_string(),
+                filename: "v003-more_cql.cql".to_string(),
+            },
+        )
+        .await
+        .unwrap();
+
+        let migrated_cql_files = select_all(&session, &keyspace_opts.name, &table_name)
+            .await
+            .expect("select all migrated cql files");
+        assert_eq!(migrated_cql_files.len(), 3);
+        let first = migrated_cql_files.get(0).unwrap();
+        assert_eq!(first.filename, "v001-more_cql.cql");
+        assert_eq!(first.version, 1);
+        assert_eq!(first.hash, "7f5b4bdccd3863f31be5c257ff497704");
+        let second = migrated_cql_files.get(1).unwrap();
+        assert_eq!(second.filename, "v002-more_cql.cql");
+        assert_eq!(second.version, 2);
+        assert_eq!(second.hash, "8f5b4bdccd3863f31be5c257ff497704");
+        let third = migrated_cql_files.get(2).unwrap();
+        assert_eq!(third.filename, "v003-more_cql.cql");
+        assert_eq!(third.version, 3);
+        assert_eq!(third.hash, "9f5b4bdccd3863f31be5c257ff497704");
     }
 }
