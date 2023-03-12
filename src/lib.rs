@@ -10,6 +10,8 @@ mod cql;
 pub mod keyspace;
 mod migrate;
 mod queries;
+#[cfg(test)]
+pub(crate) mod test_utils;
 
 const NODE_ADDRESS: &str = "127.0.0.1:9042";
 
@@ -136,20 +138,17 @@ async fn cql_session(node_address: String) -> Result<Session> {
 mod tests {
     use temp_dir::TempDir;
 
+    use crate::test_utils::make_file;
+
     use super::*;
 
     #[test]
     fn test_cql_files_from_dir() {
         let temp_dir = TempDir::new().unwrap();
-        ["foo.cql", "foo.sh", "foo.sql"].iter().for_each(|f| {
-            fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .open(temp_dir.path().join(f))
-                .expect("could not write file");
-        });
+        ["foo.cql", "foo.sh", "foo.sql"]
+            .iter()
+            .for_each(|f| make_file(temp_dir.path().join(f)));
         let temp_dir_path = temp_dir.path().canonicalize().unwrap();
-        println!("{}", temp_dir_path.to_string_lossy());
 
         match cql_files_from_dir(&temp_dir_path) {
             Err(err) => {
@@ -184,7 +183,7 @@ mod tests {
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_keyspace_does_not_exist() {
         let session = cql_session(NODE_ADDRESS.to_string()).await.unwrap();
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
+        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
         let table_name = String::from("table_name");
 
         if let Err(err) = prepare_cquill_keyspace(&session, &keyspace_opts, &table_name).await {
@@ -200,7 +199,7 @@ mod tests {
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_table_does_not_exist() {
         let session = cql_session(NODE_ADDRESS.to_string()).await.unwrap();
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
+        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
@@ -219,7 +218,7 @@ mod tests {
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_keyspace_and_table_exist() {
         let session = cql_session(NODE_ADDRESS.to_string()).await.unwrap();
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
+        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
