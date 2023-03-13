@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::Result;
 use scylla::{IntoTypedRows, Session};
 use uuid::Uuid;
@@ -22,6 +24,7 @@ pub(crate) async fn select_all(
     session: &Session,
     keyspace: &String,
     table: &String,
+    cql_dir: &Path,
 ) -> Result<Vec<CqlFile>> {
     let cql = format!("select id, name, hash, ver from {keyspace}.{table}");
     let query_result = session.query(cql, ()).await?;
@@ -31,11 +34,13 @@ pub(crate) async fn select_all(
             let row_values = row_result.unwrap();
             let filename = row_values.1;
             let hash = row_values.2;
+            let path = cql_dir.join(&filename);
             let version = row_values.3;
             result.push(CqlFile {
                 filename,
-                version,
                 hash,
+                path,
+                version,
             })
         }
     }
@@ -45,7 +50,10 @@ pub(crate) async fn select_all(
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use scylla::transport::session::IntoTypedRows;
+    use temp_dir::TempDir;
     use uuid::Uuid;
 
     use crate::keyspace::KeyspaceOpts;
@@ -65,9 +73,10 @@ mod tests {
             .await
             .expect("create table");
         let cql_file = CqlFile {
-            version: 73,
-            hash: "7f5b4bdccd3863f31be5c257ff497704".to_string(),
             filename: "v073-more_tables.cql".to_string(),
+            hash: "7f5b4bdccd3863f31be5c257ff497704".to_string(),
+            path: PathBuf::from("v073-more_tables.cql"),
+            version: 73,
         };
 
         insert(&session, &keyspace_opts.name, &table_name, &cql_file)
@@ -114,10 +123,12 @@ mod tests {
         table::create(&session, &keyspace_opts.name, &table_name)
             .await
             .expect("create table");
+        let temp_dir = TempDir::new().unwrap();
 
-        let migrated_cql_files = select_all(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("select all migrated cql files");
+        let migrated_cql_files =
+            select_all(&session, &keyspace_opts.name, &table_name, temp_dir.path())
+                .await
+                .expect("select all migrated cql files");
         assert!(migrated_cql_files.is_empty());
     }
 
@@ -140,6 +151,7 @@ mod tests {
                 version: 1,
                 hash: "7f5b4bdccd3863f31be5c257ff497704".to_string(),
                 filename: "v001-more_cql.cql".to_string(),
+                path: PathBuf::from("v001-more_cql.cql"),
             },
         )
         .await
@@ -149,9 +161,10 @@ mod tests {
             &keyspace_opts.name,
             &table_name,
             &CqlFile {
-                version: 2,
-                hash: "8f5b4bdccd3863f31be5c257ff497704".to_string(),
                 filename: "v002-more_cql.cql".to_string(),
+                hash: "8f5b4bdccd3863f31be5c257ff497704".to_string(),
+                path: PathBuf::from("v002-more_cql.cql"),
+                version: 2,
             },
         )
         .await
@@ -161,29 +174,35 @@ mod tests {
             &keyspace_opts.name,
             &table_name,
             &CqlFile {
-                version: 3,
-                hash: "9f5b4bdccd3863f31be5c257ff497704".to_string(),
                 filename: "v003-more_cql.cql".to_string(),
+                hash: "9f5b4bdccd3863f31be5c257ff497704".to_string(),
+                path: PathBuf::from("v003-more_cql.cql"),
+                version: 3,
             },
         )
         .await
         .unwrap();
+        let temp_dir = TempDir::new().unwrap();
 
-        let migrated_cql_files = select_all(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("select all migrated cql files");
+        let migrated_cql_files =
+            select_all(&session, &keyspace_opts.name, &table_name, temp_dir.path())
+                .await
+                .expect("select all migrated cql files");
         assert_eq!(migrated_cql_files.len(), 3);
         let first = migrated_cql_files.get(0).unwrap();
         assert_eq!(first.filename, "v001-more_cql.cql");
         assert_eq!(first.version, 1);
+        assert_eq!(first.path, temp_dir.path().join("v001-more_cql.cql"));
         assert_eq!(first.hash, "7f5b4bdccd3863f31be5c257ff497704");
         let second = migrated_cql_files.get(1).unwrap();
         assert_eq!(second.filename, "v002-more_cql.cql");
-        assert_eq!(second.version, 2);
         assert_eq!(second.hash, "8f5b4bdccd3863f31be5c257ff497704");
+        assert_eq!(second.path, temp_dir.path().join("v002-more_cql.cql"));
+        assert_eq!(second.version, 2);
         let third = migrated_cql_files.get(2).unwrap();
         assert_eq!(third.filename, "v003-more_cql.cql");
         assert_eq!(third.version, 3);
+        assert_eq!(third.path, temp_dir.path().join("v003-more_cql.cql"));
         assert_eq!(third.hash, "9f5b4bdccd3863f31be5c257ff497704");
     }
 }

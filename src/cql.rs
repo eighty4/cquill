@@ -14,16 +14,17 @@ lazy_static! {
 pub struct CqlFile {
     pub filename: String,
     pub hash: String,
+    pub path: PathBuf,
     pub version: i16,
 }
 
 impl CqlFile {
-    pub fn from_path(path: &PathBuf) -> Result<CqlFile> {
+    pub fn from_path(path: PathBuf) -> Result<CqlFile> {
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
         if !FILENAME_REGEX.is_match(filename.as_str()) {
             return Err(anyhow!("{filename} is not a valid cql file name"));
         }
-        let hash = match fs::read(path) {
+        let hash = match fs::read(&path) {
             Err(err) => return Err(anyhow!("failed reading file {}: {err}", filename)),
             Ok(file_content) => format!("{:x}", md5::compute(file_content)),
         };
@@ -38,6 +39,7 @@ impl CqlFile {
         Ok(CqlFile {
             filename,
             hash,
+            path,
             version,
         })
     }
@@ -70,7 +72,7 @@ pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
             cql_file_paths.sort();
             let mut cql_files = Vec::with_capacity(cql_file_paths.len());
             for path in cql_file_paths {
-                cql_files.push(CqlFile::from_path(&path)?);
+                cql_files.push(CqlFile::from_path(path)?);
             }
             Ok(cql_files)
         }
@@ -109,7 +111,7 @@ mod tests {
         file.write_all(cql_file_content.as_bytes())
             .expect("write to file");
 
-        match CqlFile::from_path(&cql_file_path) {
+        match CqlFile::from_path(cql_file_path) {
             Err(_) => panic!(),
             Ok(cql_file) => {
                 assert_eq!(cql_file.filename, String::from("v073-more_tables.cql"));

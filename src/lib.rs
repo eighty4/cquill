@@ -68,6 +68,7 @@ pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<CqlFile>> {
         &session,
         cql_files,
         migrate::MigrateArgs {
+            cql_dir: opts.cql_dir,
             history_keyspace: cquill_keyspace.name,
             history_table,
         },
