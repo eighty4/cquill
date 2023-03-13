@@ -7,7 +7,7 @@ pub(crate) async fn cql_session() -> Session {
         .known_node(node_address)
         .build()
         .await
-        .unwrap()
+        .expect("cql session")
 }
 
 fn alphanumeric_str(len: u8) -> String {
