@@ -57,7 +57,7 @@ async fn main() {
 
 async fn migrate(args: MigrateCliArgs) {
     let opts = args.to_opts();
-    let version = std::env::var("CARGO_PKG_VERSION").unwrap_or_default();
+    let version = env!("CARGO_PKG_VERSION");
     let cql_dir = opts.cql_dir.to_string_lossy();
     println!("CQuill {version}\nMigrating CQL files from {cql_dir}");
     match migrate_cql(opts).await {
