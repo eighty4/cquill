@@ -79,40 +79,27 @@ fn read_statements(cql_file: &PathBuf) -> Result<Vec<String>> {
 
 #[cfg(test)]
 mod tests {
-    use temp_dir::TempDir;
-
     use crate::cql::CqlFile;
-    use crate::keyspace::KeyspaceOpts;
     use crate::migrate::{perform, MigrateArgs};
-    use crate::test_utils::{error_panic, make_file};
-    use crate::{cql, queries, test_utils};
+    use crate::{queries, test_utils};
 
     #[tokio::test]
     async fn test_migrate_fresh_state() {
-        let temp_dir = TempDir::new().unwrap();
-        ["v001.cql", "v002.cql", "v003.cql"]
-            .iter()
-            .for_each(|f| make_file(temp_dir.path().join(f)));
-        let temp_dir_path = temp_dir.path().canonicalize().unwrap();
-        let cql_files = cql::files_from_dir(&temp_dir_path).expect("cql files from dir");
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let history_table = String::from("table_name");
-        queries::migrated::table::create(&session, &keyspace_opts.name, &history_table)
-            .await
-            .expect("create table");
+        let harness = test_utils::TestHarness::builder()
+            .cql_file("v001.cql", "")
+            .cql_file("v002.cql", "")
+            .cql_file("v003.cql", "")
+            .build();
+        let session = harness.setup().await.expect("cql session");
 
         let args = MigrateArgs {
-            cql_dir: temp_dir_path,
-            history_keyspace: keyspace_opts.name.clone(),
-            history_table,
+            cql_dir: harness.directory.path().to_path_buf(),
+            history_keyspace: harness.cquill_keyspace.name.clone(),
+            history_table: harness.cquill_table.clone(),
         };
-        let migrate_result = perform(&session, cql_files, args).await;
+        let migrate_result = perform(&session, harness.cql_files, args).await;
         match migrate_result {
-            Err(err) => error_panic(&err),
+            Err(err) => test_utils::error_panic(&err),
             Ok(migrated_files) => {
                 assert_eq!(migrated_files.len(), 3);
             }
@@ -121,38 +108,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_migrate_skip_migrated() {
-        let temp_dir = TempDir::new().unwrap();
-        ["v001.cql", "v002.cql", "v003.cql"]
-            .iter()
-            .for_each(|f| make_file(temp_dir.path().join(f)));
-        let temp_dir_path = temp_dir.path().canonicalize().unwrap();
-        let cql_files = cql::files_from_dir(&temp_dir_path).expect("cql files from dir");
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let history_table = String::from("table_name");
-        queries::migrated::table::create(&session, &keyspace_opts.name, &history_table)
-            .await
-            .expect("create table");
+        let harness = test_utils::TestHarness::builder()
+            .cql_file("v001.cql", "")
+            .cql_file("v002.cql", "")
+            .cql_file("v003.cql", "")
+            .build();
+        let session = harness.setup().await.expect("cql session");
         queries::migrated::files::insert(
             &session,
-            &keyspace_opts.name,
-            &history_table,
-            &CqlFile::from_path(temp_dir_path.join("v001.cql")).unwrap(),
+            &harness.cquill_keyspace.name,
+            &harness.cquill_table.clone(),
+            &CqlFile::from_path(harness.directory.path().join("v001.cql")).unwrap(),
         )
         .await
         .expect("save migrated file");
 
         let args = MigrateArgs {
-            cql_dir: temp_dir_path,
-            history_keyspace: keyspace_opts.name.clone(),
-            history_table,
+            cql_dir: harness.directory.path().to_path_buf(),
+            history_keyspace: harness.cquill_keyspace.name.clone(),
+            history_table: harness.cquill_table.clone(),
         };
-        let migrate_result = perform(&session, cql_files, args).await;
+        let migrate_result = perform(&session, harness.cql_files, args).await;
         match migrate_result {
-            Err(err) => error_panic(&err),
+            Err(err) => test_utils::error_panic(&err),
             Ok(migrated_files) => {
                 assert_eq!(migrated_files.len(), 2);
                 let migrated_file_names: Vec<&str> =
@@ -164,29 +142,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_migrate_errors_when_executed_cql_content_changed() {
-        let temp_dir = TempDir::new().unwrap();
-        ["v001.cql", "v002.cql", "v003.cql"]
-            .iter()
-            .for_each(|f| make_file(temp_dir.path().join(f)));
-        let temp_dir_path = temp_dir.path().canonicalize().unwrap();
-        let cql_files = cql::files_from_dir(&temp_dir_path).expect("cql files from dir");
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let history_table = String::from("table_name");
-        queries::migrated::table::create(&session, &keyspace_opts.name, &history_table)
-            .await
-            .expect("create table");
+        let harness = test_utils::TestHarness::builder()
+            .cql_file("v001.cql", "")
+            .cql_file("v002.cql", "")
+            .cql_file("v003.cql", "")
+            .build();
+        let session = harness.setup().await.expect("cql session");
         queries::migrated::files::insert(
             &session,
-            &keyspace_opts.name,
-            &history_table,
+            &harness.cquill_keyspace.name,
+            &harness.cquill_table.clone(),
             &CqlFile {
                 version: 1,
                 hash: "abc".to_string(),
-                path: temp_dir_path.join("v001.cql"),
+                path: harness.directory.path().join("v001.cql"),
                 filename: "v001.cql".to_string(),
             },
         )
@@ -194,18 +163,18 @@ mod tests {
         .expect("save migrated file");
 
         let args = MigrateArgs {
-            cql_dir: temp_dir_path,
-            history_keyspace: keyspace_opts.name.clone(),
-            history_table: history_table.clone(),
+            cql_dir: harness.directory.path().to_path_buf(),
+            history_keyspace: harness.cquill_keyspace.name.clone(),
+            history_table: harness.cquill_table.clone(),
         };
-        let migrate_result = perform(&session, cql_files, args).await;
+        let migrate_result = perform(&session, harness.cql_files, args).await;
         match migrate_result {
             Ok(_) => panic!(),
             Err(err) => {
                 assert_eq!(
                     err.to_string(),
                     format!("previously migrated file 'v001.cql' has been modified (its current contents do not match the migrated cql file's content hash recorded in {}.{})",
-                            keyspace_opts.name, history_table)
+                            harness.cquill_keyspace.name, harness.cquill_table)
                 );
             }
         }

@@ -271,42 +271,34 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names() {
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let table_name = String::from("migrated_cql");
-        queries::migrated::table::create(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("create table");
+        let harness = test_utils::TestHarness::builder().build();
+        let session = harness.setup().await.expect("cql session");
 
-        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
-            Ok(table_names) => {
-                assert_eq!(table_names.len(), 1);
-                assert!(table_names.contains(&table_name))
-            }
-            Err(_) => panic!(),
-        }
+        assert_table_names(
+            &harness.cquill_table,
+            table_names_from_session_metadata(&session, &harness.cquill_keyspace.name),
+        );
     }
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_normalizes_uppercase_keyspace_name() {
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let table_name = String::from("migrated_cql");
-        queries::migrated::table::create(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("create table");
+        let harness = test_utils::TestHarness::builder().build();
+        let session = harness.setup().await.expect("cql session");
 
-        match table_names_from_session_metadata(&session, &keyspace_opts.name.to_ascii_uppercase())
-        {
+        assert_table_names(
+            &harness.cquill_table,
+            table_names_from_session_metadata(
+                &session,
+                &harness.cquill_keyspace.name.to_ascii_uppercase(),
+            ),
+        );
+    }
+
+    fn assert_table_names(expected_table_name: &String, result: Result<Vec<String>>) {
+        match result {
             Ok(table_names) => {
                 assert_eq!(table_names.len(), 1);
-                assert!(table_names.contains(&table_name))
+                assert!(table_names.contains(expected_table_name))
             }
             Err(_) => panic!(),
         }
@@ -338,25 +330,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_updated_after_drop_table() {
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let table_name = String::from("migrated_cql");
-        queries::migrated::table::create(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("create table");
+        let harness = test_utils::TestHarness::builder().build();
+        let session = harness.setup().await.expect("cql session");
 
         session
             .query(
-                format!("drop table {}.{table_name}", keyspace_opts.name),
+                format!(
+                    "drop table {}.{}",
+                    harness.cquill_keyspace.name, harness.cquill_table
+                ),
                 (),
             )
             .await
             .expect("drop table");
 
-        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+        match table_names_from_session_metadata(&session, &harness.cquill_keyspace.name) {
             Ok(table_names) => assert!(table_names.is_empty()),
             Err(_) => panic!(),
         }
@@ -364,22 +352,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_updated_after_drop_keyspace() {
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let table_name = String::from("migrated_cql");
-        queries::migrated::table::create(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("create table");
+        let harness = test_utils::TestHarness::builder().build();
+        let session = harness.setup().await.expect("cql session");
 
         session
-            .query(format!("drop keyspace {}", keyspace_opts.name), ())
+            .query(
+                format!("drop keyspace {}", harness.cquill_keyspace.name),
+                (),
+            )
             .await
             .expect("drop keyspace");
 
-        if table_names_from_session_metadata(&session, &keyspace_opts.name).is_ok() {
+        if table_names_from_session_metadata(&session, &harness.cquill_keyspace.name).is_ok() {
             panic!()
         }
     }

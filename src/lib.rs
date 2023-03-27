@@ -163,22 +163,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_keyspace_and_table_exist() {
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let table_name = String::from("table_name");
-        migrated::table::create(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("create table");
+        let harness = test_utils::TestHarness::builder().build();
+        let session = harness.setup().await.expect("cql session");
 
-        if let Err(err) = prepare_cquill_keyspace(&session, &keyspace_opts, &table_name).await {
+        if let Err(err) =
+            prepare_cquill_keyspace(&session, &harness.cquill_keyspace, &harness.cquill_table).await
+        {
             println!("{err}");
             panic!();
         }
-        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
-            Ok(table_names) => assert!(table_names.contains(&table_name)),
+        match table_names_from_session_metadata(&session, &harness.cquill_keyspace.name) {
+            Ok(table_names) => assert!(table_names.contains(&harness.cquill_table)),
             Err(_) => panic!(),
         }
     }
