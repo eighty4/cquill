@@ -58,6 +58,7 @@ mod tests {
 
     use crate::keyspace::KeyspaceOpts;
     use crate::queries::{migrated::table, *};
+    use crate::test_utils;
 
     use super::*;
 

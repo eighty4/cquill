@@ -24,6 +24,8 @@ pub(crate) async fn drop(
 
 #[cfg(test)]
 mod tests {
+    use crate::test_utils;
+
     use super::*;
 
     #[tokio::test]

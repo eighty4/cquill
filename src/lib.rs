@@ -128,8 +128,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_keyspace_does_not_exist() {
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         let table_name = String::from("table_name");
 
         if let Err(err) = prepare_cquill_keyspace(&session, &keyspace_opts, &table_name).await {
@@ -144,8 +144,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_table_does_not_exist() {
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
@@ -163,8 +163,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_keyspace_and_table_exist() {
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");

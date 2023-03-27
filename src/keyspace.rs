@@ -143,7 +143,7 @@ pub(crate) fn table_names_from_session_metadata(
 
 #[cfg(test)]
 mod tests {
-    use crate::queries;
+    use crate::{queries, test_utils};
 
     use super::*;
 
@@ -271,8 +271,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names() {
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
@@ -292,8 +292,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_normalizes_uppercase_keyspace_name() {
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
@@ -314,8 +314,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_errors_when_keyspace_does_not_exist() {
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_name = queries::test_utils::keyspace_name();
+        let session = test_utils::cql_session().await;
+        let keyspace_name = test_utils::keyspace_name();
 
         if table_names_from_session_metadata(&session, &keyspace_name).is_ok() {
             panic!()
@@ -324,8 +324,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_empty_vec_when_no_tables() {
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
@@ -338,8 +338,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_updated_after_drop_table() {
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
@@ -364,8 +364,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_updated_after_drop_keyspace() {
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");

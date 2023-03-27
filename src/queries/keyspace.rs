@@ -112,6 +112,8 @@ fn create_network_topology_strategy_keyspace_replication_map_str(
 
 #[cfg(test)]
 mod tests {
+    use crate::test_utils;
+
     use super::*;
 
     #[tokio::test]

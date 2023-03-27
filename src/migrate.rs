@@ -85,7 +85,7 @@ mod tests {
     use crate::keyspace::KeyspaceOpts;
     use crate::migrate::{perform, MigrateArgs};
     use crate::test_utils::{error_panic, make_file};
-    use crate::{cql, queries};
+    use crate::{cql, queries, test_utils};
 
     #[tokio::test]
     async fn test_migrate_fresh_state() {
@@ -95,8 +95,8 @@ mod tests {
             .for_each(|f| make_file(temp_dir.path().join(f)));
         let temp_dir_path = temp_dir.path().canonicalize().unwrap();
         let cql_files = cql::files_from_dir(&temp_dir_path).expect("cql files from dir");
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
@@ -127,8 +127,8 @@ mod tests {
             .for_each(|f| make_file(temp_dir.path().join(f)));
         let temp_dir_path = temp_dir.path().canonicalize().unwrap();
         let cql_files = cql::files_from_dir(&temp_dir_path).expect("cql files from dir");
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
@@ -170,8 +170,8 @@ mod tests {
             .for_each(|f| make_file(temp_dir.path().join(f)));
         let temp_dir_path = temp_dir.path().canonicalize().unwrap();
         let cql_files = cql::files_from_dir(&temp_dir_path).expect("cql files from dir");
-        let session = queries::test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(queries::test_utils::keyspace_name(), 1);
+        let session = test_utils::cql_session().await;
+        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
         queries::keyspace::create(&session, &keyspace_opts)
             .await
             .expect("create keyspace");
