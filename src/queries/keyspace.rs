@@ -121,6 +121,7 @@ mod tests {
         let session = test_utils::cql_session().await;
         let keyspace_name = test_utils::keyspace_name();
         let keyspace_opts = KeyspaceOpts::simple(keyspace_name.clone(), 1);
+
         if create(&session, &keyspace_opts).await.is_err() {
             panic!();
         }
@@ -133,28 +134,22 @@ mod tests {
     #[tokio::test]
     async fn test_create_keyspace_errors_keyspace_already_exists() {
         let session = test_utils::cql_session().await;
-        let keyspace_name = test_utils::keyspace_name();
-        let keyspace_opts = KeyspaceOpts::simple(keyspace_name.clone(), 1);
-        if create(&session, &keyspace_opts).await.is_err() {
-            panic!();
-        }
+        let keyspace_opts = test_utils::create_keyspace(&session).await;
+
         if create(&session, &keyspace_opts).await.is_ok() {
             panic!();
         }
         session
-            .query(format!("drop keyspace {keyspace_name}"), ())
+            .query(format!("drop keyspace {}", keyspace_opts.name), ())
             .await
-            .unwrap_or_else(|_| panic!("failed dropping keyspace {keyspace_name}"));
+            .unwrap_or_else(|_| panic!("failed dropping keyspace {}", keyspace_opts.name));
     }
 
     #[tokio::test]
     async fn test_drop_keyspace() {
         let session = test_utils::cql_session().await;
-        let keyspace_name = test_utils::keyspace_name();
-        let keyspace_opts = KeyspaceOpts::simple(keyspace_name.clone(), 1);
-        if create(&session, &keyspace_opts).await.is_err() {
-            panic!();
-        }
+        let keyspace_opts = test_utils::create_keyspace(&session).await;
+
         if drop(&session, &keyspace_opts.name).await.is_err() {
             panic!();
         }
@@ -166,10 +161,7 @@ mod tests {
     #[tokio::test]
     async fn test_select_keyspace_table_names() {
         let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
+        let keyspace_opts = test_utils::create_keyspace(&session).await;
         let table_1 = String::from("project_1_cql");
         migrated::table::create(&session, &keyspace_opts.name, &table_1)
             .await
@@ -178,6 +170,7 @@ mod tests {
         migrated::table::create(&session, &keyspace_opts.name, &table_2)
             .await
             .unwrap();
+
         match select_table_names(&session, &keyspace_opts.name).await {
             Ok(table_names) => {
                 assert_eq!(table_names.len(), 2);

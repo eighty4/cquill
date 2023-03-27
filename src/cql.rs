@@ -11,6 +11,7 @@ lazy_static! {
             .expect("cql filename regex");
 }
 
+#[cfg_attr(test, derive(Clone))]
 pub struct CqlFile {
     pub filename: String,
     pub hash: String,
@@ -81,9 +82,6 @@ pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::io::Write;
-
     use temp_dir::TempDir;
 
     use crate::test_utils::make_file;
@@ -102,14 +100,10 @@ mod tests {
     fn test_cql_file() {
         let temp_dir = TempDir::new().unwrap();
         let cql_file_path = temp_dir.path().join("v073-more_tables.cql");
-        let mut file = fs::OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(&cql_file_path)
-            .expect("could not write file");
-        let cql_file_content = "create table big_business_data (id timeuuid primary key)";
-        file.write_all(cql_file_content.as_bytes())
-            .expect("write to file");
+        make_file(
+            cql_file_path.clone(),
+            "create table big_business_data (id timeuuid primary key)",
+        );
 
         match CqlFile::from_path(cql_file_path) {
             Err(_) => panic!(),
@@ -126,7 +120,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         ["v001.cql", "foo.sh", "foo.sql"]
             .iter()
-            .for_each(|f| make_file(temp_dir.path().join(f)));
+            .for_each(|f| make_file(temp_dir.path().join(f), ""));
         let temp_dir_path = temp_dir.path().canonicalize().unwrap();
 
         match files_from_dir(&temp_dir_path) {
@@ -146,7 +140,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         ["foo.cql", "foo.sh", "foo.sql"]
             .iter()
-            .for_each(|f| make_file(temp_dir.path().join(f)));
+            .for_each(|f| make_file(temp_dir.path().join(f), ""));
         let temp_dir_path = temp_dir.path().canonicalize().unwrap();
 
         match files_from_dir(&temp_dir_path) {

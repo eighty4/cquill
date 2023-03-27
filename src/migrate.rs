@@ -89,21 +89,23 @@ mod tests {
             .cql_file("v001.cql", "")
             .cql_file("v002.cql", "")
             .cql_file("v003.cql", "")
-            .build();
-        let session = harness.setup().await.expect("cql session");
+            .initialize()
+            .await;
 
         let args = MigrateArgs {
-            cql_dir: harness.directory.path().to_path_buf(),
-            history_keyspace: harness.cquill_keyspace.name.clone(),
+            cql_dir: harness.cql_dir.clone(),
+            history_keyspace: harness.cquill_keyspace.clone(),
             history_table: harness.cquill_table.clone(),
         };
-        let migrate_result = perform(&session, harness.cql_files, args).await;
+        let migrate_result = perform(&harness.session, harness.cql_files.to_vec(), args).await;
         match migrate_result {
             Err(err) => test_utils::error_panic(&err),
             Ok(migrated_files) => {
                 assert_eq!(migrated_files.len(), 3);
             }
         }
+
+        harness.drop_keyspace().await;
     }
 
     #[tokio::test]
@@ -112,23 +114,23 @@ mod tests {
             .cql_file("v001.cql", "")
             .cql_file("v002.cql", "")
             .cql_file("v003.cql", "")
-            .build();
-        let session = harness.setup().await.expect("cql session");
+            .initialize()
+            .await;
         queries::migrated::files::insert(
-            &session,
-            &harness.cquill_keyspace.name,
+            &harness.session,
+            &harness.cquill_keyspace,
             &harness.cquill_table.clone(),
-            &CqlFile::from_path(harness.directory.path().join("v001.cql")).unwrap(),
+            &CqlFile::from_path(harness.cql_file_path("v001.cql")).unwrap(),
         )
         .await
         .expect("save migrated file");
 
         let args = MigrateArgs {
-            cql_dir: harness.directory.path().to_path_buf(),
-            history_keyspace: harness.cquill_keyspace.name.clone(),
+            cql_dir: harness.cql_dir.clone(),
+            history_keyspace: harness.cquill_keyspace.clone(),
             history_table: harness.cquill_table.clone(),
         };
-        let migrate_result = perform(&session, harness.cql_files, args).await;
+        let migrate_result = perform(&harness.session, harness.cql_files.to_vec(), args).await;
         match migrate_result {
             Err(err) => test_utils::error_panic(&err),
             Ok(migrated_files) => {
@@ -138,6 +140,8 @@ mod tests {
                 assert!(!migrated_file_names.contains(&"v001.cql"));
             }
         }
+
+        harness.drop_keyspace().await;
     }
 
     #[tokio::test]
@@ -146,16 +150,16 @@ mod tests {
             .cql_file("v001.cql", "")
             .cql_file("v002.cql", "")
             .cql_file("v003.cql", "")
-            .build();
-        let session = harness.setup().await.expect("cql session");
+            .initialize()
+            .await;
         queries::migrated::files::insert(
-            &session,
-            &harness.cquill_keyspace.name,
+            &harness.session,
+            &harness.cquill_keyspace,
             &harness.cquill_table.clone(),
             &CqlFile {
                 version: 1,
                 hash: "abc".to_string(),
-                path: harness.directory.path().join("v001.cql"),
+                path: harness.cql_file_path("v001.cql"),
                 filename: "v001.cql".to_string(),
             },
         )
@@ -163,20 +167,22 @@ mod tests {
         .expect("save migrated file");
 
         let args = MigrateArgs {
-            cql_dir: harness.directory.path().to_path_buf(),
-            history_keyspace: harness.cquill_keyspace.name.clone(),
+            cql_dir: harness.cql_dir.clone(),
+            history_keyspace: harness.cquill_keyspace.clone(),
             history_table: harness.cquill_table.clone(),
         };
-        let migrate_result = perform(&session, harness.cql_files, args).await;
+        let migrate_result = perform(&harness.session, harness.cql_files.to_vec(), args).await;
         match migrate_result {
             Ok(_) => panic!(),
             Err(err) => {
                 assert_eq!(
                     err.to_string(),
                     format!("previously migrated file 'v001.cql' has been modified (its current contents do not match the migrated cql file's content hash recorded in {}.{})",
-                            harness.cquill_keyspace.name, harness.cquill_table)
+                            harness.cquill_keyspace, harness.cquill_table)
                 );
             }
         }
+
+        harness.drop_keyspace().await;
     }
 }

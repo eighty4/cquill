@@ -143,7 +143,7 @@ pub(crate) fn table_names_from_session_metadata(
 
 #[cfg(test)]
 mod tests {
-    use crate::{queries, test_utils};
+    use crate::test_utils;
 
     use super::*;
 
@@ -271,27 +271,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_table_names() {
-        let harness = test_utils::TestHarness::builder().build();
-        let session = harness.setup().await.expect("cql session");
+        let harness = test_utils::TestHarness::builder().initialize().await;
 
         assert_table_names(
             &harness.cquill_table,
-            table_names_from_session_metadata(&session, &harness.cquill_keyspace.name),
+            table_names_from_session_metadata(&harness.session, &harness.cquill_keyspace),
         );
+
+        harness.drop_keyspace().await;
     }
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_normalizes_uppercase_keyspace_name() {
-        let harness = test_utils::TestHarness::builder().build();
-        let session = harness.setup().await.expect("cql session");
+        let harness = test_utils::TestHarness::builder().initialize().await;
 
         assert_table_names(
             &harness.cquill_table,
             table_names_from_session_metadata(
-                &session,
-                &harness.cquill_keyspace.name.to_ascii_uppercase(),
+                &harness.session,
+                &harness.cquill_keyspace.to_ascii_uppercase(),
             ),
         );
+
+        harness.drop_keyspace().await;
     }
 
     fn assert_table_names(expected_table_name: &String, result: Result<Vec<String>>) {
@@ -317,53 +319,40 @@ mod tests {
     #[tokio::test]
     async fn test_table_names_from_session_metadata_empty_vec_when_no_tables() {
         let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
+        let keyspace_opts = test_utils::create_keyspace(&session).await;
 
         match table_names_from_session_metadata(&session, &keyspace_opts.name) {
             Ok(table_names) => assert!(table_names.is_empty()),
             Err(_) => panic!(),
         }
+
+        test_utils::drop_keyspace(&session, &keyspace_opts.name).await;
     }
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_updated_after_drop_table() {
-        let harness = test_utils::TestHarness::builder().build();
-        let session = harness.setup().await.expect("cql session");
+        let harness = test_utils::TestHarness::builder().initialize().await;
+        test_utils::drop_table(
+            &harness.session,
+            &harness.cquill_keyspace,
+            &harness.cquill_table,
+        )
+        .await;
 
-        session
-            .query(
-                format!(
-                    "drop table {}.{}",
-                    harness.cquill_keyspace.name, harness.cquill_table
-                ),
-                (),
-            )
-            .await
-            .expect("drop table");
-
-        match table_names_from_session_metadata(&session, &harness.cquill_keyspace.name) {
+        match table_names_from_session_metadata(&harness.session, &harness.cquill_keyspace) {
             Ok(table_names) => assert!(table_names.is_empty()),
             Err(_) => panic!(),
         }
+
+        harness.drop_keyspace().await;
     }
 
     #[tokio::test]
     async fn test_table_names_from_session_metadata_updated_after_drop_keyspace() {
-        let harness = test_utils::TestHarness::builder().build();
-        let session = harness.setup().await.expect("cql session");
+        let harness = test_utils::TestHarness::builder().initialize().await;
+        test_utils::drop_keyspace(&harness.session, &harness.cquill_keyspace).await;
 
-        session
-            .query(
-                format!("drop keyspace {}", harness.cquill_keyspace.name),
-                (),
-            )
-            .await
-            .expect("drop keyspace");
-
-        if table_names_from_session_metadata(&session, &harness.cquill_keyspace.name).is_ok() {
+        if table_names_from_session_metadata(&harness.session, &harness.cquill_keyspace).is_ok() {
             panic!()
         }
     }

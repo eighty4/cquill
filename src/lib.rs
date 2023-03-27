@@ -140,41 +140,43 @@ mod tests {
             Ok(table_names) => assert!(table_names.contains(&table_name)),
             Err(_) => panic!(),
         }
+
+        test_utils::drop_keyspace(&session, &keyspace_opts.name).await;
     }
 
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_table_does_not_exist() {
         let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        queries::keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
+        let keyspace_opts = test_utils::create_keyspace(&session).await;
         let table_name = String::from("table_name");
 
-        if let Err(err) = prepare_cquill_keyspace(&session, &keyspace_opts, &table_name).await {
-            println!("{err}");
-            panic!();
-        }
+        prepare_cquill_keyspace(&session, &keyspace_opts, &table_name)
+            .await
+            .expect("prepare keyspace");
         match table_names_from_session_metadata(&session, &keyspace_opts.name) {
             Ok(table_names) => assert!(table_names.contains(&table_name)),
             Err(_) => panic!(),
         }
+
+        test_utils::drop_keyspace(&session, &keyspace_opts.name).await;
     }
 
     #[tokio::test]
     async fn test_prepare_cquill_keyspace_when_keyspace_and_table_exist() {
-        let harness = test_utils::TestHarness::builder().build();
-        let session = harness.setup().await.expect("cql session");
+        let harness = test_utils::TestHarness::builder().initialize().await;
 
-        if let Err(err) =
-            prepare_cquill_keyspace(&session, &harness.cquill_keyspace, &harness.cquill_table).await
-        {
-            println!("{err}");
-            panic!();
-        }
-        match table_names_from_session_metadata(&session, &harness.cquill_keyspace.name) {
+        prepare_cquill_keyspace(
+            &harness.session,
+            &KeyspaceOpts::simple(harness.cquill_keyspace.clone(), 1),
+            &harness.cquill_table,
+        )
+        .await
+        .expect("prepare keyspace");
+        match table_names_from_session_metadata(&harness.session, &harness.cquill_keyspace) {
             Ok(table_names) => assert!(table_names.contains(&harness.cquill_table)),
             Err(_) => panic!(),
         }
+
+        harness.drop_keyspace().await;
     }
 }

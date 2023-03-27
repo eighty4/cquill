@@ -52,27 +52,15 @@ pub(crate) async fn select_all(
 mod tests {
     use std::path::PathBuf;
 
-    use scylla::transport::session::IntoTypedRows;
-    use temp_dir::TempDir;
     use uuid::Uuid;
 
-    use crate::keyspace::KeyspaceOpts;
-    use crate::queries::{migrated::table, *};
     use crate::test_utils;
 
     use super::*;
 
     #[tokio::test]
     async fn test_insert() {
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let table_name = String::from("table_name");
-        table::create(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("create table");
+        let harness = test_utils::TestHarness::builder().initialize().await;
         let cql_file = CqlFile {
             filename: "v073-more_tables.cql".to_string(),
             hash: "7f5b4bdccd3863f31be5c257ff497704".to_string(),
@@ -80,14 +68,19 @@ mod tests {
             version: 73,
         };
 
-        insert(&session, &keyspace_opts.name, &table_name, &cql_file)
-            .await
-            .unwrap();
+        insert(
+            &harness.session,
+            &harness.cquill_keyspace,
+            &harness.cquill_table,
+            &cql_file,
+        )
+        .await
+        .unwrap();
         let select_cql = format!(
-            "select id, ver, name, hash from {}.{table_name}",
-            keyspace_opts.name
+            "select id, ver, name, hash from {}.{}",
+            harness.cquill_keyspace, harness.cquill_table
         );
-        match session.query(select_cql, ()).await {
+        match harness.session.query(select_cql, ()).await {
             Err(err) => {
                 println!("{err}");
                 panic!();
@@ -111,99 +104,71 @@ mod tests {
                 }
             }
         }
+
+        harness.drop_keyspace().await;
     }
 
     #[tokio::test]
     async fn test_select_all_when_empty() {
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        keyspace::create(&session, &keyspace_opts)
-            .await
-            .expect("create keyspace");
-        let table_name = String::from("table_name");
-        table::create(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("create table");
-        let temp_dir = TempDir::new().unwrap();
+        let harness = test_utils::TestHarness::builder().initialize().await;
 
-        let migrated_cql_files =
-            select_all(&session, &keyspace_opts.name, &table_name, temp_dir.path())
-                .await
-                .expect("select all migrated cql files");
+        let migrated_cql_files = select_all(
+            &harness.session,
+            &harness.cquill_keyspace,
+            &harness.cquill_table,
+            harness.cql_dir.as_path(),
+        )
+        .await
+        .expect("select all migrated cql files");
         assert!(migrated_cql_files.is_empty());
+
+        harness.drop_keyspace().await;
     }
 
     #[tokio::test]
     async fn test_select_all_returns_ordered() {
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = KeyspaceOpts::simple(test_utils::keyspace_name(), 1);
-        keyspace::create(&session, &keyspace_opts)
+        let harness = test_utils::TestHarness::builder()
+            .cql_file("v001-more_cql.cql", "abc")
+            .cql_file("v002-more_cql.cql", "def")
+            .cql_file("v003-more_cql.cql", "ghi")
+            .initialize()
+            .await;
+        for cql_file in harness.cql_files.iter() {
+            insert(
+                &harness.session,
+                &harness.cquill_keyspace,
+                &harness.cquill_table,
+                cql_file,
+            )
             .await
-            .expect("create keyspace");
-        let table_name = String::from("table_name");
-        table::create(&session, &keyspace_opts.name, &table_name)
-            .await
-            .expect("create table");
-        insert(
-            &session,
-            &keyspace_opts.name,
-            &table_name,
-            &CqlFile {
-                version: 1,
-                hash: "7f5b4bdccd3863f31be5c257ff497704".to_string(),
-                filename: "v001-more_cql.cql".to_string(),
-                path: PathBuf::from("v001-more_cql.cql"),
-            },
-        )
-        .await
-        .unwrap();
-        insert(
-            &session,
-            &keyspace_opts.name,
-            &table_name,
-            &CqlFile {
-                filename: "v002-more_cql.cql".to_string(),
-                hash: "8f5b4bdccd3863f31be5c257ff497704".to_string(),
-                path: PathBuf::from("v002-more_cql.cql"),
-                version: 2,
-            },
-        )
-        .await
-        .unwrap();
-        insert(
-            &session,
-            &keyspace_opts.name,
-            &table_name,
-            &CqlFile {
-                filename: "v003-more_cql.cql".to_string(),
-                hash: "9f5b4bdccd3863f31be5c257ff497704".to_string(),
-                path: PathBuf::from("v003-more_cql.cql"),
-                version: 3,
-            },
-        )
-        .await
-        .unwrap();
-        let temp_dir = TempDir::new().unwrap();
+            .expect("save migrated cql file history");
+        }
 
-        let migrated_cql_files =
-            select_all(&session, &keyspace_opts.name, &table_name, temp_dir.path())
-                .await
-                .expect("select all migrated cql files");
+        let migrated_cql_files = select_all(
+            &harness.session,
+            &harness.cquill_keyspace,
+            &harness.cquill_table,
+            harness.cql_dir.as_path(),
+        )
+        .await
+        .expect("select all migrated cql files");
         assert_eq!(migrated_cql_files.len(), 3);
         let first = migrated_cql_files.get(0).unwrap();
         assert_eq!(first.filename, "v001-more_cql.cql");
         assert_eq!(first.version, 1);
-        assert_eq!(first.path, temp_dir.path().join("v001-more_cql.cql"));
-        assert_eq!(first.hash, "7f5b4bdccd3863f31be5c257ff497704");
+        assert_eq!(first.hash, "900150983cd24fb0d6963f7d28e17f72");
+        assert_eq!(first.path, harness.cql_file_path("v001-more_cql.cql"));
         let second = migrated_cql_files.get(1).unwrap();
         assert_eq!(second.filename, "v002-more_cql.cql");
-        assert_eq!(second.hash, "8f5b4bdccd3863f31be5c257ff497704");
-        assert_eq!(second.path, temp_dir.path().join("v002-more_cql.cql"));
         assert_eq!(second.version, 2);
+        assert_eq!(second.hash, "4ed9407630eb1000c0f6b63842defa7d");
+        assert_eq!(second.path, harness.cql_file_path("v002-more_cql.cql"));
         let third = migrated_cql_files.get(2).unwrap();
         assert_eq!(third.filename, "v003-more_cql.cql");
         assert_eq!(third.version, 3);
-        assert_eq!(third.path, temp_dir.path().join("v003-more_cql.cql"));
-        assert_eq!(third.hash, "9f5b4bdccd3863f31be5c257ff497704");
+        assert_eq!(third.hash, "826bbc5d0522f5f20a1da4b60fa8c871");
+        assert_eq!(third.path, harness.cql_file_path("v003-more_cql.cql"));
+
+        harness.drop_keyspace().await;
     }
 }
