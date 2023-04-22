@@ -8,22 +8,15 @@ on:
 
 jobs:
 
-  verify:
+  verified:
     runs-on: ubuntu-latest
     needs:
-      - lint
+      - build
       - fmt
+      - lint
       - test
     steps:
-      - run: exit 0
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - run: cargo clippy -- -D warnings
+      - run: echo "¡Verdes como tomatillos!"
 
   fmt:
     runs-on: ubuntu-latest
@@ -34,6 +27,32 @@ jobs:
       - run: |
           cargo fmt -v
           git diff --exit-code
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - run: cargo clippy -- -D warnings
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # https://doc.rust-lang.org/nightly/rustc/platform-support.html
+          - target: aarch64-unknown-linux-gnu
+          - target: i686-unknown-linux-gnu
+          - target: x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
+      - uses: swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cross
+      - run: cross build --release --all-features
 
   test:
     runs-on: ubuntu-latest
