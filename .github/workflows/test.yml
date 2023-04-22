@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [ main ]
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - lint
+      - fmt
+    steps:
+      - run: exit 0
+
   test:
     runs-on: ubuntu-latest
     services:
@@ -22,8 +31,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --release --all-features
       - run: cargo test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
       - run: cargo clippy -- -D warnings
+
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
       - run: cargo fmt -v
       - run: git diff --exit-code
