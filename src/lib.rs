@@ -35,10 +35,7 @@ pub struct CassandraOpts {
 impl CassandraOpts {
     pub fn node_address(&self) -> String {
         let node_address = match &self.cassandra_host {
-            None => match std::env::var("CASSANDRA_NODE") {
-                Ok(host) => host,
-                Err(_) => NODE_ADDRESS.to_string(),
-            },
+            None => std::env::var("CASSANDRA_NODE").unwrap_or(NODE_ADDRESS.to_string()),
             Some(cassandra_host) => cassandra_host.clone(),
         };
         if node_address.contains(':') {
@@ -121,7 +118,10 @@ mod tests {
         let with_port = CassandraOpts {
             cassandra_host: Some("localhost:9043".to_string()),
         };
-        assert_eq!(without_host.node_address(), "127.0.0.1:9042");
+        assert_eq!(
+            without_host.node_address(),
+            std::env::var("CASSANDRA_NODE").unwrap_or(NODE_ADDRESS.to_string())
+        );
         assert_eq!(with_host.node_address(), "localhost:9042");
         assert_eq!(with_port.node_address(), "localhost:9043");
     }

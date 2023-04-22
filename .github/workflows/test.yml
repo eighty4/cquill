@@ -1,19 +1,39 @@
-name: cquill CI
+name: CI
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
 jobs:
+
   verify:
     runs-on: ubuntu-latest
     needs:
-      - test
       - lint
       - fmt
+      - test
     steps:
       - run: exit 0
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - run: cargo clippy -- -D warnings
+
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - run: |
+          cargo fmt -v
+          git diff --exit-code
 
   test:
     runs-on: ubuntu-latest
@@ -28,22 +48,20 @@ jobs:
           --health-interval 2s
           --health-timeout 5s
           --health-retries 30
+    strategy:
+      matrix:
+        include:
+          # https://doc.rust-lang.org/nightly/rustc/platform-support.html
+          - target: aarch64-unknown-linux-gnu
+          - target: i686-unknown-linux-gnu
+          - target: x86_64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo clippy -- -D warnings
-
-  fmt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo fmt -v
-      - run: git diff --exit-code
+        with:
+          target: ${{ matrix.target }}
+      - uses: swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cross
+      - run: cross test --target ${{ matrix.target }}
+        env:
+          CROSS_CONTAINER_OPTS: --network host

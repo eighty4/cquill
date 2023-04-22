@@ -10,7 +10,7 @@ use temp_dir::TempDir;
 
 use crate::cql::CqlFile;
 use crate::keyspace::KeyspaceOpts;
-use crate::{cql, queries, TABLE};
+use crate::{cql, queries, CassandraOpts, TABLE};
 
 pub(crate) fn make_file(path: PathBuf, content: &str) {
     let mut f = fs::OpenOptions::new()
@@ -28,7 +28,8 @@ pub(crate) fn error_panic(err: &dyn Display) -> ! {
 }
 
 pub(crate) async fn cql_session() -> Session {
-    let node_address = "127.0.0.1:9042";
+    let node_address = CassandraOpts::default().node_address();
+    print!("{node_address}");
     scylla::SessionBuilder::new()
         .known_node(node_address)
         .build()
