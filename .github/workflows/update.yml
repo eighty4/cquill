@@ -1,0 +1,29 @@
+name: Cargo Update
+
+on:
+  workflow_dispatch:
+#  schedule:
+#    - cron: '22 4 * * *'
+
+jobs:
+
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - run: cargo update
+      - run: git diff --exit-code > /dev/null
+      - if: failure()
+        env:
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
+        run: |
+          git remote -v
+          git config --global user.name "Adam McKee"
+          git config --global user.email "adam.be.g84d@gmail.com"
+          BRANCH_NAME=cargo-updates-$(date +%y%m%d%H%M%S)
+          git checkout -b $BRANCH_NAME
+          git commit -am "cargo updates"
+          git push origin $BRANCH_NAME
+          gh pr create --base main --title $BRANCH_NAME --body "`cargo update` result"
