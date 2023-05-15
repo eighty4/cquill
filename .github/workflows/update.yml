@@ -23,7 +23,7 @@ jobs:
             git config --global user.email "adam.be.g84d@gmail.com"
             BRANCH_NAME=cargo-update-$(date +%y%m%d%H%M%S)
             git checkout -b $BRANCH_NAME
-            git commit -am "cargo update"
+            git commit -am "update cargo deps"
             git push origin $BRANCH_NAME
             gh pr create --base main --title "cargo update $(date +%y-%m-%d)" --body "\`cargo update\` changes"
             gh pr merge $BRANCH_NAME --auto --rebase
