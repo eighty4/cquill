@@ -1,7 +1,15 @@
 [package]
-name = "cquill-migrate"
+name = "cquill"
 version = "0.0.1"
 edition = "2021"
+license = "MIT"
+description = "Versioned CQL migrations for Cassandra and ScyllaDB"
+keywords = ["cicd", "cql", "migration", "Cassandra", "ScyllaDB"]
+authors = ["Adam McKee Bennett <adam.be.g84d@gmail.com>"]
+homepage = "https://github.com/eighty4/cquill"
+repository = "https://github.com/eighty4/cquill"
+exclude = [".*", "Dockerfile", "docker-compose.yml"]
+build = false
 
 [profile.release]
 lto = "fat"
