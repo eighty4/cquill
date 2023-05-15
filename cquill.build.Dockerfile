@@ -1,3 +1,6 @@
+# builds a cquill image from source
+# use `cquill.install.Dockerfile` to build an image from a crates released cquill version
+
 FROM rust:1.67 as builder
 WORKDIR /cquill
 COPY . .
