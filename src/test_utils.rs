@@ -10,6 +10,7 @@ use temp_dir::TempDir;
 
 use crate::cql::CqlFile;
 use crate::keyspace::KeyspaceOpts;
+use crate::migrate::MigrateArgs;
 use crate::{cql, queries, CassandraOpts, TABLE};
 
 pub(crate) fn make_file(path: PathBuf, content: &str) {
@@ -96,6 +97,14 @@ impl TestHarness {
 
     pub async fn drop_keyspace(&self) {
         drop_keyspace(&self.session, &self.cquill_keyspace).await;
+    }
+
+    pub fn migrate_args(&self) -> MigrateArgs {
+        MigrateArgs {
+            cql_dir: self.cql_dir.clone(),
+            history_keyspace: self.cquill_keyspace.clone(),
+            history_table: self.cquill_table.clone(),
+        }
     }
 }
 

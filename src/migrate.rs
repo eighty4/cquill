@@ -79,9 +79,9 @@ fn read_statements(cql_file: &PathBuf) -> Result<Vec<String>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::cql::CqlFile;
-    use crate::migrate::{perform, MigrateArgs};
-    use crate::{queries, test_utils};
+    use crate::test_utils;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_migrate_fresh_state() {
@@ -92,12 +92,12 @@ mod tests {
             .initialize()
             .await;
 
-        let args = MigrateArgs {
-            cql_dir: harness.cql_dir.clone(),
-            history_keyspace: harness.cquill_keyspace.clone(),
-            history_table: harness.cquill_table.clone(),
-        };
-        let migrate_result = perform(&harness.session, harness.cql_files.to_vec(), args).await;
+        let migrate_result = perform(
+            &harness.session,
+            harness.cql_files.to_vec(),
+            harness.migrate_args(),
+        )
+        .await;
         match migrate_result {
             Err(err) => test_utils::error_panic(&err),
             Ok(migrated_files) => {
@@ -125,12 +125,12 @@ mod tests {
         .await
         .expect("save migrated file");
 
-        let args = MigrateArgs {
-            cql_dir: harness.cql_dir.clone(),
-            history_keyspace: harness.cquill_keyspace.clone(),
-            history_table: harness.cquill_table.clone(),
-        };
-        let migrate_result = perform(&harness.session, harness.cql_files.to_vec(), args).await;
+        let migrate_result = perform(
+            &harness.session,
+            harness.cql_files.to_vec(),
+            harness.migrate_args(),
+        )
+        .await;
         match migrate_result {
             Err(err) => test_utils::error_panic(&err),
             Ok(migrated_files) => {
@@ -166,12 +166,12 @@ mod tests {
         .await
         .expect("save migrated file");
 
-        let args = MigrateArgs {
-            cql_dir: harness.cql_dir.clone(),
-            history_keyspace: harness.cquill_keyspace.clone(),
-            history_table: harness.cquill_table.clone(),
-        };
-        let migrate_result = perform(&harness.session, harness.cql_files.to_vec(), args).await;
+        let migrate_result = perform(
+            &harness.session,
+            harness.cql_files.to_vec(),
+            harness.migrate_args(),
+        )
+        .await;
         match migrate_result {
             Ok(_) => panic!(),
             Err(err) => {
