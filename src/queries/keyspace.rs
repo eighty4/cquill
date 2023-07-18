@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use scylla::transport::session::IntoTypedRows;
-
 use crate::keyspace::ReplicationFactor::*;
 
 use super::*;
@@ -17,41 +15,6 @@ pub(crate) async fn drop(session: &Session, keyspace_name: &String) -> Result<()
     let cql = format!("drop keyspace {keyspace_name}");
     session.query(cql, ()).await?;
     Ok(())
-}
-
-#[allow(dead_code)]
-pub(crate) async fn select_table_names(
-    session: &Session,
-    keyspace_name: &String,
-) -> Result<Vec<String>> {
-    let cql = format!(
-        "select table_name from system_schema.tables where keyspace_name='{keyspace_name}'"
-    );
-    let query_result = session.query(cql, ()).await;
-    match query_result {
-        Err(err) => Err(anyhow!(
-            "error selecting table names from keyspace {}: {}",
-            keyspace_name,
-            err.to_string(),
-        )),
-        Ok(query_result) => {
-            let mut table_names: Vec<String> = Vec::new();
-            if let Some(rows) = query_result.rows {
-                for row_result in rows.into_typed::<(String,)>() {
-                    match row_result {
-                        Ok(row) => table_names.push(row.0),
-                        Err(err) => {
-                            return Err(anyhow!(
-                            "error reading table name rows from query result for keyspace {}: {}",
-                            keyspace_name,
-                            err.to_string()));
-                        }
-                    }
-                }
-            }
-            Ok(table_names)
-        }
-    }
 }
 
 fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String> {
@@ -156,36 +119,6 @@ mod tests {
         if drop(&session, &keyspace_opts.name).await.is_ok() {
             panic!();
         }
-    }
-
-    #[tokio::test]
-    async fn test_select_keyspace_table_names() {
-        let session = test_utils::cql_session().await;
-        let keyspace_opts = test_utils::create_keyspace(&session).await;
-        let table_1 = String::from("project_1_cql");
-        migrated::table::create(&session, &keyspace_opts.name, &table_1)
-            .await
-            .unwrap();
-        let table_2 = String::from("project_2_cql");
-        migrated::table::create(&session, &keyspace_opts.name, &table_2)
-            .await
-            .unwrap();
-
-        match select_table_names(&session, &keyspace_opts.name).await {
-            Ok(table_names) => {
-                assert_eq!(table_names.len(), 2);
-                assert!(table_names.contains(&table_1));
-                assert!(table_names.contains(&table_2));
-            }
-            Err(err) => {
-                println!("{err}");
-                panic!();
-            }
-        }
-        session
-            .query(format!("drop keyspace {}", &keyspace_opts.name), ())
-            .await
-            .unwrap_or_else(|_| panic!("failed dropping keyspace {}", &keyspace_opts.name));
     }
 
     #[test]

@@ -19,7 +19,6 @@ pub(crate) async fn insert(
     Ok(())
 }
 
-#[allow(dead_code)]
 pub(crate) async fn select_all(
     session: &Session,
     keyspace: &String,

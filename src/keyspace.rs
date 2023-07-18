@@ -126,7 +126,6 @@ impl FromStr for ReplicationFactor {
     }
 }
 
-#[allow(dead_code)]
 pub(crate) fn table_names_from_session_metadata(
     session: &Session,
     keyspace_name: &String,
@@ -143,7 +142,7 @@ pub(crate) fn table_names_from_session_metadata(
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils;
+    use crate::{queries, test_utils};
 
     use super::*;
 
@@ -326,7 +325,9 @@ mod tests {
             Err(_) => panic!(),
         }
 
-        test_utils::drop_keyspace(&session, &keyspace_opts.name).await;
+        queries::keyspace::drop(&session, &keyspace_opts.name)
+            .await
+            .expect("drop keyspace");
     }
 
     #[tokio::test]
@@ -350,7 +351,9 @@ mod tests {
     #[tokio::test]
     async fn test_table_names_from_session_metadata_updated_after_drop_keyspace() {
         let harness = test_utils::TestHarness::builder().initialize().await;
-        test_utils::drop_keyspace(&harness.session, &harness.cquill_keyspace).await;
+        queries::keyspace::drop(&harness.session, &harness.cquill_keyspace)
+            .await
+            .expect("drop keyspace");
 
         if table_names_from_session_metadata(&harness.session, &harness.cquill_keyspace).is_ok() {
             panic!()

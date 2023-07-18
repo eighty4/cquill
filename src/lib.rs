@@ -141,7 +141,9 @@ mod tests {
             Err(_) => panic!(),
         }
 
-        test_utils::drop_keyspace(&session, &keyspace_opts.name).await;
+        queries::keyspace::drop(&session, &keyspace_opts.name)
+            .await
+            .expect("drop keyspace");
     }
 
     #[tokio::test]
@@ -158,7 +160,9 @@ mod tests {
             Err(_) => panic!(),
         }
 
-        test_utils::drop_keyspace(&session, &keyspace_opts.name).await;
+        queries::keyspace::drop(&session, &keyspace_opts.name)
+            .await
+            .expect("drop keyspace");
     }
 
     #[tokio::test]

@@ -30,7 +30,6 @@ pub(crate) fn error_panic(err: &dyn Display) -> ! {
 
 pub(crate) async fn cql_session() -> Session {
     let node_address = CassandraOpts::default().node_address();
-    print!("{node_address}");
     scylla::SessionBuilder::new()
         .known_node(node_address)
         .build()
@@ -48,13 +47,6 @@ pub(crate) async fn create_keyspace_from_opts(session: &Session, keyspace_opts: 
     queries::keyspace::create(session, keyspace_opts)
         .await
         .expect("create keyspace");
-}
-
-pub(crate) async fn drop_keyspace(session: &Session, keyspace_name: &String) {
-    session
-        .query(format!("drop keyspace {}", keyspace_name), ())
-        .await
-        .expect("drop keyspace");
 }
 
 pub(crate) async fn drop_table(session: &Session, keyspace_name: &String, table_name: &String) {
@@ -79,8 +71,7 @@ pub(crate) fn keyspace_name() -> String {
 pub(crate) struct TestHarness {
     pub session: Session,
     pub cql_dir: PathBuf,
-    #[allow(dead_code)]
-    directory: TempDir,
+    _directory: TempDir,
     pub cquill_keyspace: String,
     pub cquill_table: String,
     pub cql_files: Vec<CqlFile>,
@@ -96,7 +87,9 @@ impl TestHarness {
     }
 
     pub async fn drop_keyspace(&self) {
-        drop_keyspace(&self.session, &self.cquill_keyspace).await;
+        queries::keyspace::drop(&self.session, &self.cquill_keyspace)
+            .await
+            .expect("drop keyspace");
     }
 
     pub fn migrate_args(&self) -> MigrateArgs {
@@ -158,7 +151,7 @@ impl TestHarnessBuilder {
         TestHarness {
             session,
             cql_dir: self.directory.path().to_path_buf(),
-            directory: self.directory,
+            _directory: self.directory,
             cquill_keyspace: cquill_keyspace.name,
             cquill_table,
             cql_files,

@@ -37,7 +37,9 @@ mod tests {
             .await
             .expect("creating table");
 
-        test_utils::drop_keyspace(&session, &keyspace_opts.name).await;
+        keyspace::drop(&session, &keyspace_opts.name)
+            .await
+            .expect("drop keyspace");
     }
 
     #[tokio::test]
@@ -75,6 +77,8 @@ mod tests {
             .await
             .expect_err("creating table");
 
-        test_utils::drop_keyspace(&session, &keyspace_opts.name).await;
+        keyspace::drop(&session, &keyspace_opts.name)
+            .await
+            .expect("drop keyspace");
     }
 }
