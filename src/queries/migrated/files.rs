@@ -133,7 +133,8 @@ mod tests {
             .cql_file("v003-more_cql.cql", "ghi")
             .initialize()
             .await;
-        for cql_file in harness.cql_files.iter() {
+        for i in [0, 2, 1] {
+            let cql_file = harness.cql_files.get(i).unwrap();
             insert(
                 &harness.session,
                 &harness.cquill_keyspace,
