@@ -71,9 +71,30 @@ pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
                 ));
             }
             cql_file_paths.sort();
-            let mut cql_files = Vec::with_capacity(cql_file_paths.len());
+            let mut cql_files: Vec<CqlFile> = Vec::with_capacity(cql_file_paths.len());
+            let mut expected_version: i16 = 1;
             for path in cql_file_paths {
-                cql_files.push(CqlFile::from_path(path)?);
+                let cql_file = CqlFile::from_path(path)?;
+                if cql_file.version != expected_version {
+                    return if cql_file.version == expected_version - 1 {
+                        let previous_index = usize::try_from(expected_version - 2)?;
+                        let previous_filename = &cql_files.get(previous_index).unwrap().filename;
+                        Err(anyhow!(
+                            "{} and {} repeat versions instead of incrementing to v{:0>3}",
+                            previous_filename,
+                            cql_file.filename,
+                            expected_version
+                        ))
+                    } else {
+                        Err(anyhow!(
+                            "{} found without a preceding v{:0>3} version cql file",
+                            cql_file.filename,
+                            expected_version
+                        ))
+                    };
+                }
+                cql_files.push(cql_file);
+                expected_version += 1;
             }
             Ok(cql_files)
         }
@@ -138,7 +159,7 @@ mod tests {
     #[test]
     fn test_files_from_dir_errors_with_cql_name() {
         let temp_dir = TempDir::new().unwrap();
-        ["foo.cql", "foo.sh", "foo.sql"]
+        ["foo.cql"]
             .iter()
             .for_each(|f| make_file(temp_dir.path().join(f), ""));
         let temp_dir_path = temp_dir.path().canonicalize().unwrap();
@@ -147,6 +168,44 @@ mod tests {
             Ok(_) => panic!(),
             Err(err) => {
                 assert_eq!(err.to_string(), "foo.cql is not a valid cql file name");
+            }
+        }
+    }
+
+    #[test]
+    fn test_files_from_dir_errors_with_out_of_order_versions() {
+        let temp_dir = TempDir::new().unwrap();
+        ["v001-foo.cql", "v002-foo.cql", "v004-foo.cql"]
+            .iter()
+            .for_each(|f| make_file(temp_dir.path().join(f), ""));
+        let temp_dir_path = temp_dir.path().canonicalize().unwrap();
+
+        match files_from_dir(&temp_dir_path) {
+            Ok(_) => panic!("cql::files_from_dir should have errored"),
+            Err(err) => {
+                assert_eq!(
+                    err.to_string(),
+                    "v004-foo.cql found without a preceding v003 version cql file"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_files_from_dir_errors_with_repeating_versions() {
+        let temp_dir = TempDir::new().unwrap();
+        ["v001-foo.cql", "v001-bar.cql"]
+            .iter()
+            .for_each(|f| make_file(temp_dir.path().join(f), ""));
+        let temp_dir_path = temp_dir.path().canonicalize().unwrap();
+
+        match files_from_dir(&temp_dir_path) {
+            Ok(_) => panic!("cql::files_from_dir should have errored"),
+            Err(err) => {
+                assert_eq!(
+                    err.to_string(),
+                    "v001-bar.cql and v001-foo.cql repeat versions instead of incrementing to v002"
+                );
             }
         }
     }
