@@ -1,25 +1,30 @@
 use std::collections::HashMap;
 
+use anyhow::{anyhow, Result};
+
 use crate::keyspace::ReplicationFactor::*;
 
 use super::*;
 
-pub(crate) async fn create(session: &Session, keyspace_opts: &KeyspaceOpts) -> Result<()> {
+pub(crate) async fn create(
+    session: &Session,
+    keyspace_opts: &KeyspaceOpts,
+) -> Result<(), QueryError> {
     let cql = create_keyspace_cql(keyspace_opts)?;
     session.query(cql, ()).await?;
     Ok(())
 }
 
 #[allow(dead_code)]
-pub(crate) async fn drop(session: &Session, keyspace_name: &String) -> Result<()> {
+pub(crate) async fn drop(session: &Session, keyspace_name: &String) -> Result<(), QueryError> {
     let cql = format!("drop keyspace {keyspace_name}");
     session.query(cql, ()).await?;
     Ok(())
 }
 
-fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String> {
+fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String, QueryError> {
     if keyspace_opts.name.is_empty() {
-        return Err(anyhow!("keyspace has empty name"));
+        return Err(QueryError::from(anyhow!("keyspace has empty name")));
     }
     let replication = match &keyspace_opts.replication {
         Some(r) => match r {
@@ -37,7 +42,11 @@ fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String> {
             "create keyspace {} with replication = {}",
             keyspace_opts.name, r
         )),
-        Err(e) => Err(anyhow!("keyspace {} {}", keyspace_opts.name, e.to_string())),
+        Err(e) => Err(QueryError::from(anyhow!(
+            "keyspace {} {}",
+            keyspace_opts.name,
+            e.to_string()
+        ))),
     }
 }
 

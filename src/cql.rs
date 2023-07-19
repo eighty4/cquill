@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Display, Formatter};
 use std::fs;
 use std::path::PathBuf;
 
@@ -5,18 +6,26 @@ use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::MigrateError;
+
 lazy_static! {
     static ref FILENAME_REGEX: Regex =
         regex::Regex::new(r"^[Vv](?P<version>[\d]{3})(?:[-_\da-zA-Z]*)?.cql$")
             .expect("cql filename regex");
 }
 
-#[cfg_attr(test, derive(Clone))]
+#[derive(Clone, Debug)]
 pub struct CqlFile {
     pub filename: String,
     pub hash: String,
     pub path: PathBuf,
     pub version: i16,
+}
+
+impl Display for CqlFile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.filename)
+    }
 }
 
 impl CqlFile {
@@ -43,6 +52,23 @@ impl CqlFile {
             path,
             version,
         })
+    }
+
+    pub(crate) fn read_statements(&self) -> Result<Vec<String>, MigrateError> {
+        let cql = match fs::read_to_string(&self.path) {
+            Err(err) => {
+                return Err(MigrateError::CqlFileReadError {
+                    filename: self.filename.clone(),
+                    error: err.to_string(),
+                })
+            }
+            Ok(cql) => cql
+                .split(';')
+                .map(|s| s.replace('\n', "").trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
+        };
+        Ok(cql)
     }
 }
 

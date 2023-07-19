@@ -264,6 +264,7 @@ dependencies = [
  "regex",
  "scylla",
  "temp-dir",
+ "thiserror",
  "tokio",
  "uuid",
 ]

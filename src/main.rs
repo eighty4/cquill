@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 
-use anyhow::Error;
 use clap::{Parser, Subcommand};
 
-use cquill::{keyspace::*, migrate_cql, CassandraOpts, MigrateOpts};
+use cquill::{keyspace::*, migrate_cql, CassandraOpts, CqlFile, MigrateError, MigrateOpts};
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -33,7 +32,7 @@ impl MigrateCliArgs {
     fn to_opts(&self) -> MigrateOpts {
         let replication_factor = match self.history_replication.parse::<ReplicationFactor>() {
             Ok(replication_factor) => replication_factor,
-            Err(err) => error_exit(err),
+            Err(err) => error_exit(MigrateError::from(err)),
         };
         MigrateOpts {
             cassandra_opts: Some(CassandraOpts::default()),
@@ -61,19 +60,21 @@ async fn migrate(args: MigrateCliArgs) {
     let cql_dir = opts.cql_dir.to_string_lossy();
     println!("CQuill {version}\nMigrating CQL files from {cql_dir}");
     match migrate_cql(opts).await {
-        Ok(migrated_cql) => {
-            if migrated_cql.is_empty() {
-                println!("✔ already up to date");
-            } else if migrated_cql.len() == 1 {
-                println!("✔ 1 cql file migrated: {}", migrated_cql[0].filename);
-            } else {
-                println!("✔ {} cql files migrated:", migrated_cql.len());
-                migrated_cql.iter().for_each(|p| {
-                    println!("  {}", p.filename);
-                });
-            }
-        }
+        Ok(migrated_cql) => print_migrated_cql(&migrated_cql),
         Err(err) => error_exit(err),
+    }
+}
+
+fn print_migrated_cql(migrated_cql: &[CqlFile]) {
+    if migrated_cql.is_empty() {
+        println!("✔ already up to date");
+    } else if migrated_cql.len() == 1 {
+        println!("✔ 1 cql file migrated: {}", migrated_cql[0].filename);
+    } else {
+        println!("✔ {} cql files migrated:", migrated_cql.len());
+        migrated_cql.iter().for_each(|p| {
+            println!("  {}", p.filename);
+        });
     }
 }
 
@@ -85,7 +86,7 @@ fn error_prefix() -> String {
     "\x1b[0;31;1merror\x1b[0m".to_string()
 }
 
-fn error_exit(err: Error) -> ! {
+fn error_exit(err: MigrateError) -> ! {
     println!("{} {err}", error_prefix());
     std::process::exit(1);
 }

@@ -1,17 +1,17 @@
 use std::path::Path;
 
-use anyhow::Result;
 use scylla::{IntoTypedRows, Session};
 use uuid::Uuid;
 
 use crate::cql::CqlFile;
+use crate::queries::QueryError;
 
 pub(crate) async fn insert(
     session: &Session,
     keyspace: &String,
     table: &String,
     cql_file: &CqlFile,
-) -> Result<()> {
+) -> Result<(), QueryError> {
     let cql =
         format!("insert into {keyspace}.{table} (id, ver, name, hash) values (now(), ?, ?, ?)");
     let values = (&cql_file.version, &cql_file.filename, &cql_file.hash);
@@ -24,7 +24,7 @@ pub(crate) async fn select_all(
     keyspace: &String,
     table: &String,
     cql_dir: &Path,
-) -> Result<Vec<CqlFile>> {
+) -> Result<Vec<CqlFile>, QueryError> {
     let cql = format!("select id, name, hash, ver from {keyspace}.{table}");
     let query_result = session.query(cql, ()).await?;
     let mut result = Vec::new();
