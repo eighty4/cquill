@@ -126,7 +126,6 @@ impl TestHarnessBuilder {
         self
     }
 
-    #[allow(dead_code)]
     pub fn cquill_history(mut self, keyspace_name: &str, table_name: &str) -> Self {
         self.cquill_keyspace = Some(KeyspaceOpts::simple(keyspace_name.to_string(), 1));
         self.cquill_table = Some(table_name.to_string());

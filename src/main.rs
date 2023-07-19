@@ -1,8 +1,13 @@
+use std::ops::Deref;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use cquill::{keyspace::*, migrate_cql, CassandraOpts, CqlFile, MigrateError, MigrateOpts};
+use cquill::MigrateError::HistoryUpdateFailed;
+use cquill::{
+    keyspace::*, migrate_cql, CassandraOpts, CqlFile, MigrateError, MigrateError::PartialMigration,
+    MigrateErrorState, MigrateOpts,
+};
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -61,7 +66,15 @@ async fn migrate(args: MigrateCliArgs) {
     println!("CQuill {version}\nMigrating CQL files from {cql_dir}");
     match migrate_cql(opts).await {
         Ok(migrated_cql) => print_migrated_cql(&migrated_cql),
-        Err(err) => error_exit(err),
+        Err(err) => match err {
+            HistoryUpdateFailed {
+                error_state,
+                cquill_keyspace,
+                cquill_table,
+            } => history_update_failed_exit(error_state.deref(), cquill_keyspace, cquill_table),
+            PartialMigration { error_state } => partial_migrate_error_exit(error_state.deref()),
+            _ => error_exit(err),
+        },
     }
 }
 
@@ -84,6 +97,52 @@ fn error_prefix() -> String {
     //       31 -> red foreground
     //        1 -> bold
     "\x1b[0;31;1merror\x1b[0m".to_string()
+}
+
+fn history_update_failed_exit(
+    error_state: &MigrateErrorState,
+    cquill_keyspace: String,
+    cquill_table: String,
+) {
+    if !error_state.migrated.is_empty() {
+        print_migrated_cql(&error_state.migrated);
+    }
+    println!(
+        "\nUpdating CQuill's migration history table failed after executing the CQL from {}.",
+        error_state.failed_file
+    );
+    println!("{} {}", error_prefix(), error_state.error);
+    println!("\n===IMPORTANT===");
+    println!(
+        "`cquill migrate` must not be run until {} is added to the {}.{} history table.",
+        error_state.failed_file, cquill_keyspace, cquill_table,
+    );
+    println!("===============");
+}
+
+fn partial_migrate_error_exit(error_state: &MigrateErrorState) {
+    if !error_state.migrated.is_empty() {
+        print_migrated_cql(&error_state.migrated);
+    }
+    match &error_state.failed_cql {
+        None => println!("Migrate failed during {}", error_state.failed_file),
+        Some(failed_cql) => {
+            println!(
+                "\nMigrate failed during {} on the CQL statement:",
+                error_state.failed_file
+            );
+            println!("    {}", failed_cql);
+        }
+    }
+    println!("{} {}", error_prefix(), error_state.error);
+    println!("\n===IMPORTANT===");
+    println!(
+        "CQL statements before this statement in {} were successfully executed.",
+        error_state.failed_file
+    );
+    println!("The remaining statements will need to be manually executed and {} must be added to CQuill's history table with the CQL file's content hash.", error_state.failed_file);
+    println!("===============");
+    std::process::exit(1);
 }
 
 fn error_exit(err: MigrateError) -> ! {

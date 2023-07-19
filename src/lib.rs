@@ -5,7 +5,7 @@ use scylla::Session;
 
 pub use crate::cql::CqlFile;
 use crate::keyspace::*;
-pub use crate::migrate::MigrateError;
+pub use crate::migrate::{MigrateError, MigrateErrorState};
 use crate::queries::*;
 
 mod cql;

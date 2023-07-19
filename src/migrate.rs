@@ -23,11 +23,27 @@ pub enum MigrateError {
         cquill_keyspace: String,
         cquill_table: String,
     },
+    #[error("errored saving migrate status of '{0}' to {cquill_keyspace}.{cquill_table}: {1}", error_state.failed_file.filename, error_state.error)]
+    HistoryUpdateFailed {
+        cquill_keyspace: String,
+        cquill_table: String,
+        error_state: Box<MigrateErrorState>,
+    },
+    #[error("errored during migrate of '{0}': {1}", error_state.failed_file.filename, error_state.error)]
+    PartialMigration { error_state: Box<MigrateErrorState> },
     #[error("{source}")]
     Other {
         #[from]
         source: anyhow::Error,
     },
+}
+
+#[derive(Debug)]
+pub struct MigrateErrorState {
+    pub error: String,
+    pub failed_cql: Option<String>,
+    pub failed_file: CqlFile,
+    pub migrated: Vec<CqlFile>,
 }
 
 pub(crate) struct MigrateArgs {
@@ -69,16 +85,37 @@ pub(crate) async fn perform(
     let mut migrated: Vec<CqlFile> = Vec::new();
     for cql in not_migrated {
         for cql_statement in cql.1 {
-            queries::exec(session, cql_statement).await?
+            if let Err(err) = queries::exec(session, cql_statement.clone()).await {
+                return Err(MigrateError::PartialMigration {
+                    error_state: Box::from(MigrateErrorState {
+                        error: err.to_string(),
+                        failed_cql: Some(cql_statement),
+                        failed_file: cql.0,
+                        migrated,
+                    }),
+                });
+            }
         }
-        queries::migrated::files::insert(
+        migrated.push(cql.0.clone());
+        if let Err(err) = queries::migrated::files::insert(
             session,
             &args.history_keyspace,
             &args.history_table,
             &cql.0,
         )
-        .await?;
-        migrated.push(cql.0);
+        .await
+        {
+            return Err(MigrateError::HistoryUpdateFailed {
+                error_state: Box::from(MigrateErrorState {
+                    error: err.to_string(),
+                    failed_file: cql.0,
+                    failed_cql: None,
+                    migrated,
+                }),
+                cquill_keyspace: args.history_keyspace,
+                cquill_table: args.history_table,
+            });
+        };
     }
     Ok(migrated)
 }
@@ -175,6 +212,46 @@ mod tests {
                             harness.cquill_keyspace, harness.cquill_table)
                 );
             }
+        }
+
+        harness.drop_keyspace().await;
+    }
+
+    #[tokio::test]
+    async fn test_partial_migration_error_state() {
+        let keyspace = test_utils::keyspace_name();
+        let harness = test_utils::TestHarness::builder()
+            .cql_file("v001.cql", "")
+            .cql_file(
+                "v002.cql",
+                format!(
+                    "CREATE TABLE {}.asdf (id UUID PRIMARY KEY, data TEXT); CREATE TABLE;",
+                    keyspace
+                )
+                .as_str(),
+            )
+            .cquill_history(keyspace.as_str(), "cquill")
+            .initialize()
+            .await;
+
+        let migrate_result =
+            perform(&harness.session, &harness.cql_files, harness.migrate_args()).await;
+        match migrate_result {
+            Ok(_) => panic!(),
+            Err(err) => match err {
+                MigrateError::PartialMigration { error_state } => {
+                    assert_eq!(error_state.migrated.len(), 1);
+                    assert_eq!(error_state.migrated.get(0).unwrap().filename, "v001.cql");
+                    assert!(error_state.failed_cql.is_some());
+                    assert_eq!(error_state.failed_cql.unwrap(), "CREATE TABLE");
+                    assert_eq!(error_state.failed_file.filename, "v002.cql");
+                    assert_eq!(
+                        error_state.error,
+                        "cql query error: Database returned an error: The submitted query has a syntax error, Error message: line 1:0 no viable alternative at input '<EOF>'"
+                    );
+                }
+                _ => panic!("error was not a MigrateError::PartialMigration"),
+            },
         }
 
         harness.drop_keyspace().await;
