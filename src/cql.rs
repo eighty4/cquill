@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
@@ -32,6 +32,8 @@ impl CqlFile {
     pub fn from_path(path: PathBuf) -> Result<CqlFile> {
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
         if !FILENAME_REGEX.is_match(filename.as_str()) {
+            // todo use MigrateError for main.rs to handle error with
+            //  info about _ for .cql files to be omitted from migrate
             return Err(anyhow!("{filename} is not a valid cql file name"));
         }
         let hash = match fs::read(&path) {
@@ -82,12 +84,8 @@ pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
             let mut cql_file_paths = Vec::new();
             for dir_entry in read_dir {
                 let path = dir_entry?.path();
-                if path.is_file() && path.file_name().is_some() {
-                    if let Some(extension) = path.extension() {
-                        if extension == "cql" {
-                            cql_file_paths.push(path);
-                        }
-                    }
+                if is_inclusive_cql_filename(&path) {
+                    cql_file_paths.push(path);
                 }
             }
             if cql_file_paths.is_empty() {
@@ -125,6 +123,19 @@ pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
             Ok(cql_files)
         }
     }
+}
+
+fn is_inclusive_cql_filename(path: &Path) -> bool {
+    if path.is_file() {
+        if let Some(file_name) = path.file_name() {
+            if let Some(extension) = path.extension() {
+                if extension == "cql" && !file_name.to_string_lossy().starts_with('_') {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 #[cfg(test)]
@@ -195,6 +206,26 @@ mod tests {
             Err(err) => {
                 assert_eq!(err.to_string(), "foo.cql is not a valid cql file name");
             }
+        }
+    }
+
+    #[test]
+    fn test_files_from_dir_allows_non_migrating_cql() {
+        let temp_dir = TempDir::new().unwrap();
+        ["v001-foo.cql", "_foo.cql"]
+            .iter()
+            .for_each(|f| make_file(temp_dir.path().join(f), ""));
+        let temp_dir_path = temp_dir.path().canonicalize().unwrap();
+
+        match files_from_dir(&temp_dir_path) {
+            Ok(cql_files) => {
+                assert_eq!(cql_files.len(), 1);
+                assert_eq!(
+                    cql_files.get(0).unwrap().filename,
+                    "v001-foo.cql".to_string()
+                );
+            }
+            Err(err) => panic!("should not have errored with: {err}"),
         }
     }
 
