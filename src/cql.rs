@@ -64,13 +64,38 @@ impl CqlFile {
                     error: err.to_string(),
                 })
             }
-            Ok(cql) => cql
-                .split(';')
-                .map(|s| s.replace('\n', "").trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect(),
+            Ok(cql) => cql,
         };
-        Ok(cql)
+        let mut result: Vec<String> = Vec::new();
+        for line in cql.lines() {
+            let mut line_comment: Option<usize> = None;
+            let mut prev_c = ' ';
+            for (i, c) in line.chars().enumerate() {
+                if c == '-' && prev_c == '-' || c == '/' && prev_c == '/' {
+                    line_comment = Some(i - 1);
+                    break;
+                }
+                prev_c = c;
+            }
+
+            let comment_trimmed = match line_comment {
+                None => line,
+                Some(i) => &line[0..i],
+            }
+            .trim()
+            .to_string();
+
+            if !comment_trimmed.is_empty() {
+                result.push(comment_trimmed);
+            }
+        }
+
+        Ok(result
+            .join(" ")
+            .split(';')
+            .map(|s| s.replace("\r\n", " ").replace('\n', " ").trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect())
     }
 }
 
@@ -166,7 +191,7 @@ mod tests {
         let cql_file_path = temp_dir.path().join("v073-more_tables.cql");
         make_file(
             cql_file_path.clone(),
-            "create table big_business_data (id timeuuid primary key)",
+            "  create table big_business_data (id timeuuid primary key)  ;",
         );
 
         match CqlFile::from_path(cql_file_path) {
@@ -174,7 +199,54 @@ mod tests {
             Ok(cql_file) => {
                 assert_eq!(cql_file.filename, String::from("v073-more_tables.cql"));
                 assert_eq!(cql_file.version, 73);
-                assert_eq!(cql_file.hash, "7f5b4bdccd3863f31be5c257ff497704");
+                assert_eq!(cql_file.hash, "e995c628cf1a06863dc86760020ecb43");
+                let statements_result = cql_file.read_statements();
+                assert!(statements_result.is_ok());
+                let statements = statements_result.unwrap();
+                assert_eq!(statements.len(), 1);
+                assert_eq!(
+                    statements.get(0).unwrap(),
+                    "create table big_business_data (id timeuuid primary key)"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_removes_line_comments() {
+        let temp_dir = TempDir::new().unwrap();
+        let cql_file_path = temp_dir.path().join("v073-more_tables.cql");
+        make_file(
+            cql_file_path.clone(),
+            "\
+create table big_business_data (id timeuuid primary key); // a table
+--create table big_business_data (id timeuuid primary key);
+create table big_business_data (
+id timeuuid primary key, -- a primary key
+// commented_out text,
+);
+            ",
+        );
+
+        match CqlFile::from_path(cql_file_path) {
+            Err(_) => panic!(),
+            Ok(cql_file) => {
+                assert_eq!(cql_file.filename, String::from("v073-more_tables.cql"));
+                assert_eq!(cql_file.version, 73);
+                assert_eq!(cql_file.hash, "0c6cf0d169d67ff0127728c10dafe5da");
+                let statements_result = cql_file.read_statements();
+                assert!(statements_result.is_ok());
+                let statements = statements_result.unwrap();
+                println!("{}", statements.get(0).unwrap());
+                assert_eq!(statements.len(), 2);
+                assert_eq!(
+                    statements.get(0).unwrap(),
+                    "create table big_business_data (id timeuuid primary key)"
+                );
+                assert_eq!(
+                    statements.get(1).unwrap(),
+                    "create table big_business_data ( id timeuuid primary key, )"
+                );
             }
         }
     }
