@@ -75,54 +75,60 @@ impl CqlFile {
 }
 
 pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
-    match fs::read_dir(cql_dir) {
-        Err(_) => Err(anyhow!(
-            "could not find directory '{}'",
-            cql_dir.to_string_lossy()
-        )),
-        Ok(read_dir) => {
-            let mut cql_file_paths = Vec::new();
-            for dir_entry in read_dir {
-                let path = dir_entry?.path();
-                if is_inclusive_cql_filename(&path) {
-                    cql_file_paths.push(path);
-                }
-            }
-            if cql_file_paths.is_empty() {
-                return Err(anyhow!(
-                    "no cql files found in directory '{}'",
-                    cql_dir.to_string_lossy()
-                ));
-            }
-            cql_file_paths.sort();
-            let mut cql_files: Vec<CqlFile> = Vec::with_capacity(cql_file_paths.len());
-            let mut expected_version: i16 = 1;
-            for path in cql_file_paths {
-                let cql_file = CqlFile::from_path(path)?;
-                if cql_file.version != expected_version {
-                    return if cql_file.version == expected_version - 1 {
-                        let previous_index = usize::try_from(expected_version - 2)?;
-                        let previous_filename = &cql_files.get(previous_index).unwrap().filename;
-                        Err(anyhow!(
-                            "{} and {} repeat versions instead of incrementing to v{:0>3}",
-                            previous_filename,
-                            cql_file.filename,
-                            expected_version
-                        ))
-                    } else {
-                        Err(anyhow!(
-                            "{} found without a preceding v{:0>3} version cql file",
-                            cql_file.filename,
-                            expected_version
-                        ))
-                    };
-                }
-                cql_files.push(cql_file);
-                expected_version += 1;
-            }
-            Ok(cql_files)
+    let cql_file_paths = read_cql_file_paths(cql_dir)?;
+    let mut cql_files: Vec<CqlFile> = Vec::with_capacity(cql_file_paths.len());
+    let mut expected_version: i16 = 1;
+    for path in cql_file_paths {
+        let cql_file = CqlFile::from_path(path)?;
+        if cql_file.version != expected_version {
+            return if cql_file.version == expected_version - 1 {
+                let previous_index = usize::try_from(expected_version - 2)?;
+                let previous_filename = &cql_files.get(previous_index).unwrap().filename;
+                Err(anyhow!(
+                    "{} and {} repeat versions instead of incrementing to v{:0>3}",
+                    previous_filename,
+                    cql_file.filename,
+                    expected_version
+                ))
+            } else {
+                Err(anyhow!(
+                    "{} found without a preceding v{:0>3} version cql file",
+                    cql_file.filename,
+                    expected_version
+                ))
+            };
+        }
+        cql_files.push(cql_file);
+        expected_version += 1;
+    }
+    Ok(cql_files)
+}
+
+fn read_cql_file_paths(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
+    let dir_read = match fs::read_dir(cql_dir) {
+        Err(_) => {
+            return Err(anyhow!(
+                "could not find directory '{}'",
+                cql_dir.to_string_lossy()
+            ))
+        }
+        Ok(dir_read) => dir_read,
+    };
+    let mut cql_file_paths = Vec::new();
+    for dir_entry in dir_read {
+        let path = dir_entry?.path();
+        if is_inclusive_cql_filename(&path) {
+            cql_file_paths.push(path);
         }
     }
+    cql_file_paths.sort();
+    if cql_file_paths.is_empty() {
+        return Err(anyhow!(
+            "no cql files found in directory '{}'",
+            cql_dir.to_string_lossy()
+        ));
+    }
+    Ok(cql_file_paths)
 }
 
 fn is_inclusive_cql_filename(path: &Path) -> bool {
