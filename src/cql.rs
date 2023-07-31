@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -20,6 +21,12 @@ pub struct CqlFile {
     pub hash: String,
     pub path: PathBuf,
     pub version: i16,
+}
+
+#[derive(Debug)]
+pub struct CqlStatement {
+    pub cql: String,
+    pub lines: (usize, usize),
 }
 
 impl Display for CqlFile {
@@ -56,45 +63,79 @@ impl CqlFile {
         })
     }
 
-    pub(crate) fn read_statements(&self) -> Result<Vec<String>, MigrateError> {
+    pub(crate) fn read_statements(&self) -> Result<Vec<CqlStatement>, MigrateError> {
         let cql = match fs::read_to_string(&self.path) {
             Err(err) => {
                 return Err(MigrateError::CqlFileReadError {
                     filename: self.filename.clone(),
                     error: err.to_string(),
-                })
+                });
             }
             Ok(cql) => cql,
         };
-        let mut result: Vec<String> = Vec::new();
-        for line in cql.lines() {
-            let mut line_comment: Option<usize> = None;
-            let mut prev_c = ' ';
-            for (i, c) in line.chars().enumerate() {
-                if c == '-' && prev_c == '-' || c == '/' && prev_c == '/' {
-                    line_comment = Some(i - 1);
-                    break;
+
+        // todo parse an ast bc this is no bueno
+        let mut line_index = 0;
+        let mut line_comment_begin: Option<usize> = None;
+        let mut line_comments: VecDeque<(usize, usize)> = VecDeque::new();
+        let mut prev_c: char = ' ';
+        let mut statement_begin_line: usize = 0;
+        let mut statement_begin_index: usize = 0;
+        let mut statements: Vec<CqlStatement> = Vec::new();
+        for (char_index, c) in cql.chars().enumerate() {
+            if (c == '-' && prev_c == '-') || (c == '/' && prev_c == '/') {
+                line_comment_begin = Some(char_index - 1);
+            } else if c == '\n' {
+                line_index += 1;
+                let commented_line = if let Some(i) = line_comment_begin {
+                    line_comment_begin = None;
+                    let commented_line = cql[statement_begin_index..i].trim().is_empty();
+                    if !commented_line || statement_begin_line + 1 != line_index {
+                        line_comments.push_back((i, char_index));
+                    }
+                    commented_line
+                } else {
+                    cql[statement_begin_index..char_index].trim().is_empty()
+                };
+                if commented_line {
+                    statement_begin_index = char_index;
+                    statement_begin_line = line_index;
                 }
-                prev_c = c;
+            } else if c == ';' && line_comment_begin.is_none() {
+                let statement = if line_comments.is_empty() {
+                    cql[statement_begin_index..char_index].to_string()
+                } else {
+                    let mut parts: Vec<String> = Vec::with_capacity(line_comments.len() + 1);
+                    let mut cursor = statement_begin_index;
+                    for (comment_start, comment_end) in &line_comments {
+                        parts.push(cql[cursor..*comment_start].trim().to_string());
+                        cursor = comment_end + 1;
+                    }
+                    parts.push(cql[cursor..char_index].trim().to_string());
+                    line_comments = VecDeque::new();
+                    parts.join(" ")
+                };
+                statements.push(CqlStatement {
+                    cql: statement,
+                    lines: (statement_begin_line + 1, line_index + 1),
+                });
+                statement_begin_index = char_index + 1;
+                statement_begin_line = line_index;
             }
-
-            let comment_trimmed = match line_comment {
-                None => line,
-                Some(i) => &line[0..i],
-            }
-            .trim()
-            .to_string();
-
-            if !comment_trimmed.is_empty() {
-                result.push(comment_trimmed);
-            }
+            prev_c = c;
         }
 
-        Ok(result
-            .join(" ")
-            .split(';')
-            .map(|s| s.replace("\r\n", " ").replace('\n', " ").trim().to_string())
-            .filter(|s| !s.is_empty())
+        Ok(statements
+            .iter()
+            .map(|statement| CqlStatement {
+                cql: statement
+                    .cql
+                    .replace("\r\n", " ")
+                    .replace('\n', " ")
+                    .trim()
+                    .to_string(),
+                lines: statement.lines,
+            })
             .collect())
     }
 }
@@ -135,7 +176,7 @@ fn read_cql_file_paths(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
             return Err(anyhow!(
                 "could not find directory '{}'",
                 cql_dir.to_string_lossy()
-            ))
+            ));
         }
         Ok(dir_read) => dir_read,
     };
@@ -205,50 +246,129 @@ mod tests {
                 let statements = statements_result.unwrap();
                 assert_eq!(statements.len(), 1);
                 assert_eq!(
-                    statements.get(0).unwrap(),
+                    statements.get(0).unwrap().cql,
                     "create table big_business_data (id timeuuid primary key)"
                 );
             }
         }
     }
 
-    #[test]
-    fn test_cql_file_read_statements_removes_line_comments() {
+    fn read_statements_test(cql: &'static str, expected: Vec<CqlStatement>) {
         let temp_dir = TempDir::new().unwrap();
-        let cql_file_path = temp_dir.path().join("v073-more_tables.cql");
-        make_file(
-            cql_file_path.clone(),
-            "\
-create table big_business_data (id timeuuid primary key); // a table
---create table big_business_data (id timeuuid primary key);
-create table big_business_data (
-id timeuuid primary key, -- a primary key
-// commented_out text,
-);
-            ",
-        );
-
-        match CqlFile::from_path(cql_file_path) {
-            Err(_) => panic!(),
-            Ok(cql_file) => {
-                assert_eq!(cql_file.filename, String::from("v073-more_tables.cql"));
-                assert_eq!(cql_file.version, 73);
-                assert_eq!(cql_file.hash, "0c6cf0d169d67ff0127728c10dafe5da");
-                let statements_result = cql_file.read_statements();
-                assert!(statements_result.is_ok());
-                let statements = statements_result.unwrap();
-                println!("{}", statements.get(0).unwrap());
-                assert_eq!(statements.len(), 2);
-                assert_eq!(
-                    statements.get(0).unwrap(),
-                    "create table big_business_data (id timeuuid primary key)"
-                );
-                assert_eq!(
-                    statements.get(1).unwrap(),
-                    "create table big_business_data ( id timeuuid primary key, )"
-                );
-            }
+        let cql_file_path = temp_dir.path().join("v001-no_more_tests.cql");
+        make_file(cql_file_path.clone(), cql);
+        let cql_file = CqlFile::from_path(cql_file_path).expect("cql file");
+        let statements_result = cql_file.read_statements();
+        assert!(statements_result.is_ok());
+        let statements = statements_result.unwrap();
+        assert_eq!(statements.len(), expected.len());
+        for (i, statement) in statements.iter().enumerate() {
+            let other = expected.get(i).unwrap();
+            assert_eq!(statement.cql, other.cql);
+            assert_eq!(statement.lines.0, other.lines.0);
+            assert_eq!(statement.lines.1, other.lines.1);
         }
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_incomplete_line() {
+        read_statements_test(
+            "create table big_business_data (id timeuuid primary key)",
+            Vec::new(),
+        );
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_complete_line() {
+        read_statements_test(
+            "create table big_business_data (id timeuuid primary key);",
+            Vec::from([CqlStatement {
+                cql: "create table big_business_data (id timeuuid primary key)".to_string(),
+                lines: (1, 1),
+            }]),
+        );
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_two_lines() {
+        read_statements_test(
+            "create table big_business_data (id timeuuid primary key);
+                      create table more_business_data (id timeuuid primary key);",
+            Vec::from([
+                CqlStatement {
+                    cql: "create table big_business_data (id timeuuid primary key)".to_string(),
+                    lines: (1, 1),
+                },
+                CqlStatement {
+                    cql: "create table more_business_data (id timeuuid primary key)".to_string(),
+                    lines: (2, 2),
+                },
+            ]),
+        );
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_line_comment_only() {
+        read_statements_test(
+            "--create table big_business_data (id timeuuid primary key);",
+            Vec::new(),
+        );
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_line_comment_out_statement_ending() {
+        read_statements_test(
+            "create table big_business_data (--id timeuuid primary key);\nanother_id uuid primary key);",
+            vec!(
+                CqlStatement {
+                    cql: "create table big_business_data ( another_id uuid primary key)".to_string(),
+                    lines: (1, 2),
+                })
+        );
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_line_comment_between_statements() {
+        read_statements_test(
+            "create table big_business_data (id timeuuid primary key);
+            --create table another_business_data (id timeuuid primary key);
+            create table more_business_data (id timeuuid primary key);",
+            vec![
+                CqlStatement {
+                    cql: "create table big_business_data (id timeuuid primary key)".to_string(),
+                    lines: (1, 1),
+                },
+                CqlStatement {
+                    cql: "create table more_business_data (id timeuuid primary key)".to_string(),
+                    lines: (3, 3),
+                },
+            ],
+        );
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_partial_line_comment_between_statements() {
+        read_statements_test(
+            "create table big_business_data (id timeuuid primary key);
+            create table --another_business_data (id timeuuid primary key);
+            more_business_data (id timeuuid primary key);
+            create table even_more_business_data (id timeuuid primary key);",
+            vec![
+                CqlStatement {
+                    cql: "create table big_business_data (id timeuuid primary key)".to_string(),
+                    lines: (1, 1),
+                },
+                CqlStatement {
+                    cql: "create table more_business_data (id timeuuid primary key)".to_string(),
+                    lines: (2, 3),
+                },
+                CqlStatement {
+                    cql: "create table even_more_business_data (id timeuuid primary key)"
+                        .to_string(),
+                    lines: (4, 4),
+                },
+            ],
+        );
     }
 
     #[test]

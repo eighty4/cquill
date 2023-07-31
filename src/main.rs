@@ -128,10 +128,17 @@ fn partial_migrate_error_exit(error_state: &MigrateErrorState) {
         None => println!("Migrate failed during {}", error_state.failed_file),
         Some(failed_cql) => {
             println!(
-                "\nMigrate failed during {} on the CQL statement:",
-                error_state.failed_file
+                "\nMigrate failed during {} ({}) on the CQL statement:\n    {}",
+                error_state.failed_file,
+                if failed_cql.lines.0 == failed_cql.lines.1 {
+                    format!("line {}", failed_cql.lines.0)
+                } else if failed_cql.lines.1 - failed_cql.lines.0 == 1 {
+                    format!("lines {} and {}", failed_cql.lines.0, failed_cql.lines.1)
+                } else {
+                    format!("lines {} to {}", failed_cql.lines.0, failed_cql.lines.1)
+                },
+                failed_cql.cql
             );
-            println!("    {}", failed_cql);
         }
     }
     println!("{} {}", error_prefix(), error_state.error);

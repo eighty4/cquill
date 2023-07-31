@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use scylla::Session;
 
-use crate::cql::CqlFile;
+use crate::cql::{CqlFile, CqlStatement};
 use crate::queries;
 use crate::queries::QueryError;
 
@@ -41,7 +41,7 @@ pub enum MigrateError {
 #[derive(Debug)]
 pub struct MigrateErrorState {
     pub error: String,
-    pub failed_cql: Option<String>,
+    pub failed_cql: Option<CqlStatement>,
     pub failed_file: CqlFile,
     pub migrated: Vec<CqlFile>,
 }
@@ -66,7 +66,7 @@ pub(crate) async fn perform(
         )
         .await?,
     );
-    let mut not_migrated: Vec<(CqlFile, Vec<String>)> = Vec::new();
+    let mut not_migrated: Vec<(CqlFile, Vec<CqlStatement>)> = Vec::new();
     for cql_file in cql_files {
         if let Some(migrated_cql_file) = previously_migrated.pop_front() {
             if cql_file.hash == migrated_cql_file.hash {
@@ -85,7 +85,7 @@ pub(crate) async fn perform(
     let mut migrated: Vec<CqlFile> = Vec::new();
     for cql in not_migrated {
         for cql_statement in cql.1 {
-            if let Err(err) = queries::exec(session, cql_statement.clone()).await {
+            if let Err(err) = queries::exec(session, cql_statement.cql.clone()).await {
                 return Err(MigrateError::PartialMigration {
                     error_state: Box::from(MigrateErrorState {
                         error: err.to_string(),
@@ -243,7 +243,7 @@ mod tests {
                     assert_eq!(error_state.migrated.len(), 1);
                     assert_eq!(error_state.migrated.get(0).unwrap().filename, "v001.cql");
                     assert!(error_state.failed_cql.is_some());
-                    assert_eq!(error_state.failed_cql.unwrap(), "CREATE TABLE");
+                    assert_eq!(error_state.failed_cql.unwrap().cql, "CREATE TABLE");
                     assert_eq!(error_state.failed_file.filename, "v002.cql");
                     assert_eq!(
                         error_state.error,
