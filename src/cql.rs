@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -75,25 +74,49 @@ impl CqlFile {
         };
 
         // todo parse an ast bc this is no bueno
-        let mut line_index = 0;
+        let mut block_comment_begin: Option<usize> = None;
+        let mut comments: Vec<(usize, usize)> = Vec::new();
         let mut line_comment_begin: Option<usize> = None;
-        let mut line_comments: VecDeque<(usize, usize)> = VecDeque::new();
+        let mut line_index = 0;
         let mut prev_c: char = ' ';
-        let mut statement_begin_line: usize = 0;
         let mut statement_begin_index: usize = 0;
+        let mut statement_begin_line: usize = 0;
         let mut statements: Vec<CqlStatement> = Vec::new();
         for (char_index, c) in cql.chars().enumerate() {
-            if (c == '-' && prev_c == '-') || (c == '/' && prev_c == '/') {
+            if c == '/' && prev_c == '*' {
+                if let Some(i) = block_comment_begin {
+                    comments.push((i, char_index + 1));
+                    block_comment_begin = None;
+                }
+            } else if c == '*' && prev_c == '/' && block_comment_begin.is_none() {
+                block_comment_begin = Some(char_index - 1);
+            } else if (c == '-' && prev_c == '-') || (c == '/' && prev_c == '/') {
                 line_comment_begin = Some(char_index - 1);
             } else if c == '\n' {
                 line_index += 1;
-                let commented_line = if let Some(i) = line_comment_begin {
+                if let Some(i) = line_comment_begin {
                     line_comment_begin = None;
-                    let commented_line = cql[statement_begin_index..i].trim().is_empty();
-                    if !commented_line || statement_begin_line + 1 != line_index {
-                        line_comments.push_back((i, char_index));
+                    comments.push((i, char_index));
+                }
+                let commented_line = if !comments.is_empty() {
+                    let mut uncommented_cql = false;
+                    let mut cursor = statement_begin_index;
+                    for (comment_start, comment_end) in &comments {
+                        if !cql[cursor..*comment_start].trim().to_string().is_empty() {
+                            uncommented_cql = true;
+                            break;
+                        }
+                        cursor = *comment_end;
                     }
-                    commented_line
+                    if !uncommented_cql && !cql[cursor..char_index].trim().to_string().is_empty() {
+                        uncommented_cql = true;
+                    }
+                    if uncommented_cql {
+                        false
+                    } else {
+                        comments = Vec::new();
+                        true
+                    }
                 } else {
                     cql[statement_begin_index..char_index].trim().is_empty()
                 };
@@ -101,18 +124,18 @@ impl CqlFile {
                     statement_begin_index = char_index;
                     statement_begin_line = line_index;
                 }
-            } else if c == ';' && line_comment_begin.is_none() {
-                let statement = if line_comments.is_empty() {
+            } else if c == ';' && block_comment_begin.is_none() && line_comment_begin.is_none() {
+                let statement = if comments.is_empty() {
                     cql[statement_begin_index..char_index].to_string()
                 } else {
-                    let mut parts: Vec<String> = Vec::with_capacity(line_comments.len() + 1);
+                    let mut parts: Vec<String> = Vec::with_capacity(comments.len() + 1);
                     let mut cursor = statement_begin_index;
-                    for (comment_start, comment_end) in &line_comments {
+                    for (comment_start, comment_end) in &comments {
                         parts.push(cql[cursor..*comment_start].trim().to_string());
-                        cursor = comment_end + 1;
+                        cursor = *comment_end;
                     }
                     parts.push(cql[cursor..char_index].trim().to_string());
-                    line_comments = VecDeque::new();
+                    comments = Vec::new();
                     parts.join(" ")
                 };
                 statements.push(CqlStatement {
@@ -128,12 +151,7 @@ impl CqlFile {
         Ok(statements
             .iter()
             .map(|statement| CqlStatement {
-                cql: statement
-                    .cql
-                    .replace("\r\n", " ")
-                    .replace('\n', " ")
-                    .trim()
-                    .to_string(),
+                cql: statement.cql.lines().map(|l| l.trim()).collect(),
                 lines: statement.lines,
             })
             .collect())
@@ -265,8 +283,18 @@ mod tests {
         for (i, statement) in statements.iter().enumerate() {
             let other = expected.get(i).unwrap();
             assert_eq!(statement.cql, other.cql);
-            assert_eq!(statement.lines.0, other.lines.0);
-            assert_eq!(statement.lines.1, other.lines.1);
+            assert_eq!(
+                statement.lines.0,
+                other.lines.0,
+                "{}",
+                statement.cql.as_str()
+            );
+            assert_eq!(
+                statement.lines.1,
+                other.lines.1,
+                "{}",
+                statement.cql.as_str()
+            );
         }
     }
 
@@ -308,10 +336,52 @@ mod tests {
     }
 
     #[test]
+    fn test_cql_file_read_statements_block_comment_only() {
+        read_statements_test(
+            "/*create table big_business_data (id timeuuid primary key);*/",
+            Vec::new(),
+        );
+    }
+
+    #[test]
     fn test_cql_file_read_statements_line_comment_only() {
         read_statements_test(
             "--create table big_business_data (id timeuuid primary key);",
             Vec::new(),
+        );
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_multiline_statement_with_line_comments() {
+        read_statements_test(
+            "create table big_business_data (
+            id timeuuid primary key,
+            -- here's some docs
+            data text, -- and more docs
+            created timestamp
+            );",
+            vec![CqlStatement {
+                cql: "create table big_business_data (id timeuuid primary key, data text, created timestamp)"
+                    .to_string(),
+                lines: (1, 6),
+            }],
+        );
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_block_comment_in_statement() {
+        read_statements_test(
+            "create table big_business_data (
+            /*id timeuuid primary key,*/
+            another_id uuid primary key,
+            /*data text,*/
+            data text
+            );",
+            vec![CqlStatement {
+                cql: "create table big_business_data ( another_id uuid primary key, data text)"
+                    .to_string(),
+                lines: (1, 6),
+            }],
         );
     }
 
@@ -324,6 +394,25 @@ mod tests {
                     cql: "create table big_business_data ( another_id uuid primary key)".to_string(),
                     lines: (1, 2),
                 })
+        );
+    }
+
+    #[test]
+    fn test_cql_file_read_statements_block_comment_between_statements() {
+        read_statements_test(
+            "create table big_business_data (id timeuuid primary key);
+            /*create table another_business_data (id timeuuid primary key);*/
+            create table more_business_data (id timeuuid primary key);",
+            vec![
+                CqlStatement {
+                    cql: "create table big_business_data (id timeuuid primary key)".to_string(),
+                    lines: (1, 1),
+                },
+                CqlStatement {
+                    cql: "create table more_business_data (id timeuuid primary key)".to_string(),
+                    lines: (3, 3),
+                },
+            ],
         );
     }
 
