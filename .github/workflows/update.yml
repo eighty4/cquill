@@ -1,8 +1,8 @@
 name: Cargo Update
 
 on:
-  schedule:
-    - cron: '22 4 * * *'
+#  schedule:
+#    - cron: '22 4 * * *'
   workflow_dispatch:
 
 jobs:
