@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use scylla::Session;
 
-use crate::cql::{CqlFile, CqlStatement};
+use crate::cql_file::{CqlFile, CqlStatement};
 use crate::queries;
 use crate::queries::QueryError;
 

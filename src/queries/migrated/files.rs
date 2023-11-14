@@ -3,7 +3,7 @@ use std::path::Path;
 use scylla::{IntoTypedRows, Session};
 use uuid::Uuid;
 
-use crate::cql::CqlFile;
+use crate::cql_file::CqlFile;
 use crate::queries::QueryError;
 
 pub(crate) async fn insert(

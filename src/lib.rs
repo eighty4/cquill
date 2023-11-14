@@ -3,12 +3,12 @@ use std::{path::PathBuf, str};
 use anyhow::{anyhow, Result};
 use scylla::Session;
 
-pub use crate::cql::CqlFile;
+pub use crate::cql_file::CqlFile;
 use crate::keyspace::*;
 pub use crate::migrate::{MigrateError, MigrateErrorState};
 use crate::queries::*;
 
-mod cql;
+mod cql_file;
 pub mod keyspace;
 mod migrate;
 mod queries;
@@ -52,7 +52,7 @@ impl CassandraOpts {
 /// specified with [MigrateOpts::history_keyspace] and [MigrateOpts::history_table]. A successful
 /// method result contains a vec of the cql script paths executed during this invocation.
 pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<CqlFile>, MigrateError> {
-    let cql_files = cql::files_from_dir(&opts.cql_dir)?;
+    let cql_files = cql_file::files_from_dir(&opts.cql_dir)?;
     let node_address = opts.cassandra_opts.unwrap_or_default().node_address();
     let session = cql_session(node_address).await?;
 

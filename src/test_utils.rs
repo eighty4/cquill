@@ -8,10 +8,10 @@ use rand::Rng;
 use scylla::Session;
 use temp_dir::TempDir;
 
-use crate::cql::CqlFile;
+use crate::cql_file::CqlFile;
 use crate::keyspace::KeyspaceOpts;
 use crate::migrate::MigrateArgs;
-use crate::{cql, queries, CassandraOpts, TABLE};
+use crate::{cql_file, queries, CassandraOpts, TABLE};
 
 pub(crate) fn make_file(path: PathBuf, content: &str) {
     let mut f = fs::OpenOptions::new()
@@ -137,7 +137,7 @@ impl TestHarnessBuilder {
             make_file(self.directory.path().join(filename), content);
         }
         let temp_dir_path = self.directory.path().canonicalize().unwrap();
-        let cql_files = cql::files_from_dir(&temp_dir_path).unwrap_or_default();
+        let cql_files = cql_file::files_from_dir(&temp_dir_path).unwrap_or_default();
         let cquill_keyspace = self
             .cquill_keyspace
             .unwrap_or_else(|| KeyspaceOpts::simple(keyspace_name(), 1));
