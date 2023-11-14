@@ -1,26 +1,28 @@
 use crate::cql::lex::TokenName::*;
+use uuid::Uuid;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum TokenName {
     LeftCurvedBracket,
     RightCurvedBracket,
-    LeftRoundBracket,
-    RightRoundBracket,
-    LeftSquareBracket,
-    RightSquareBracket,
+    LeftParenthesis,
+    RightParenthesis,
+    LeftSquareBracket,  // todo impl
+    RightSquareBracket, // todo impl
     Comma,
     Semicolon,
     Colon,
     Dot,
     Star,
-    Divide,
-    Modulus,
-    Plus,
+    Divide,  // todo impl
+    Modulus, // todo impl
+    Plus,    // todo impl
     Minus,
-    DoubleMinus,
-    DoubleQuote,
+    DoubleMinus, // todo impl
+    DoubleQuote, // todo impl
     SingleQuote,
     Equal,
+    NotEqual,
     LessThan,
     GreaterThan,
     LessThanEqual,
@@ -28,39 +30,37 @@ pub(crate) enum TokenName {
 
     AccessKeyword, // todo test lex
     AddKeyword,
-    AllKeyword,   // todo test lex
-    AllowKeyword, // todo test lex
+    AllKeyword, // todo test lex
+    AllowKeyword,
     AlterKeyword,
     AggregateKeyword, // todo test lex
     AndKeyword,
-    ApplyKeyword, // todo test lex
+    ApplyKeyword,
     AsciiKeyword,
-    AsKeyword, // todo test lex
+    AsKeyword,
     AscKeyword,
     AuthorizeKeyword, // todo test lex
-    BatchKeyword,     // todo test lex
-    BeginKeyword,     // todo test lex
+    BatchKeyword,
+    BeginKeyword,
     BigIntKeyword,
     BlobKeyword,
     BooleanKeyword,
     ByKeyword,
     CalledKeyword, // todo test lex
-    CastKeyword,   // todo test lex
     ClusteringKeyword,
     CompactKeyword,
-    ContainsKeyword, // todo test lex
-    CountKeyword,    // todo test lex
+    ContainsKeyword,
     CounterKeyword,
     CreateKeyword,
     CustomKeyword, // todo test lex
     DateKeyword,
     DatacentersKeyword, // todo test lex
     DecimalKeyword,
-    DefaultKeyword, // todo test lex
-    DeleteKeyword,  // todo test lex
+    DefaultKeyword,
+    DeleteKeyword,
     DescKeyword,
     DescribeKeyword, // todo test lex
-    DistinctKeyword, // todo test lex
+    DistinctKeyword,
     DoubleKeyword,
     DropKeyword,
     DurationKeyword,
@@ -71,46 +71,49 @@ pub(crate) enum TokenName {
     FilteringKeyword,
     FinalFuncKeyword, // todo test lex
     FloatKeyword,
-    FromKeyword,      // todo test lex
+    FromKeyword,
     FullKeyword,      // todo test lex
     FunctionKeyword,  // todo test lex
     FunctionsKeyword, // todo test lex
     GrantKeyword,     // todo test lex
-    GroupKeyword,     // todo test lex
-    HashedKeyword,    // todo test lex
+    GroupKeyword,
+    HashedKeyword, // todo test lex
     IfKeyword,
-    InKeyword,    // todo test lex
+    InKeyword,
     IndexKeyword, // todo test lex
     InetKeyword,
+    InfinityKeyword, // todo test lex
     InitCondKeyword, // todo test lex
     InputKeyword,    // todo test lex
-    InsertKeyword,   // todo test lex
+    InsertKeyword,
     IntKeyword,
-    JsonKeyword, // todo test lex
+    IntoKeyword,
+    JsonKeyword,
     KeyKeyword,
     KeysKeyword, // todo test lex
     KeyspaceKeyword,
-    KeyspacesKeyword,    // todo test lex
-    LanguageKeyword,     // todo test lex
-    LimitKeyword,        // todo test lex
+    KeyspacesKeyword, // todo test lex
+    LanguageKeyword,  // todo test lex
+    LimitKeyword,
     ListKeyword,         // todo test lex
     LoginKeyword,        // todo test lex
     MaterializedKeyword, // todo test lex
     MBeanKeyword,        // todo test lex
     MBeansKeyword,       // todo test lex
     ModifyKeyword,       // todo test lex
+    NaNKeyword,          // todo test lex
     NoRecursiveKeyword,  // todo test lex
     NotKeyword,
     NoSuperUserKeyword, // todo test lex
-    NullKeyword,        // todo test lex
-    OfKeyword,          // todo test lex
-    OnKeyword,          // todo test lex
-    OptionsKeyword,     // todo test lex
-    OrKeyword,          // todo test lex
+    NullKeyword,
+    OfKeyword,      // todo test lex
+    OnKeyword,      // todo test lex
+    OptionsKeyword, // todo test lex
+    OrKeyword,      // todo test lex
     OrderKeyword,
-    PartitionKeyword,   // todo test lex
-    PasswordKeyword,    // todo test lex
-    PerKeyword,         // todo test lex
+    PartitionKeyword,
+    PasswordKeyword, // todo test lex
+    PerKeyword,
     PermissionKeyword,  // todo test lex
     PermissionsKeyword, // todo test lex
     PrimaryKeyword,
@@ -121,9 +124,9 @@ pub(crate) enum TokenName {
     RevokeKeyword,  // todo test lex
     RoleKeyword,    // todo test lex
     RolesKeyword,   // todo test lex
-    SelectKeyword,  // todo test lex
-    SetKeyword,     // todo test lex
-    SFuncKeyword,   // todo test lex
+    SelectKeyword,
+    SetKeyword,
+    SFuncKeyword, // todo test lex
     SmallIntKeyword,
     StaticKeyword, // todo test lex
     StorageKeyword,
@@ -134,7 +137,7 @@ pub(crate) enum TokenName {
     TablesKeyword, // todo test lex
     TextKeyword,
     TimeKeyword,
-    TimestampKeyword, // todo test lex
+    TimestampKeyword,
     TimeUuidKeyword,
     TinyIntKeyword,
     ToKeyword,
@@ -142,25 +145,26 @@ pub(crate) enum TokenName {
     TriggerKeyword, // todo test lex
     TrueKeyword,
     TruncateKeyword,
-    TtlKeyword,      // todo test lex
-    UnloggedKeyword, // todo test lex
-    UnsetKeyword,    // todo test lex
-    UpdateKeyword,   // todo test lex
+    TtlKeyword,
+    UnloggedKeyword,
+    UnsetKeyword, // todo test lex
+    UpdateKeyword,
     UseKeyword,
     UserKeyword,  // todo test lex
     UsersKeyword, // todo test lex
-    UsingKeyword, // todo test lex
+    UsingKeyword,
     UuidKeyword,
-    ValuesKeyword, // todo test lex
+    ValuesKeyword,
     VarCharKeyword,
     VarIntKeyword,
-    ViewKeyword,  // todo test lex
-    WhereKeyword, // todo test lex
+    ViewKeyword, // todo test lex
+    WhereKeyword,
     WithKeyword,
-    WriteTimeKeyword, // todo test lex
 
+    UuidLiteral,
     StringLiteral,
     NumberLiteral,
+    BlobLiteral,
     Identifier,
 }
 
@@ -186,11 +190,9 @@ impl TokenName {
             "boolean" => BooleanKeyword,
             "by" => ByKeyword,
             "called" => CalledKeyword,
-            "cast" => CastKeyword,
             "clustering" => ClusteringKeyword,
             "compact" => CompactKeyword,
             "contains" => ContainsKeyword,
-            "count" => CountKeyword,
             "counter" => CounterKeyword,
             "create" => CreateKeyword,
             "custom" => CustomKeyword,
@@ -227,6 +229,7 @@ impl TokenName {
             "input" => InputKeyword,
             "insert" => InsertKeyword,
             "int" => IntKeyword,
+            "into" => IntoKeyword,
             "json" => JsonKeyword,
             "key" => KeyKeyword,
             "keys" => KeysKeyword,
@@ -298,7 +301,6 @@ impl TokenName {
             "view" => ViewKeyword,
             "where" => WhereKeyword,
             "with" => WithKeyword,
-            "writetime" => WriteTimeKeyword,
             &_ => Identifier,
         }
     }
@@ -370,24 +372,44 @@ impl<'a> Tokenizer<'a> {
                 }
                 "{" => Some(LeftCurvedBracket),
                 "}" => Some(RightCurvedBracket),
-                "(" => Some(LeftRoundBracket),
-                ")" => Some(RightRoundBracket),
+                "(" => Some(LeftParenthesis),
+                ")" => Some(RightParenthesis),
+                "-" => Some(Minus),
                 "." => Some(Dot),
                 "=" => Some(Equal),
-                ":" => Some(Colon),
-                "," => Some(Comma),
-                ";" => Some(Semicolon),
-                "'" => Some(self.string()),
-                &_ => {
-                    if c.chars().all(|c| c.is_ascii_digit()) {
-                        Some(self.number())
-                    } else if c.chars().all(|c| c.is_ascii_alphabetic()) {
-                        Some(self.identifier_or_keyword())
+                "!" => {
+                    if self.peek().map_or(false, |c| c == "=") {
+                        self.advance();
+                        Some(NotEqual)
                     } else {
-                        // todo add error
                         None
                     }
                 }
+                ":" => Some(Colon),
+                "," => Some(Comma),
+                ";" => Some(Semicolon),
+                "*" => Some(Star),
+                "<" => {
+                    if self.peek().map_or(false, |c| c == "=") {
+                        self.advance();
+                        Some(LessThanEqual)
+                    } else {
+                        Some(LessThan)
+                    }
+                }
+                ">" => {
+                    if self.peek().map_or(false, |c| c == "=") {
+                        self.advance();
+                        Some(GreaterThanEqual)
+                    } else {
+                        Some(GreaterThan)
+                    }
+                }
+                "'" => Some(self.string()),
+                &_ => match self.constant_or_identifier_or_keyword() {
+                    Ok(name) => Some(name),
+                    Err(_) => None,
+                },
             };
             if let Some(name) = maybe_name {
                 self.add_token(name);
@@ -413,30 +435,91 @@ impl<'a> Tokenizer<'a> {
         StringLiteral
     }
 
-    fn number(&mut self) -> TokenName {
+    fn constant_or_identifier_or_keyword(&mut self) -> Result<TokenName, ()> {
+        if self.splice() == "0" {
+            match self.blob() {
+                Ok(maybe_name) => {
+                    if let Some(name) = maybe_name {
+                        return Ok(name);
+                    }
+                }
+                Err(_) => return Err(()),
+            };
+        }
+        let mut only_hex = true;
+        let mut only_digit = true;
+        let mut has_dash = false;
+        let mut has_decimal = false;
+        let mut has_underscore = false;
         loop {
-            if let Some(c) = self.peek() {
-                if c.chars().all(|c| c.is_ascii_digit()) && self.advance().is_some() {
+            if let Some(s) = self.peek() {
+                let mut advance = true;
+                for c in s.chars() {
+                    advance =
+                        advance && (c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.');
+                    if advance {
+                        if c == '.' {
+                            if !only_digit {
+                                advance = false;
+                                break;
+                            }
+                            has_decimal = true;
+                        } else if c == '-' {
+                            has_dash = true;
+                        } else if c == '_' {
+                            has_underscore = true;
+                        } else if !c.is_ascii_digit() {
+                            only_digit = false;
+                            if !c.is_ascii_hexdigit() {
+                                only_hex = false;
+                            }
+                        }
+                    }
+                }
+                if advance && self.advance().is_some() {
                     continue;
                 }
             }
             break;
         }
-        NumberLiteral
+        let s = self.splice();
+        let maybe_uuid = s.len() == 36 && only_hex && !has_decimal && has_dash && !has_underscore;
+        if maybe_uuid && Uuid::try_parse_ascii(s.as_bytes()).is_ok() {
+            Ok(UuidLiteral)
+        } else if only_digit && !has_dash && !has_underscore {
+            Ok(NumberLiteral)
+        } else if !has_dash && !has_decimal {
+            Ok(TokenName::match_keyword(s))
+        } else {
+            Err(())
+        }
     }
 
-    fn identifier_or_keyword(&mut self) -> TokenName {
-        loop {
-            if let Some(c) = self.peek() {
-                if c.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-                    && self.advance().is_some()
-                {
-                    continue;
+    fn blob(&mut self) -> Result<Option<TokenName>, ()> {
+        if !self.peek().map_or(false, |c| c.to_ascii_lowercase() == "x") {
+            Ok(None)
+        } else {
+            self.advance();
+            let mut hex = true;
+            loop {
+                if let Some(s) = self.peek() {
+                    let mut advance = false;
+                    for c in s.chars() {
+                        advance = c.is_ascii_alphanumeric();
+                        hex = hex && c.is_ascii_hexdigit();
+                    }
+                    if advance && self.advance().is_some() {
+                        continue;
+                    }
                 }
+                break;
             }
-            break;
+            if hex {
+                Ok(Some(BlobLiteral))
+            } else {
+                Err(())
+            }
         }
-        TokenName::match_keyword(self.splice())
     }
 
     fn add_token(&mut self, name: TokenName) {
