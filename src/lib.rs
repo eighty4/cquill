@@ -8,6 +8,8 @@ use crate::keyspace::*;
 pub use crate::migrate::{MigrateError, MigrateErrorState};
 use crate::queries::*;
 
+#[allow(unused)]
+mod cql;
 mod cql_file;
 pub mod keyspace;
 mod migrate;
