@@ -1,4 +1,6 @@
 mod lex;
 
 #[cfg(test)]
-pub(crate) mod lex_test;
+mod lex_test;
+#[cfg(test)]
+mod test_cql;

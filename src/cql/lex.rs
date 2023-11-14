@@ -27,8 +27,9 @@ pub(crate) enum TokenName {
     GreaterThanEqual,
 
     AccessKeyword, // todo test lex
-    AllKeyword,    // todo test lex
-    AllowKeyword,  // todo test lex
+    AddKeyword,
+    AllKeyword,   // todo test lex
+    AllowKeyword, // todo test lex
     AlterKeyword,
     AggregateKeyword, // todo test lex
     AndKeyword,
@@ -46,7 +47,7 @@ pub(crate) enum TokenName {
     CalledKeyword, // todo test lex
     CastKeyword,   // todo test lex
     ClusteringKeyword,
-    CompactKeyword,  // todo test lex
+    CompactKeyword,
     ContainsKeyword, // todo test lex
     CountKeyword,    // todo test lex
     CounterKeyword,
@@ -61,11 +62,11 @@ pub(crate) enum TokenName {
     DescribeKeyword, // todo test lex
     DistinctKeyword, // todo test lex
     DoubleKeyword,
-    DropKeyword, // todo test lex
+    DropKeyword,
     DurationKeyword,
     EntriesKeyword, // todo test lex
     ExecuteKeyword, // todo test lex
-    ExistsKeyword,  // todo test lex
+    ExistsKeyword,
     FalseKeyword,
     FilteringKeyword,
     FinalFuncKeyword, // todo test lex
@@ -77,9 +78,9 @@ pub(crate) enum TokenName {
     GrantKeyword,     // todo test lex
     GroupKeyword,     // todo test lex
     HashedKeyword,    // todo test lex
-    IfKeyword,        // todo test lex
-    InKeyword,        // todo test lex
-    IndexKeyword,     // todo test lex
+    IfKeyword,
+    InKeyword,    // todo test lex
+    IndexKeyword, // todo test lex
     InetKeyword,
     InitCondKeyword, // todo test lex
     InputKeyword,    // todo test lex
@@ -99,13 +100,13 @@ pub(crate) enum TokenName {
     MBeansKeyword,       // todo test lex
     ModifyKeyword,       // todo test lex
     NoRecursiveKeyword,  // todo test lex
-    NotKeyword,          // todo test lex
-    NoSuperUserKeyword,  // todo test lex
-    NullKeyword,         // todo test lex
-    OfKeyword,           // todo test lex
-    OnKeyword,           // todo test lex
-    OptionsKeyword,      // todo test lex
-    OrKeyword,           // todo test lex
+    NotKeyword,
+    NoSuperUserKeyword, // todo test lex
+    NullKeyword,        // todo test lex
+    OfKeyword,          // todo test lex
+    OnKeyword,          // todo test lex
+    OptionsKeyword,     // todo test lex
+    OrKeyword,          // todo test lex
     OrderKeyword,
     PartitionKeyword,   // todo test lex
     PasswordKeyword,    // todo test lex
@@ -113,6 +114,7 @@ pub(crate) enum TokenName {
     PermissionKeyword,  // todo test lex
     PermissionsKeyword, // todo test lex
     PrimaryKeyword,
+    RenameKeyword,
     ReplaceKeyword, // todo test lex
     ReplicationKeyword,
     ReturnsKeyword, // todo test lex
@@ -123,8 +125,8 @@ pub(crate) enum TokenName {
     SetKeyword,     // todo test lex
     SFuncKeyword,   // todo test lex
     SmallIntKeyword,
-    StaticKeyword,    // todo test lex
-    StorageKeyword,   // todo test lex
+    StaticKeyword, // todo test lex
+    StorageKeyword,
     STypeKeyword,     // todo test lex
     SumKeyword,       // todo test lex
     SuperUserKeyword, // todo test lex
@@ -135,11 +137,11 @@ pub(crate) enum TokenName {
     TimestampKeyword, // todo test lex
     TimeUuidKeyword,
     TinyIntKeyword,
-    ToKeyword,      // todo test lex
+    ToKeyword,
     TokenKeyword,   // todo test lex
     TriggerKeyword, // todo test lex
     TrueKeyword,
-    TruncateKeyword, // todo test lex
+    TruncateKeyword,
     TtlKeyword,      // todo test lex
     UnloggedKeyword, // todo test lex
     UnsetKeyword,    // todo test lex
@@ -166,6 +168,7 @@ impl TokenName {
     pub fn match_keyword(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "access" => AccessKeyword,
+            "add" => AddKeyword,
             "all" => AllKeyword,
             "allow" => AllowKeyword,
             "alter" => AlterKeyword,
@@ -252,6 +255,7 @@ impl TokenName {
             "permission" => PermissionKeyword,
             "permissions" => PermissionsKeyword,
             "primary" => PrimaryKeyword,
+            "rename" => RenameKeyword,
             "replace" => ReplaceKeyword,
             "replication" => ReplicationKeyword,
             "returns" => ReturnsKeyword,
