@@ -1869,3 +1869,1241 @@ mod data_manipulation {
         }
     }
 }
+
+mod secondary_indexes {
+    use super::*;
+
+    mod create_index {
+        use super::*;
+
+        #[test]
+        fn test_create_index() {
+            tokenize_expect(
+                CREATE_INDEX,
+                vec![
+                    (CreateKeyword, "create"),
+                    (IndexKeyword, "index"),
+                    (Identifier, "big_data_index"),
+                    (OnKeyword, "on"),
+                    (Identifier, "big_data_table"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "text_column"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_index_if_not_exists() {
+            tokenize_expect(
+                CREATE_INDEX_IF_NOT_EXISTS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (IndexKeyword, "index"),
+                    (IfKeyword, "if"),
+                    (NotKeyword, "not"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_index"),
+                    (OnKeyword, "on"),
+                    (Identifier, "big_data_table"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "text_column"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_index_on_keys() {
+            tokenize_expect(
+                CREATE_INDEX_ON_KEYS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (IndexKeyword, "index"),
+                    (Identifier, "big_data_index"),
+                    (OnKeyword, "on"),
+                    (Identifier, "big_data_table"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "keys"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "map_column"),
+                    (RightParenthesis, ")"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_index_on_values() {
+            tokenize_expect(
+                CREATE_INDEX_ON_VALUES,
+                vec![
+                    (CreateKeyword, "create"),
+                    (IndexKeyword, "index"),
+                    (Identifier, "big_data_index"),
+                    (OnKeyword, "on"),
+                    (Identifier, "big_data_table"),
+                    (LeftParenthesis, "("),
+                    (ValuesKeyword, "values"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "map_column"),
+                    (RightParenthesis, ")"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_index_on_entries() {
+            tokenize_expect(
+                CREATE_INDEX_ON_ENTRIES,
+                vec![
+                    (CreateKeyword, "create"),
+                    (IndexKeyword, "index"),
+                    (Identifier, "big_data_index"),
+                    (OnKeyword, "on"),
+                    (Identifier, "big_data_table"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "entries"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "map_column"),
+                    (RightParenthesis, ")"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_index_on_full() {
+            tokenize_expect(
+                CREATE_INDEX_ON_FULL,
+                vec![
+                    (CreateKeyword, "create"),
+                    (IndexKeyword, "index"),
+                    (Identifier, "big_data_index"),
+                    (OnKeyword, "on"),
+                    (Identifier, "big_data_table"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "full"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "map_column"),
+                    (RightParenthesis, ")"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_custom_index() {
+            tokenize_expect(
+                CREATE_CUSTOM_INDEX,
+                vec![
+                    (CreateKeyword, "create"),
+                    (CustomKeyword, "custom"),
+                    (IndexKeyword, "index"),
+                    (Identifier, "big_data_index"),
+                    (OnKeyword, "on"),
+                    (Identifier, "big_data_table"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "text_column"),
+                    (RightParenthesis, ")"),
+                    (UsingKeyword, "using"),
+                    (StringLiteral, "'fqpn.IndexClass'"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_custom_index_with_options() {
+            tokenize_expect(
+                CREATE_CUSTOM_INDEX_WITH_OPTIONS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (CustomKeyword, "custom"),
+                    (IndexKeyword, "index"),
+                    (Identifier, "big_data_index"),
+                    (OnKeyword, "on"),
+                    (Identifier, "big_data_table"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "text_column"),
+                    (RightParenthesis, ")"),
+                    (UsingKeyword, "using"),
+                    (StringLiteral, "'fqpn.IndexClass'"),
+                    (WithKeyword, "with"),
+                    (OptionsKeyword, "options"),
+                    (Equal, "="),
+                    (LeftCurvedBracket, "{"),
+                    (StringLiteral, "'option'"),
+                    (Colon, ":"),
+                    (StringLiteral, "'value'"),
+                    (RightCurvedBracket, "}"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+
+    mod drop_index {
+        use super::*;
+
+        #[test]
+        fn test_drop_index() {
+            tokenize_expect(
+                DROP_INDEX,
+                vec![
+                    (DropKeyword, "drop"),
+                    (IndexKeyword, "index"),
+                    (Identifier, "big_data_index"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_index_if_exists() {
+            tokenize_expect(
+                DROP_INDEX_IF_EXISTS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (IndexKeyword, "index"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_index"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+}
+
+mod materialized_views {
+    use super::*;
+
+    mod create_materialized_view {
+        use super::*;
+
+        #[test]
+        fn test_create_materialized_view() {
+            tokenize_expect(
+                CREATE_MATERIALIZED_VIEW,
+                vec![
+                    (CreateKeyword, "create"),
+                    (MaterializedKeyword, "materialized"),
+                    (ViewKeyword, "view"),
+                    (Identifier, "big_data_view"),
+                    (AsKeyword, "as"),
+                    (SelectKeyword, "select"),
+                    (Star, "*"),
+                    (FromKeyword, "from"),
+                    (Identifier, "big_data_table"),
+                    (WhereKeyword, "where"),
+                    (Identifier, "int_column"),
+                    (GreaterThan, ">"),
+                    (NumberLiteral, "4"),
+                    (PrimaryKeyword, "primary"),
+                    (KeyKeyword, "key"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "int_column"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_materialized_view_if_not_exists() {
+            tokenize_expect(
+                CREATE_MATERIALIZED_VIEW_IF_NOT_EXISTS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (MaterializedKeyword, "materialized"),
+                    (ViewKeyword, "view"),
+                    (IfKeyword, "if"),
+                    (NotKeyword, "not"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_view"),
+                    (AsKeyword, "as"),
+                    (SelectKeyword, "select"),
+                    (Star, "*"),
+                    (FromKeyword, "from"),
+                    (Identifier, "big_data_table"),
+                    (WhereKeyword, "where"),
+                    (Identifier, "int_column"),
+                    (GreaterThan, ">"),
+                    (NumberLiteral, "4"),
+                    (PrimaryKeyword, "primary"),
+                    (KeyKeyword, "key"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "int_column"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_materialized_view_with_options() {
+            tokenize_expect(
+                CREATE_MATERIALIZED_VIEW_WITH_OPTIONS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (MaterializedKeyword, "materialized"),
+                    (ViewKeyword, "view"),
+                    (Identifier, "big_data_view"),
+                    (AsKeyword, "as"),
+                    (SelectKeyword, "select"),
+                    (Star, "*"),
+                    (FromKeyword, "from"),
+                    (Identifier, "big_data_table"),
+                    (WhereKeyword, "where"),
+                    (Identifier, "int_column"),
+                    (GreaterThan, ">"),
+                    (NumberLiteral, "4"),
+                    (PrimaryKeyword, "primary"),
+                    (KeyKeyword, "key"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "int_column"),
+                    (RightParenthesis, ")"),
+                    (WithKeyword, "with"),
+                    (Identifier, "comment"),
+                    (Equal, "="),
+                    (StringLiteral, "'comment ca va'"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+
+    mod alter_materialized_view {
+        use super::*;
+
+        #[test]
+        fn test_alter_materialized_view() {
+            tokenize_expect(
+                ALTER_MATERIALIZED_VIEW,
+                vec![
+                    (AlterKeyword, "alter"),
+                    (MaterializedKeyword, "materialized"),
+                    (ViewKeyword, "view"),
+                    (Identifier, "big_data_view"),
+                    (WithKeyword, "with"),
+                    (Identifier, "comment"),
+                    (Equal, "="),
+                    (StringLiteral, "'quoi de neuf'"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_alter_materialized_view_if_exists() {
+            tokenize_expect(
+                ALTER_MATERIALIZED_VIEW_IF_EXISTS,
+                vec![
+                    (AlterKeyword, "alter"),
+                    (MaterializedKeyword, "materialized"),
+                    (ViewKeyword, "view"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_view"),
+                    (WithKeyword, "with"),
+                    (Identifier, "comment"),
+                    (Equal, "="),
+                    (StringLiteral, "'quoi de neuf'"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+
+    mod drop_materialized_view {
+        use super::*;
+
+        #[test]
+        fn test_drop_materialized_view() {
+            tokenize_expect(
+                DROP_MATERIALIZED_VIEW,
+                vec![
+                    (DropKeyword, "drop"),
+                    (MaterializedKeyword, "materialized"),
+                    (ViewKeyword, "view"),
+                    (Identifier, "big_data_view"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_materialized_view_if_exists() {
+            tokenize_expect(
+                DROP_MATERIALIZED_VIEW_IF_EXISTS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (MaterializedKeyword, "materialized"),
+                    (ViewKeyword, "view"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_view"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+}
+
+mod user_defined_functions {
+    use super::*;
+
+    mod create_function {
+        use super::*;
+
+        #[test]
+        fn test_create_function_with_string_literal() {
+            tokenize_expect(
+                CREATE_FUNCTION_WITH_STRING_LITERAL,
+                vec![
+                    (CreateKeyword, "create"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "fn_arg"),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (CalledKeyword, "called"),
+                    (OnKeyword, "on"),
+                    (NullKeyword, "null"),
+                    (InputKeyword, "input"),
+                    (ReturnsKeyword, "returns"),
+                    (TextKeyword, "text"),
+                    (LanguageKeyword, "language"),
+                    (Identifier, "java"),
+                    (AsKeyword, "as"),
+                    (StringLiteral, "'return fn_arg.toString();'"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_function_called_on_null_input() {
+            tokenize_expect(
+                CREATE_FUNCTION_WITH_STRING_LITERAL,
+                vec![
+                    (CreateKeyword, "create"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "fn_arg"),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (CalledKeyword, "called"),
+                    (OnKeyword, "on"),
+                    (NullKeyword, "null"),
+                    (InputKeyword, "input"),
+                    (ReturnsKeyword, "returns"),
+                    (TextKeyword, "text"),
+                    (LanguageKeyword, "language"),
+                    (Identifier, "java"),
+                    (AsKeyword, "as"),
+                    (StringLiteral, "'return fn_arg.toString();'"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_function_returns_null_on_null_input() {
+            tokenize_expect(
+                CREATE_FUNCTION_RETURNS_NULL_ON_NULL_INPUT,
+                vec![
+                    (CreateKeyword, "create"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "fn_arg"),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (ReturnsKeyword, "returns"),
+                    (NullKeyword, "null"),
+                    (OnKeyword, "on"),
+                    (NullKeyword, "null"),
+                    (InputKeyword, "input"),
+                    (ReturnsKeyword, "returns"),
+                    (TextKeyword, "text"),
+                    (LanguageKeyword, "language"),
+                    (Identifier, "java"),
+                    (AsKeyword, "as"),
+                    (
+                        DollarStringLiteral,
+                        "$$\n        return fn_arg.toString();\n    $$",
+                    ),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_or_replace_function() {
+            tokenize_expect(
+                CREATE_OR_REPLACE_FUNCTION,
+                vec![
+                    (CreateKeyword, "create"),
+                    (OrKeyword, "or"),
+                    (ReplaceKeyword, "replace"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "fn_arg"),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (CalledKeyword, "called"),
+                    (OnKeyword, "on"),
+                    (NullKeyword, "null"),
+                    (InputKeyword, "input"),
+                    (ReturnsKeyword, "returns"),
+                    (TextKeyword, "text"),
+                    (LanguageKeyword, "language"),
+                    (Identifier, "java"),
+                    (AsKeyword, "as"),
+                    (
+                        DollarStringLiteral,
+                        "$$\n        return fn_arg.toString();\n    $$",
+                    ),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_function_if_not_exists() {
+            tokenize_expect(
+                CREATE_FUNCTION_IF_NOT_EXISTS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (FunctionKeyword, "function"),
+                    (IfKeyword, "if"),
+                    (NotKeyword, "not"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "fn_arg"),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (CalledKeyword, "called"),
+                    (OnKeyword, "on"),
+                    (NullKeyword, "null"),
+                    (InputKeyword, "input"),
+                    (ReturnsKeyword, "returns"),
+                    (TextKeyword, "text"),
+                    (LanguageKeyword, "language"),
+                    (Identifier, "java"),
+                    (AsKeyword, "as"),
+                    (
+                        DollarStringLiteral,
+                        "$$\n        return fn_arg.toString();\n    $$",
+                    ),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_function_with_multiple_args() {
+            tokenize_expect(
+                CREATE_FUNCTION_WITH_MULTIPLE_ARGS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "fn_arg1"),
+                    (IntKeyword, "int"),
+                    (Comma, ","),
+                    (Identifier, "fn_arg2"),
+                    (TextKeyword, "text"),
+                    (RightParenthesis, ")"),
+                    (CalledKeyword, "called"),
+                    (OnKeyword, "on"),
+                    (NullKeyword, "null"),
+                    (InputKeyword, "input"),
+                    (ReturnsKeyword, "returns"),
+                    (TextKeyword, "text"),
+                    (LanguageKeyword, "language"),
+                    (Identifier, "java"),
+                    (AsKeyword, "as"),
+                    (
+                        DollarStringLiteral,
+                        "$$\n        return fn_arg1.toString();\n    $$",
+                    ),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_function_with_frozen_arg() {
+            tokenize_expect(
+                CREATE_FUNCTION_WITH_FROZEN_ARG,
+                vec![
+                    (CreateKeyword, "create"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "fn_arg"),
+                    (Identifier, "frozen"),
+                    (LessThan, "<"),
+                    (Identifier, "some_udt"),
+                    (GreaterThan, ">"),
+                    (RightParenthesis, ")"),
+                    (CalledKeyword, "called"),
+                    (OnKeyword, "on"),
+                    (NullKeyword, "null"),
+                    (InputKeyword, "input"),
+                    (ReturnsKeyword, "returns"),
+                    (TextKeyword, "text"),
+                    (LanguageKeyword, "language"),
+                    (Identifier, "java"),
+                    (AsKeyword, "as"),
+                    (
+                        DollarStringLiteral,
+                        "$$\n        return fn_arg.toString();\n    $$",
+                    ),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_function_returns_user_defined_type() {
+            tokenize_expect(
+                CREATE_FUNCTION_RETURNS_USER_DEFINED_TYPE,
+                vec![
+                    (CreateKeyword, "create"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "fn_arg"),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (CalledKeyword, "called"),
+                    (OnKeyword, "on"),
+                    (NullKeyword, "null"),
+                    (InputKeyword, "input"),
+                    (ReturnsKeyword, "returns"),
+                    (Identifier, "some_udt"),
+                    (LanguageKeyword, "language"),
+                    (Identifier, "java"),
+                    (AsKeyword, "as"),
+                    (
+                        DollarStringLiteral,
+                        "$$\n        return fn_arg.toString();\n    $$",
+                    ),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+
+    mod drop_function {
+        use super::*;
+
+        #[test]
+        fn test_drop_function_without_args() {
+            tokenize_expect(
+                DROP_FUNCTION_WITHOUT_ARGS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_function_with_explicit_keyspace() {
+            tokenize_expect(
+                DROP_FUNCTION_WITH_EXPLICIT_KEYSPACE,
+                vec![
+                    (DropKeyword, "drop"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_keyspace"),
+                    (Dot, "."),
+                    (Identifier, "big_data_fn"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_function_with_single_arg() {
+            tokenize_expect(
+                DROP_FUNCTION_WITH_SINGLE_ARG,
+                vec![
+                    (DropKeyword, "drop"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_function_with_multiple_args() {
+            tokenize_expect(
+                DROP_FUNCTION_WITH_MULTIPLE_ARGS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (Comma, ","),
+                    (TextKeyword, "text"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_function_and_the_kitchen_sink() {
+            tokenize_expect(
+                DROP_FUNCTION_WITH_EXPLICIT_KEYSPACE_AND_MULTIPLE_ARGS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (FunctionKeyword, "function"),
+                    (Identifier, "big_data_keyspace"),
+                    (Dot, "."),
+                    (Identifier, "big_data_fn"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (Comma, ","),
+                    (TextKeyword, "text"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_function_if_exists() {
+            tokenize_expect(
+                DROP_FUNCTION_IF_EXISTS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (FunctionKeyword, "function"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_fn"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+}
+
+mod user_defined_aggregates {
+    use super::*;
+
+    mod create_aggregate {
+        use super::*;
+
+        #[test]
+        fn test_create_aggregate_with_single_arg() {
+            tokenize_expect(
+                CREATE_AGGREGATE_WITH_SINGLE_ARG,
+                vec![
+                    (CreateKeyword, "create"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (SFuncKeyword, "sfunc"),
+                    (Identifier, "fn_name"),
+                    (STypeKeyword, "stype"),
+                    (ListKeyword, "list"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_aggregate_with_multiple_args() {
+            tokenize_expect(
+                CREATE_AGGREGATE_WITH_MULTIPLE_ARGS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (Comma, ","),
+                    (DoubleKeyword, "double"),
+                    (RightParenthesis, ")"),
+                    (SFuncKeyword, "sfunc"),
+                    (Identifier, "fn_name"),
+                    (STypeKeyword, "stype"),
+                    (ListKeyword, "list"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_aggregate_with_udt_stype() {
+            tokenize_expect(
+                CREATE_AGGREGATE_WITH_UDT_STYPE,
+                vec![
+                    (CreateKeyword, "create"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (SFuncKeyword, "sfunc"),
+                    (Identifier, "fn_name"),
+                    (STypeKeyword, "stype"),
+                    (Identifier, "some_udt"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_or_replace_aggregate() {
+            tokenize_expect(
+                CREATE_OR_REPLACE_AGGREGATE,
+                vec![
+                    (CreateKeyword, "create"),
+                    (OrKeyword, "or"),
+                    (ReplaceKeyword, "replace"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (SFuncKeyword, "sfunc"),
+                    (Identifier, "fn_name"),
+                    (STypeKeyword, "stype"),
+                    (ListKeyword, "list"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_aggregate_if_not_exists() {
+            tokenize_expect(
+                CREATE_AGGREGATE_IF_NOT_EXISTS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (AggregateKeyword, "aggregate"),
+                    (IfKeyword, "if"),
+                    (NotKeyword, "not"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (SFuncKeyword, "sfunc"),
+                    (Identifier, "fn_name"),
+                    (STypeKeyword, "stype"),
+                    (ListKeyword, "list"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_aggregate_with_finalfunc() {
+            tokenize_expect(
+                CREATE_AGGREGATE_WITH_FINALFUNC,
+                vec![
+                    (CreateKeyword, "create"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (SFuncKeyword, "sfunc"),
+                    (Identifier, "fn_name"),
+                    (STypeKeyword, "stype"),
+                    (ListKeyword, "list"),
+                    (FinalFuncKeyword, "finalfunc"),
+                    (Identifier, "ffn_name"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_aggregate_with_initcond() {
+            tokenize_expect(
+                CREATE_AGGREGATE_WITH_INITCOND,
+                vec![
+                    (CreateKeyword, "create"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (SFuncKeyword, "sfunc"),
+                    (Identifier, "fn_name"),
+                    (STypeKeyword, "stype"),
+                    (ListKeyword, "list"),
+                    (InitCondKeyword, "initcond"),
+                    (StringLiteral, "'state value'"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_aggregate_with_finalfunc_and_initcond() {
+            tokenize_expect(
+                CREATE_AGGREGATE_WITH_FINALFUNC_AND_INITCOND,
+                vec![
+                    (CreateKeyword, "create"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (SFuncKeyword, "sfunc"),
+                    (Identifier, "fn_name"),
+                    (STypeKeyword, "stype"),
+                    (ListKeyword, "list"),
+                    (FinalFuncKeyword, "finalfunc"),
+                    (Identifier, "ffn_name"),
+                    (InitCondKeyword, "initcond"),
+                    (StringLiteral, "'state value'"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+
+    mod drop_aggregate {
+        use super::*;
+
+        #[test]
+        fn test_drop_aggregate() {
+            tokenize_expect(
+                DROP_AGGREGATE_WITHOUT_ARGS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_aggregate_with_explicit_keyspace() {
+            tokenize_expect(
+                DROP_AGGREGATE_WITH_EXPLICIT_KEYSPACE,
+                vec![
+                    (DropKeyword, "drop"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_keyspace"),
+                    (Dot, "."),
+                    (Identifier, "big_data_agg"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_aggregate_with_single_arg() {
+            tokenize_expect(
+                DROP_AGGREGATE_WITH_SINGLE_ARG,
+                vec![
+                    (DropKeyword, "drop"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_aggregate_with_multiple_args() {
+            tokenize_expect(
+                DROP_AGGREGATE_WITH_MULTIPLE_ARGS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (Comma, ","),
+                    (TextKeyword, "text"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_aggregate_and_the_kitchen_sink() {
+            tokenize_expect(
+                DROP_AGGREGATE_WITH_EXPLICIT_KEYSPACE_AND_MULTIPLE_ARGS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (AggregateKeyword, "aggregate"),
+                    (Identifier, "big_data_keyspace"),
+                    (Dot, "."),
+                    (Identifier, "big_data_agg"),
+                    (LeftParenthesis, "("),
+                    (IntKeyword, "int"),
+                    (Comma, ","),
+                    (TextKeyword, "text"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_aggregate_if_exists() {
+            tokenize_expect(
+                DROP_AGGREGATE_IF_EXISTS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (AggregateKeyword, "aggregate"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_agg"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+}
+
+mod user_defined_types {
+    use super::*;
+
+    mod create_type {
+        use super::*;
+
+        #[test]
+        fn test_create_type() {
+            tokenize_expect(
+                CREATE_UDT_WITH_SINGLE_ATTRIBUTE,
+                vec![
+                    (CreateKeyword, "create"),
+                    (TypeKeyword, "type"),
+                    (Identifier, "big_data_udt"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "int_attribute"),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_type_with_multiple_attributes() {
+            tokenize_expect(
+                CREATE_UDT_WITH_MULTIPLE_ATTRIBUTES,
+                vec![
+                    (CreateKeyword, "create"),
+                    (TypeKeyword, "type"),
+                    (Identifier, "big_data_udt"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "int_attr"),
+                    (IntKeyword, "int"),
+                    (Comma, ","),
+                    (Identifier, "text_attr"),
+                    (TextKeyword, "text"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_create_type_if_not_exists() {
+            tokenize_expect(
+                CREATE_UDT_IF_NOT_EXISTS,
+                vec![
+                    (CreateKeyword, "create"),
+                    (TypeKeyword, "type"),
+                    (IfKeyword, "if"),
+                    (NotKeyword, "not"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_udt"),
+                    (LeftParenthesis, "("),
+                    (Identifier, "int_attr"),
+                    (IntKeyword, "int"),
+                    (RightParenthesis, ")"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+
+    mod alter_type {
+        use super::*;
+
+        #[test]
+        fn test_alter_type_add_field() {
+            tokenize_expect(
+                ALTER_UDT_ADD_FIELD,
+                vec![
+                    (AlterKeyword, "alter"),
+                    (TypeKeyword, "type"),
+                    (Identifier, "big_data_udt"),
+                    (AddKeyword, "add"),
+                    (Identifier, "big_data_text_column"),
+                    (TextKeyword, "text"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_alter_type_if_exists() {
+            tokenize_expect(
+                ALTER_UDT_IF_EXISTS,
+                vec![
+                    (AlterKeyword, "alter"),
+                    (TypeKeyword, "type"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_udt"),
+                    (AddKeyword, "add"),
+                    (Identifier, "big_data_text_column"),
+                    (TextKeyword, "text"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_alter_type_add_field_if_not_exists() {
+            tokenize_expect(
+                ALTER_UDT_ADD_FIELD_IF_NOT_EXISTS,
+                vec![
+                    (AlterKeyword, "alter"),
+                    (TypeKeyword, "type"),
+                    (Identifier, "big_data_udt"),
+                    (AddKeyword, "add"),
+                    (IfKeyword, "if"),
+                    (NotKeyword, "not"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_text_column"),
+                    (TextKeyword, "text"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_alter_type_rename_field() {
+            tokenize_expect(
+                ALTER_UDT_RENAME_FIELD,
+                vec![
+                    (AlterKeyword, "alter"),
+                    (TypeKeyword, "type"),
+                    (Identifier, "big_data_udt"),
+                    (RenameKeyword, "rename"),
+                    (Identifier, "big_data_text_column"),
+                    (ToKeyword, "to"),
+                    (Identifier, "modest_data_text_column"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_alter_type_rename_multiple_fields() {
+            tokenize_expect(
+                ALTER_UDT_RENAME_MULTIPLE_FIELDS,
+                vec![
+                    (AlterKeyword, "alter"),
+                    (TypeKeyword, "type"),
+                    (Identifier, "big_data_udt"),
+                    (RenameKeyword, "rename"),
+                    (Identifier, "big_data_text_column"),
+                    (ToKeyword, "to"),
+                    (Identifier, "modest_data_text_column"),
+                    (AndKeyword, "and"),
+                    (Identifier, "big_data_int_column"),
+                    (ToKeyword, "to"),
+                    (Identifier, "gargantuan_int_column"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_alter_type_rename_field_if_exists() {
+            tokenize_expect(
+                ALTER_UDT_RENAME_FIELD_IF_EXISTS,
+                vec![
+                    (AlterKeyword, "alter"),
+                    (TypeKeyword, "type"),
+                    (Identifier, "big_data_udt"),
+                    (RenameKeyword, "rename"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_text_column"),
+                    (ToKeyword, "to"),
+                    (Identifier, "modest_data_text_column"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+
+    mod drop_type {
+        use super::*;
+
+        #[test]
+        fn test_drop_type() {
+            tokenize_expect(
+                DROP_UDT,
+                vec![
+                    (DropKeyword, "drop"),
+                    (TypeKeyword, "type"),
+                    (Identifier, "big_data_udt"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_type_if_exists() {
+            tokenize_expect(
+                DROP_UDT_IF_EXISTS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (TypeKeyword, "type"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_udt"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+    }
+}

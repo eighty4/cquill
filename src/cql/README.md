@@ -1,22 +1,34 @@
 # CQL reference
 
-- [DDL](https://cassandra.apache.org/doc/stable/cassandra/cql/ddl.html)
-- [DML](https://cassandra.apache.org/doc/stable/cassandra/cql/dml.html)
-- [secondary indices](https://cassandra.apache.org/doc/stable/cassandra/cql/indexes.html)
-- [materialized views](https://cassandra.apache.org/doc/stable/cassandra/cql/mvs.html)
-- [functions](https://cassandra.apache.org/doc/stable/cassandra/cql/functions.html)
-- [json](https://cassandra.apache.org/doc/stable/cassandra/cql/json.html)
-- [security](https://cassandra.apache.org/doc/stable/cassandra/cql/security.html)
-- [triggers](https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html)
+Lexer, parser and AST for [CQL 3.0](https://cassandra.apache.org/doc/stable/cassandra/cql/index.html).
+
+## Not supported
+
+- CQLSH commands like CAPTURE, CLEAR, CONSISTENCY, COPY, DESCRIBE, EXIT, LOGIN, PAGING, SERIAL CONSISTENCY, SHOW, SOURCE and TRACING
+- [Custom types](https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#custom-types)
 
 ## todos
 
-- collection cql types
-  - table column definitions
-  - insert collection constants
-  - update set, +, -, etc. operations
+- [json](https://cassandra.apache.org/doc/stable/cassandra/cql/json.html)
+- [security](https://cassandra.apache.org/doc/stable/cassandra/cql/security.html)
+- [triggers](https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html)
 - comments
-- dates
-- double-quoted case-sensitive identifiers
-- functions
-- TTL contextually tokenized as a `select ttl()` function identifier and a DML update parameter keyword
+  - `--`
+  - `//`
+  - `/*    \n    */`
+- types
+  - collections
+    - table column definitions
+    - insert collection constants
+    - update set, +, -, etc. operations
+  - datetime operations
+  - strings
+    - double-quoted case-sensitive identifiers
+    - using multiple `''` to escape a single quote in a string literal: `'tiffany's breakfast`
+    - triple single quote `'''string literals with a ' without escaping'''`
+- lex / parse gotchas
+  - ValuesKeyword and values fn
+  - TtlKeyword and ttl fn
+- lexer error reporting
+- parser
+- ast

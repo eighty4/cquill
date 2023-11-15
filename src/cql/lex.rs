@@ -13,6 +13,7 @@ pub(crate) enum TokenName {
     Semicolon,
     Colon,
     Dot,
+    Dollar,
     Star,
     Divide,  // todo impl
     Modulus, // todo impl
@@ -33,7 +34,7 @@ pub(crate) enum TokenName {
     AllKeyword, // todo test lex
     AllowKeyword,
     AlterKeyword,
-    AggregateKeyword, // todo test lex
+    AggregateKeyword,
     AndKeyword,
     ApplyKeyword,
     AsciiKeyword,
@@ -46,13 +47,13 @@ pub(crate) enum TokenName {
     BlobKeyword,
     BooleanKeyword,
     ByKeyword,
-    CalledKeyword, // todo test lex
+    CalledKeyword,
     ClusteringKeyword,
     CompactKeyword,
     ContainsKeyword,
     CounterKeyword,
     CreateKeyword,
-    CustomKeyword, // todo test lex
+    CustomKeyword,
     DateKeyword,
     DatacentersKeyword, // todo test lex
     DecimalKeyword,
@@ -64,52 +65,49 @@ pub(crate) enum TokenName {
     DoubleKeyword,
     DropKeyword,
     DurationKeyword,
-    EntriesKeyword, // todo test lex
     ExecuteKeyword, // todo test lex
     ExistsKeyword,
     FalseKeyword,
     FilteringKeyword,
-    FinalFuncKeyword, // todo test lex
+    FinalFuncKeyword,
     FloatKeyword,
     FromKeyword,
-    FullKeyword,      // todo test lex
-    FunctionKeyword,  // todo test lex
+    FunctionKeyword,
     FunctionsKeyword, // todo test lex
     GrantKeyword,     // todo test lex
     GroupKeyword,
     HashedKeyword, // todo test lex
     IfKeyword,
     InKeyword,
-    IndexKeyword, // todo test lex
+    IndexKeyword,
     InetKeyword,
     InfinityKeyword, // todo test lex
-    InitCondKeyword, // todo test lex
-    InputKeyword,    // todo test lex
+    InitCondKeyword,
+    InputKeyword,
     InsertKeyword,
     IntKeyword,
     IntoKeyword,
     JsonKeyword,
     KeyKeyword,
-    KeysKeyword, // todo test lex
     KeyspaceKeyword,
     KeyspacesKeyword, // todo test lex
-    LanguageKeyword,  // todo test lex
+    LanguageKeyword,
     LimitKeyword,
-    ListKeyword,         // todo test lex
-    LoginKeyword,        // todo test lex
-    MaterializedKeyword, // todo test lex
-    MBeanKeyword,        // todo test lex
-    MBeansKeyword,       // todo test lex
-    ModifyKeyword,       // todo test lex
-    NaNKeyword,          // todo test lex
-    NoRecursiveKeyword,  // todo test lex
+    ListKeyword,  // todo test lex
+    LoginKeyword, // todo test lex
+    MaterializedKeyword,
+    MBeanKeyword,       // todo test lex
+    MBeansKeyword,      // todo test lex
+    ModifyKeyword,      // todo test lex
+    NaNKeyword,         // todo test lex
+    NoRecursiveKeyword, // todo test lex
     NotKeyword,
     NoSuperUserKeyword, // todo test lex
     NullKeyword,
-    OfKeyword,      // todo test lex
-    OnKeyword,      // todo test lex
-    OptionsKeyword, // todo test lex
-    OrKeyword,      // todo test lex
+    OfKeyword, // todo test lex
+    OnKeyword, // todo test lex
+    OptionsKeyword,
+    OrKeyword,
     OrderKeyword,
     PartitionKeyword,
     PasswordKeyword, // todo test lex
@@ -118,19 +116,19 @@ pub(crate) enum TokenName {
     PermissionsKeyword, // todo test lex
     PrimaryKeyword,
     RenameKeyword,
-    ReplaceKeyword, // todo test lex
+    ReplaceKeyword,
     ReplicationKeyword,
-    ReturnsKeyword, // todo test lex
-    RevokeKeyword,  // todo test lex
-    RoleKeyword,    // todo test lex
-    RolesKeyword,   // todo test lex
+    ReturnsKeyword,
+    RevokeKeyword, // todo test lex
+    RoleKeyword,   // todo test lex
+    RolesKeyword,  // todo test lex
     SelectKeyword,
     SetKeyword,
-    SFuncKeyword, // todo test lex
+    SFuncKeyword,
     SmallIntKeyword,
     StaticKeyword, // todo test lex
     StorageKeyword,
-    STypeKeyword,     // todo test lex
+    STypeKeyword,
     SumKeyword,       // todo test lex
     SuperUserKeyword, // todo test lex
     TableKeyword,
@@ -146,6 +144,7 @@ pub(crate) enum TokenName {
     TrueKeyword,
     TruncateKeyword,
     TtlKeyword,
+    TypeKeyword,
     UnloggedKeyword,
     UnsetKeyword, // todo test lex
     UpdateKeyword,
@@ -157,12 +156,13 @@ pub(crate) enum TokenName {
     ValuesKeyword,
     VarCharKeyword,
     VarIntKeyword,
-    ViewKeyword, // todo test lex
+    ViewKeyword,
     WhereKeyword,
     WithKeyword,
 
     UuidLiteral,
     StringLiteral,
+    DollarStringLiteral,
     NumberLiteral,
     BlobLiteral,
     Identifier,
@@ -207,7 +207,6 @@ impl TokenName {
             "double" => DoubleKeyword,
             "drop" => DropKeyword,
             "duration" => DurationKeyword,
-            "entries" => EntriesKeyword,
             "execute" => ExecuteKeyword,
             "exists" => ExistsKeyword,
             "false" => FalseKeyword,
@@ -215,7 +214,6 @@ impl TokenName {
             "finalfunc" => FinalFuncKeyword,
             "float" => FloatKeyword,
             "from" => FromKeyword,
-            "full" => FullKeyword,
             "function" => FunctionKeyword,
             "functions" => FunctionsKeyword,
             "grant" => GrantKeyword,
@@ -232,7 +230,6 @@ impl TokenName {
             "into" => IntoKeyword,
             "json" => JsonKeyword,
             "key" => KeyKeyword,
-            "keys" => KeysKeyword,
             "keyspace" => KeyspaceKeyword,
             "keyspaces" => KeyspacesKeyword,
             "language" => LanguageKeyword,
@@ -287,6 +284,7 @@ impl TokenName {
             "true" => TrueKeyword,
             "truncate" => TruncateKeyword,
             "ttl" => TtlKeyword,
+            "type" => TypeKeyword,
             "unlogged" => UnloggedKeyword,
             "unset" => UnsetKeyword,
             "update" => UpdateKeyword,
@@ -405,6 +403,7 @@ impl<'a> Tokenizer<'a> {
                         Some(GreaterThan)
                     }
                 }
+                "$" => self.dollar_string(),
                 "'" => Some(self.string()),
                 &_ => match self.constant_or_identifier_or_keyword() {
                     Ok(name) => Some(name),
@@ -433,6 +432,27 @@ impl<'a> Tokenizer<'a> {
             break;
         }
         StringLiteral
+    }
+
+    fn dollar_string(&mut self) -> Option<TokenName> {
+        if self.peek().map_or(false, |c| c == "$") {
+            self.advance();
+        } else {
+            return None;
+        }
+        loop {
+            if let Some(c) = self.peek() {
+                if c == "\n" {
+                    self.line += 1;
+                }
+                self.advance();
+                if c == "$" && self.peek().map_or(false, |c| c == "$") {
+                    self.advance();
+                    break;
+                }
+            }
+        }
+        Some(DollarStringLiteral)
     }
 
     fn constant_or_identifier_or_keyword(&mut self) -> Result<TokenName, ()> {

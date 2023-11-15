@@ -409,3 +409,314 @@ insert into big_data_table (text_col1) values ('big data!');
 insert into big_data_table (text_col2) values ('more data!');
 apply batch;
 ";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/indexes.html#create-index-statement
+
+pub const CREATE_INDEX: &str = "\
+create index big_data_index on big_data_table (text_column);
+";
+
+pub const CREATE_INDEX_IF_NOT_EXISTS: &str = "\
+create index if not exists big_data_index on big_data_table (text_column);
+";
+
+pub const CREATE_INDEX_ON_KEYS: &str = "\
+create index big_data_index on big_data_table (keys(map_column));
+";
+
+pub const CREATE_INDEX_ON_VALUES: &str = "\
+create index big_data_index on big_data_table (values(map_column));
+";
+
+pub const CREATE_INDEX_ON_ENTRIES: &str = "\
+create index big_data_index on big_data_table (entries(map_column));
+";
+
+pub const CREATE_INDEX_ON_FULL: &str = "\
+create index big_data_index on big_data_table (full(map_column));
+";
+
+pub const CREATE_CUSTOM_INDEX: &str = "\
+create custom index big_data_index on big_data_table (text_column) using 'fqpn.IndexClass';
+";
+
+pub const CREATE_CUSTOM_INDEX_WITH_OPTIONS: &str = "\
+create custom index big_data_index on big_data_table (text_column)
+    using 'fqpn.IndexClass'
+    with options = {'option':'value'};
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/indexes.html#drop-index-statement
+
+pub const DROP_INDEX: &str = "\
+drop index big_data_index;
+";
+
+pub const DROP_INDEX_IF_EXISTS: &str = "\
+drop index if exists big_data_index;
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/mvs.html#create-materialized-view-statement
+
+pub const CREATE_MATERIALIZED_VIEW: &str = "\
+create materialized view big_data_view as
+    select * from big_data_table
+    where int_column > 4
+    primary key (int_column);
+";
+
+pub const CREATE_MATERIALIZED_VIEW_IF_NOT_EXISTS: &str = "\
+create materialized view if not exists big_data_view as
+    select * from big_data_table
+    where int_column > 4
+    primary key (int_column);
+";
+
+pub const CREATE_MATERIALIZED_VIEW_WITH_OPTIONS: &str = "\
+create materialized view big_data_view as
+    select * from big_data_table
+    where int_column > 4
+    primary key (int_column)
+    with comment = 'comment ca va';
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/mvs.html#alter-materialized-view-statement
+
+pub const ALTER_MATERIALIZED_VIEW: &str = "\
+alter materialized view big_data_view with comment = 'quoi de neuf';
+";
+
+pub const ALTER_MATERIALIZED_VIEW_IF_EXISTS: &str = "\
+alter materialized view if exists big_data_view with comment = 'quoi de neuf';
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/mvs.html#drop-materialized-view-statement
+pub const DROP_MATERIALIZED_VIEW: &str = "\
+drop materialized view big_data_view;
+";
+
+pub const DROP_MATERIALIZED_VIEW_IF_EXISTS: &str = "\
+drop materialized view if exists big_data_view;
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/functions.html#create-function-statement
+
+pub const CREATE_FUNCTION_WITH_STRING_LITERAL: &str = "\
+create function big_data_fn(fn_arg int)
+    called on null input
+    returns text
+    language java
+    as 'return fn_arg.toString();';
+";
+
+pub const CREATE_FUNCTION_CALLED_ON_NULL_INPUT: &str = "\
+create function big_data_fn(fn_arg int)
+    called on null input
+    returns text
+    language java
+    as $$
+        return fn_arg.toString();
+    $$;
+";
+
+pub const CREATE_FUNCTION_RETURNS_NULL_ON_NULL_INPUT: &str = "\
+create function big_data_fn (fn_arg int)
+    returns null on null input
+    returns text
+    language java
+    as $$
+        return fn_arg.toString();
+    $$;
+";
+
+pub const CREATE_OR_REPLACE_FUNCTION: &str = "\
+create or replace function big_data_fn (fn_arg int)
+    called on null input
+    returns text
+    language java
+    as $$
+        return fn_arg.toString();
+    $$;
+";
+
+pub const CREATE_FUNCTION_IF_NOT_EXISTS: &str = "\
+create function if not exists big_data_fn (fn_arg int)
+    called on null input
+    returns text
+    language java
+    as $$
+        return fn_arg.toString();
+    $$;
+";
+
+pub const CREATE_FUNCTION_WITH_MULTIPLE_ARGS: &str = "\
+create function big_data_fn (fn_arg1 int, fn_arg2 text)
+    called on null input
+    returns text
+    language java
+    as $$
+        return fn_arg1.toString();
+    $$;
+";
+
+pub const CREATE_FUNCTION_WITH_FROZEN_ARG: &str = "\
+create function big_data_fn (fn_arg frozen<some_udt>)
+    called on null input
+    returns text
+    language java
+    as $$
+        return fn_arg.toString();
+    $$;
+";
+
+pub const CREATE_FUNCTION_RETURNS_USER_DEFINED_TYPE: &str = "\
+create function big_data_fn (fn_arg int)
+    called on null input
+    returns some_udt
+    language java
+    as $$
+        return fn_arg.toString();
+    $$;
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/functions.html#drop-function-statement
+
+pub const DROP_FUNCTION_WITHOUT_ARGS: &str = "\
+drop function big_data_fn;
+";
+
+pub const DROP_FUNCTION_WITH_EXPLICIT_KEYSPACE: &str = "\
+drop function big_data_keyspace.big_data_fn;
+";
+
+pub const DROP_FUNCTION_WITH_SINGLE_ARG: &str = "\
+drop function big_data_fn(int);
+";
+
+pub const DROP_FUNCTION_WITH_MULTIPLE_ARGS: &str = "\
+drop function big_data_fn(int, text);
+";
+
+pub const DROP_FUNCTION_WITH_EXPLICIT_KEYSPACE_AND_MULTIPLE_ARGS: &str = "\
+drop function big_data_keyspace.big_data_fn(int, text);
+";
+
+pub const DROP_FUNCTION_IF_EXISTS: &str = "\
+drop function if exists big_data_fn;
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/functions.html#create-aggregate-statement
+
+pub const CREATE_AGGREGATE_WITH_SINGLE_ARG: &str = "\
+create aggregate big_data_agg (int) sfunc fn_name stype list;
+";
+
+pub const CREATE_AGGREGATE_WITH_MULTIPLE_ARGS: &str = "\
+create aggregate big_data_agg (int, double) sfunc fn_name stype list;
+";
+
+pub const CREATE_AGGREGATE_WITH_UDT_STYPE: &str = "\
+create aggregate big_data_agg (int) sfunc fn_name stype some_udt;
+";
+
+pub const CREATE_OR_REPLACE_AGGREGATE: &str = "\
+create or replace aggregate big_data_agg (int) sfunc fn_name stype list;
+";
+
+pub const CREATE_AGGREGATE_IF_NOT_EXISTS: &str = "\
+create aggregate if not exists big_data_agg (int) sfunc fn_name stype list;
+";
+
+pub const CREATE_AGGREGATE_WITH_FINALFUNC: &str = "\
+create aggregate big_data_agg (int) sfunc fn_name stype list finalfunc ffn_name;
+";
+
+pub const CREATE_AGGREGATE_WITH_INITCOND: &str = "\
+create aggregate big_data_agg (int) sfunc fn_name stype list initcond 'state value';
+";
+
+pub const CREATE_AGGREGATE_WITH_FINALFUNC_AND_INITCOND: &str = "\
+create aggregate big_data_agg (int) sfunc fn_name stype list finalfunc ffn_name initcond 'state value';
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/functions.html#drop-aggregate-statement
+
+pub const DROP_AGGREGATE_WITHOUT_ARGS: &str = "\
+drop aggregate big_data_agg;
+";
+
+pub const DROP_AGGREGATE_WITH_EXPLICIT_KEYSPACE: &str = "\
+drop aggregate big_data_keyspace.big_data_agg;
+";
+
+pub const DROP_AGGREGATE_WITH_SINGLE_ARG: &str = "\
+drop aggregate big_data_agg(int);
+";
+
+pub const DROP_AGGREGATE_WITH_MULTIPLE_ARGS: &str = "\
+drop aggregate big_data_agg(int, text);
+";
+
+pub const DROP_AGGREGATE_WITH_EXPLICIT_KEYSPACE_AND_MULTIPLE_ARGS: &str = "\
+drop aggregate big_data_keyspace.big_data_agg(int, text);
+";
+
+pub const DROP_AGGREGATE_IF_EXISTS: &str = "\
+drop aggregate if exists big_data_agg;
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#creating-a-udt
+
+pub const CREATE_UDT_WITH_SINGLE_ATTRIBUTE: &str = "\
+create type big_data_udt (int_attribute int);
+";
+
+pub const CREATE_UDT_WITH_MULTIPLE_ATTRIBUTES: &str = "\
+create type big_data_udt (int_attr int, text_attr text);
+";
+
+pub const CREATE_UDT_IF_NOT_EXISTS: &str = "\
+create type if not exists big_data_udt (int_attr int);
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#udt-literals
+
+pub const INSERT_UDT_LITERAL: &str = "\
+insert into big_data_table (big_data_udt_column) values ({int_attr: 1, text_attr: 'big data!'});
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#altering-a-udt
+
+pub const ALTER_UDT_ADD_FIELD: &str = "\
+alter type big_data_udt add big_data_text_column text;
+";
+
+pub const ALTER_UDT_IF_EXISTS: &str = "\
+alter type if exists big_data_udt add big_data_text_column text;
+";
+
+pub const ALTER_UDT_ADD_FIELD_IF_NOT_EXISTS: &str = "\
+alter type big_data_udt add if not exists big_data_text_column text;
+";
+
+pub const ALTER_UDT_RENAME_FIELD: &str = "\
+alter type big_data_udt rename big_data_text_column to modest_data_text_column;
+";
+
+pub const ALTER_UDT_RENAME_MULTIPLE_FIELDS: &str = "\
+alter type big_data_udt rename big_data_text_column to modest_data_text_column and big_data_int_column to gargantuan_int_column;
+";
+
+pub const ALTER_UDT_RENAME_FIELD_IF_EXISTS: &str = "\
+alter type big_data_udt rename if exists big_data_text_column to modest_data_text_column;
+";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#dropping-a-udt
+
+pub const DROP_UDT: &str = "\
+drop type big_data_udt;
+";
+
+pub const DROP_UDT_IF_EXISTS: &str = "\
+drop type if exists big_data_udt;
+";
