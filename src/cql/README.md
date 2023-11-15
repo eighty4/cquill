@@ -24,8 +24,6 @@ Lexer, parser and AST for [CQL 3.0](https://cassandra.apache.org/doc/stable/cass
   - datetime operations
   - strings
     - double-quoted case-sensitive identifiers
-    - using multiple `''` to escape a single quote in a string literal: `'tiffany's breakfast`
-    - triple single quote `'''string literals with a ' without escaping'''`
 - lex / parse gotchas
   - ValuesKeyword and values fn
   - TtlKeyword and ttl fn

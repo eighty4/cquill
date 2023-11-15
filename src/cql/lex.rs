@@ -2,6 +2,13 @@ use crate::cql::lex::TokenName::*;
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq)]
+pub(crate) enum StringStyle {
+    DollarSign,
+    SingleQuote,
+    TripleQuote,
+}
+
+#[derive(Debug, PartialEq)]
 pub(crate) enum TokenName {
     LeftCurvedBracket,
     RightCurvedBracket,
@@ -161,8 +168,7 @@ pub(crate) enum TokenName {
     WithKeyword,
 
     UuidLiteral,
-    StringLiteral,
-    DollarStringLiteral,
+    StringLiteral(StringStyle),
     NumberLiteral,
     BlobLiteral,
     Identifier,
@@ -376,7 +382,7 @@ impl<'a> Tokenizer<'a> {
                 "." => Some(Dot),
                 "=" => Some(Equal),
                 "!" => {
-                    if self.peek().map_or(false, |c| c == "=") {
+                    if self.match_next("=") {
                         self.advance();
                         Some(NotEqual)
                     } else {
@@ -388,7 +394,7 @@ impl<'a> Tokenizer<'a> {
                 ";" => Some(Semicolon),
                 "*" => Some(Star),
                 "<" => {
-                    if self.peek().map_or(false, |c| c == "=") {
+                    if self.match_next("=") {
                         self.advance();
                         Some(LessThanEqual)
                     } else {
@@ -396,15 +402,15 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
                 ">" => {
-                    if self.peek().map_or(false, |c| c == "=") {
+                    if self.match_next("=") {
                         self.advance();
                         Some(GreaterThanEqual)
                     } else {
                         Some(GreaterThan)
                     }
                 }
-                "$" => self.dollar_string(),
-                "'" => Some(self.string()),
+                "$" => self.dollar_sign_string(),
+                "'" => Some(self.quote_string()),
                 &_ => match self.constant_or_identifier_or_keyword() {
                     Ok(name) => Some(name),
                     Err(_) => None,
@@ -418,24 +424,50 @@ impl<'a> Tokenizer<'a> {
         Ok(self.tokens)
     }
 
-    fn string(&mut self) -> TokenName {
-        loop {
-            if let Some(c) = self.peek() {
-                if c == "\n" {
-                    self.line += 1;
-                }
-                self.advance();
-                if c != "'" {
-                    continue;
+    fn quote_string(&mut self) -> TokenName {
+        let is_triple_quote = self.match_next("'") && self.match_next_nth(1, "'");
+        if is_triple_quote {
+            self.advance();
+            self.advance();
+            loop {
+                if let Some(c) = self.peek() {
+                    if c == "\n" {
+                        self.line += 1;
+                    }
+                    self.advance();
+                    if c == "'" && self.match_next("'") && self.match_next_nth(1, "'") {
+                        self.advance();
+                        self.advance();
+                        break;
+                    }
                 }
             }
-            break;
+            StringLiteral(StringStyle::TripleQuote)
+        } else {
+            let mut escaped_single_quote = false;
+            loop {
+                if let Some(c) = self.peek() {
+                    if c == "\n" {
+                        self.line += 1;
+                    }
+                    self.advance();
+                    if c == "'" {
+                        if escaped_single_quote {
+                            escaped_single_quote = false;
+                        } else if self.match_next("'") {
+                            escaped_single_quote = true;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            StringLiteral(StringStyle::SingleQuote)
         }
-        StringLiteral
     }
 
-    fn dollar_string(&mut self) -> Option<TokenName> {
-        if self.peek().map_or(false, |c| c == "$") {
+    fn dollar_sign_string(&mut self) -> Option<TokenName> {
+        if self.match_next("$") {
             self.advance();
         } else {
             return None;
@@ -446,13 +478,13 @@ impl<'a> Tokenizer<'a> {
                     self.line += 1;
                 }
                 self.advance();
-                if c == "$" && self.peek().map_or(false, |c| c == "$") {
+                if c == "$" && self.match_next("$") {
                     self.advance();
                     break;
                 }
             }
         }
-        Some(DollarStringLiteral)
+        Some(StringLiteral(StringStyle::DollarSign))
     }
 
     fn constant_or_identifier_or_keyword(&mut self) -> Result<TokenName, ()> {
@@ -555,19 +587,6 @@ impl<'a> Tokenizer<'a> {
         maybe_c
     }
 
-    fn peek(&self) -> Option<&'a str> {
-        let i = self.current.1 + 1;
-        if i >= self.cql.len() {
-            None
-        } else {
-            self.char_at(i)
-        }
-    }
-
-    fn splice(&self) -> &'a str {
-        &self.cql[self.current.0..=self.current.1]
-    }
-
     fn char_at(&self, i: usize) -> Option<&'a str> {
         assert!(i < self.cql.len());
         assert!(self.cql.is_char_boundary(i));
@@ -582,5 +601,30 @@ impl<'a> Tokenizer<'a> {
             }
         }
         Some(&self.cql[i..e])
+    }
+
+    fn match_next(&self, exp: &'a str) -> bool {
+        self.match_next_nth(0, exp)
+    }
+
+    fn match_next_nth(&self, nth: usize, exp: &'a str) -> bool {
+        self.peek_nth(nth).map_or(false, |s| s == exp)
+    }
+
+    fn peek(&self) -> Option<&'a str> {
+        self.peek_nth(0)
+    }
+
+    fn peek_nth(&self, nth: usize) -> Option<&'a str> {
+        let i = self.current.1 + 1 + nth;
+        if i >= self.cql.len() {
+            None
+        } else {
+            self.char_at(i)
+        }
+    }
+
+    fn splice(&self) -> &'a str {
+        &self.cql[self.current.0..=self.current.1]
     }
 }
