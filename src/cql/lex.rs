@@ -322,8 +322,9 @@ impl TokenRange {
         &cql[self.0..=self.1]
     }
 
-    pub fn next_char(&self) -> Self {
-        Self::new(self.1 + 1, self.1 + 1)
+    pub fn next_char(&mut self) {
+        self.0 = self.1 + 1;
+        self.1 = self.0;
     }
 
     pub fn extend(&mut self, i: usize) {
@@ -371,14 +372,47 @@ impl<'a> Tokenizer<'a> {
                     if c == "\n" {
                         self.line += 1;
                     }
-                    self.current = self.current.next_char();
+                    self.current.next_char();
                     continue;
                 }
                 "{" => Some(LeftCurvedBracket),
                 "}" => Some(RightCurvedBracket),
                 "(" => Some(LeftParenthesis),
                 ")" => Some(RightParenthesis),
-                "-" => Some(Minus),
+                "-" => {
+                    if self.match_next("-") {
+                        self.current.next_char();
+                        self.skip_until_line_term();
+                        None
+                    } else {
+                        Some(Minus)
+                    }
+                }
+                "/" => {
+                    if self.match_next("/") {
+                        self.current.next_char();
+                        self.skip_until_line_term();
+                    } else if self.match_next("*") {
+                        self.current.next_char();
+                        loop {
+                            match self.peek() {
+                                None => break,
+                                Some(s) => {
+                                    if s == "*" && self.match_next_nth(1, "/") {
+                                        self.current.next_char();
+                                        break;
+                                    } else {
+                                        if s == "\n" {
+                                            self.line += 1;
+                                        }
+                                        self.current.next_char();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    None
+                }
                 "." => Some(Dot),
                 "=" => Some(Equal),
                 "!" => {
@@ -419,7 +453,7 @@ impl<'a> Tokenizer<'a> {
             if let Some(name) = maybe_name {
                 self.add_token(name);
             }
-            self.current = self.current.next_char();
+            self.current.next_char();
         }
         Ok(self.tokens)
     }
@@ -503,6 +537,7 @@ impl<'a> Tokenizer<'a> {
         let mut has_dash = false;
         let mut has_decimal = false;
         let mut has_underscore = false;
+        let mut line_commented_started = false;
         loop {
             if let Some(s) = self.peek() {
                 let mut advance = true;
@@ -517,7 +552,11 @@ impl<'a> Tokenizer<'a> {
                             }
                             has_decimal = true;
                         } else if c == '-' {
-                            has_dash = true;
+                            if self.match_next_nth(1, "-") {
+                                line_commented_started = true;
+                            } else {
+                                has_dash = true;
+                            }
                         } else if c == '_' {
                             has_underscore = true;
                         } else if !c.is_ascii_digit() {
@@ -528,7 +567,7 @@ impl<'a> Tokenizer<'a> {
                         }
                     }
                 }
-                if advance && self.advance().is_some() {
+                if !line_commented_started && advance && self.advance().is_some() {
                     continue;
                 }
             }
@@ -621,6 +660,21 @@ impl<'a> Tokenizer<'a> {
             None
         } else {
             self.char_at(i)
+        }
+    }
+
+    fn skip_until_line_term(&mut self) {
+        loop {
+            match self.peek() {
+                None => break,
+                Some(s) => {
+                    if s == "\n" {
+                        break;
+                    } else {
+                        self.current.next_char();
+                    }
+                }
+            }
         }
     }
 

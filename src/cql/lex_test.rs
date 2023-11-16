@@ -11,6 +11,85 @@ fn tokenize_expect(cql: &'static str, expected: Vec<(TokenName, &str)>) {
     }
 }
 
+mod comments {
+    use super::*;
+
+    #[test]
+    fn test_dash_line_comment() {
+        let cql = "select -- commented out \n * from big_data_table;";
+        tokenize_expect(
+            cql,
+            vec![
+                (SelectKeyword, "select"),
+                (Star, "*"),
+                (FromKeyword, "from"),
+                (Identifier, "big_data_table"),
+                (Semicolon, ";"),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_dash_line_comment_butts_up_against_identifier() {
+        let cql = "select-- commented out \n * from big_data_table;";
+        tokenize_expect(
+            cql,
+            vec![
+                (SelectKeyword, "select"),
+                (Star, "*"),
+                (FromKeyword, "from"),
+                (Identifier, "big_data_table"),
+                (Semicolon, ";"),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_slash_line_comment() {
+        let cql = "select // commented out \n * from big_data_table;";
+        tokenize_expect(
+            cql,
+            vec![
+                (SelectKeyword, "select"),
+                (Star, "*"),
+                (FromKeyword, "from"),
+                (Identifier, "big_data_table"),
+                (Semicolon, ";"),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_multiline_comment() {
+        let cql = "select /* commented out \n on multiple lines */ * from big_data_table;";
+        tokenize_expect(
+            cql,
+            vec![
+                (SelectKeyword, "select"),
+                (Star, "*"),
+                (FromKeyword, "from"),
+                (Identifier, "big_data_table"),
+                (Semicolon, ";"),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_empty_multiline_comment() {
+        let cql = "select /**/ * from big_data_table;";
+        tokenize_expect(
+            cql,
+            vec![
+                (SelectKeyword, "select"),
+                (Star, "*"),
+                (FromKeyword, "from"),
+                (Identifier, "big_data_table"),
+                (Semicolon, ";"),
+            ],
+        );
+    }
+}
+
 mod data_types {
     use super::*;
 
