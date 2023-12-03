@@ -720,3 +720,33 @@ drop type big_data_udt;
 pub const DROP_UDT_IF_EXISTS: &str = "\
 drop type if exists big_data_udt;
 ";
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#create-role-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#alter-role-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#drop-role-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#grant-role-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#revoke-role-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#list-roles-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#create-user-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#alter-user-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#drop-user-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#list-users-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#grant-permission-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#revoke-permission-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#list-permissions-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html#create-trigger-statement
+
+// https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html#drop-trigger-statement

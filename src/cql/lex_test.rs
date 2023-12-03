@@ -3247,3 +3247,71 @@ mod user_defined_types {
         }
     }
 }
+
+mod security {
+    use super::*;
+
+    mod create_role {
+        use super::*;
+    }
+
+    mod alter_role {
+        use super::*;
+    }
+
+    mod drop_role {
+        use super::*;
+    }
+
+    mod grant_role {
+        use super::*;
+    }
+
+    mod revoke_role {
+        use super::*;
+    }
+
+    mod list_roles {
+        use super::*;
+    }
+
+    mod create_user {
+        use super::*;
+    }
+
+    mod alter_user {
+        use super::*;
+    }
+
+    mod drop_user {
+        use super::*;
+    }
+
+    mod list_users {
+        use super::*;
+    }
+
+    mod grant_permission {
+        use super::*;
+    }
+
+    mod revoke_permission {
+        use super::*;
+    }
+
+    mod list_permissions {
+        use super::*;
+    }
+}
+
+mod triggers {
+    use super::*;
+
+    mod create_trigger {
+        use super::*;
+    }
+
+    mod drop_trigger {
+        use super::*;
+    }
+}
