@@ -36,9 +36,9 @@ pub(crate) enum TokenName {
     LessThanEqual,
     GreaterThanEqual,
 
-    AccessKeyword, // todo test lex
+    AccessKeyword,
     AddKeyword,
-    AllKeyword, // todo test lex
+    AllKeyword,
     AllowKeyword,
     AlterKeyword,
     AggregateKeyword,
@@ -47,7 +47,7 @@ pub(crate) enum TokenName {
     AsciiKeyword,
     AsKeyword,
     AscKeyword,
-    AuthorizeKeyword, // todo test lex
+    AuthorizeKeyword,
     BatchKeyword,
     BeginKeyword,
     BigIntKeyword,
@@ -62,17 +62,17 @@ pub(crate) enum TokenName {
     CreateKeyword,
     CustomKeyword,
     DateKeyword,
-    DatacentersKeyword, // todo test lex
+    DatacentersKeyword,
     DecimalKeyword,
     DefaultKeyword,
     DeleteKeyword,
     DescKeyword,
-    DescribeKeyword, // todo test lex
+    DescribeKeyword,
     DistinctKeyword,
     DoubleKeyword,
     DropKeyword,
     DurationKeyword,
-    ExecuteKeyword, // todo test lex
+    ExecuteKeyword,
     ExistsKeyword,
     FalseKeyword,
     FilteringKeyword,
@@ -80,10 +80,10 @@ pub(crate) enum TokenName {
     FloatKeyword,
     FromKeyword,
     FunctionKeyword,
-    FunctionsKeyword, // todo test lex
-    GrantKeyword,     // todo test lex
+    FunctionsKeyword,
+    GrantKeyword,
     GroupKeyword,
-    HashedKeyword, // todo test lex
+    HashedKeyword,
     IfKeyword,
     InKeyword,
     IndexKeyword,
@@ -97,38 +97,38 @@ pub(crate) enum TokenName {
     JsonKeyword,
     KeyKeyword,
     KeyspaceKeyword,
-    KeyspacesKeyword, // todo test lex
+    KeyspacesKeyword,
     LanguageKeyword,
     LimitKeyword,
-    ListKeyword,  // todo test lex
-    LoginKeyword, // todo test lex
+    ListKeyword,
+    LoginKeyword,
     MaterializedKeyword,
-    MBeanKeyword,       // todo test lex
-    MBeansKeyword,      // todo test lex
-    ModifyKeyword,      // todo test lex
-    NaNKeyword,         // todo test lex
-    NoRecursiveKeyword, // todo test lex
+    MBeanKeyword,
+    MBeansKeyword,
+    ModifyKeyword,
+    NaNKeyword, // todo test lex
+    NoRecursiveKeyword,
     NotKeyword,
-    NoSuperUserKeyword, // todo test lex
+    NoSuperUserKeyword,
     NullKeyword,
-    OfKeyword, // todo test lex
-    OnKeyword, // todo test lex
+    OfKeyword,
+    OnKeyword,
     OptionsKeyword,
     OrKeyword,
     OrderKeyword,
     PartitionKeyword,
-    PasswordKeyword, // todo test lex
+    PasswordKeyword,
     PerKeyword,
-    PermissionKeyword,  // todo test lex
-    PermissionsKeyword, // todo test lex
+    PermissionKeyword,
+    PermissionsKeyword,
     PrimaryKeyword,
     RenameKeyword,
     ReplaceKeyword,
     ReplicationKeyword,
     ReturnsKeyword,
-    RevokeKeyword, // todo test lex
-    RoleKeyword,   // todo test lex
-    RolesKeyword,  // todo test lex
+    RevokeKeyword,
+    RoleKeyword,
+    RolesKeyword,
     SelectKeyword,
     SetKeyword,
     SFuncKeyword,
@@ -136,8 +136,8 @@ pub(crate) enum TokenName {
     StaticKeyword, // todo test lex
     StorageKeyword,
     STypeKeyword,
-    SumKeyword,       // todo test lex
-    SuperUserKeyword, // todo test lex
+    SumKeyword, // todo test lex
+    SuperUserKeyword,
     TableKeyword,
     TablesKeyword, // todo test lex
     TextKeyword,
@@ -146,18 +146,18 @@ pub(crate) enum TokenName {
     TimeUuidKeyword,
     TinyIntKeyword,
     ToKeyword,
-    TokenKeyword,   // todo test lex
-    TriggerKeyword, // todo test lex
+    TokenKeyword, // todo test lex
+    TriggerKeyword,
     TrueKeyword,
     TruncateKeyword,
     TtlKeyword,
     TypeKeyword,
     UnloggedKeyword,
-    UnsetKeyword, // todo test lex
+    UnsetKeyword,
     UpdateKeyword,
     UseKeyword,
-    UserKeyword,  // todo test lex
-    UsersKeyword, // todo test lex
+    UserKeyword,
+    UsersKeyword,
     UsingKeyword,
     UuidKeyword,
     ValuesKeyword,

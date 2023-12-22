@@ -9,7 +9,7 @@
 services:
   scylladb:
     container_name: cquill-scylladb
-    image: scylladb/scylla
+    image: scylladb/scylla:5.2
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s

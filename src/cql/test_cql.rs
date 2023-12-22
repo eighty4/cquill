@@ -723,30 +723,562 @@ drop type if exists big_data_udt;
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#create-role-statement
 
+pub const CREATE_ROLE_WITH_PASSWORD: &str = "\
+create role big_data_role with password = 'asdf';
+";
+
+pub const CREATE_ROLE_WITH_HASHED_PASSWORD: &str = "\
+create role big_data_role with hashed password = 'aassddff';
+";
+
+pub const CREATE_ROLE_WITH_LOGIN_TRUE: &str = "\
+create role big_data_role with login = true;
+";
+
+pub const CREATE_ROLE_WITH_LOGIN_FALSE: &str = "\
+create role big_data_role with login = false;
+";
+
+pub const CREATE_ROLE_WITH_SUPERUSER_TRUE: &str = "\
+create role big_data_role with superuser = true;
+";
+
+pub const CREATE_ROLE_WITH_SUPERUSER_FALSE: &str = "\
+create role big_data_role with superuser = false;
+";
+
+pub const CREATE_ROLE_WITH_OPTIONS_MAP: &str = "\
+create role big_data_role with options = { 'opt1': 'val', 'opt2': 99};
+";
+
+pub const CREATE_ROLE_WITH_ACCESS_TO_DATACENTERS_SET: &str = "\
+create role big_data_role with access to datacenters {'dc1', 'dc2'};
+";
+
+pub const CREATE_ROLE_WITH_ACCESS_TO_ALL_DATACENTERS: &str = "\
+create role big_data_role with access to all datacenters;
+";
+
+pub const CREATE_ROLE_WITH_MULTIPLE_ROLE_OPTIONS: &str = "\
+create role big_data_role with password = 'asdf' and login = true;
+";
+
+pub const CREATE_ROLE_IF_NOT_EXISTS: &str = "\
+create role if not exists big_data_role with password = 'asdf';
+";
+
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#alter-role-statement
+
+pub const ALTER_ROLE_WITH_PASSWORD: &str = "\
+alter role big_data_role with password = 'asdf';
+";
+
+pub const ALTER_ROLE_WITH_HASHED_PASSWORD: &str = "\
+alter role big_data_role with hashed password = 'aassddff';
+";
+
+pub const ALTER_ROLE_WITH_LOGIN_TRUE: &str = "\
+alter role big_data_role with login = true;
+";
+
+pub const ALTER_ROLE_WITH_LOGIN_FALSE: &str = "\
+alter role big_data_role with login = false;
+";
+
+pub const ALTER_ROLE_WITH_SUPERUSER_TRUE: &str = "\
+alter role big_data_role with superuser = true;
+";
+
+pub const ALTER_ROLE_WITH_SUPERUSER_FALSE: &str = "\
+alter role big_data_role with superuser = false;
+";
+
+pub const ALTER_ROLE_WITH_OPTIONS_MAP: &str = "\
+alter role big_data_role with options = { 'opt1': 'val', 'opt2': 99};
+";
+
+pub const ALTER_ROLE_WITH_ACCESS_TO_DATACENTERS_SET: &str = "\
+alter role big_data_role with access to datacenters {'dc1', 'dc2'};
+";
+
+pub const ALTER_ROLE_WITH_ACCESS_TO_ALL_DATACENTERS: &str = "\
+alter role big_data_role with access to all datacenters;
+";
+
+pub const ALTER_ROLE_WITH_MULTIPLE_ROLE_OPTIONS: &str = "\
+alter role big_data_role with password = 'asdf' and login = true;
+";
+
+pub const ALTER_ROLE_IF_EXISTS: &str = "\
+alter role if exists big_data_role with password = 'asdf';
+";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#drop-role-statement
 
+pub const DROP_ROLE: &str = "\
+drop role big_data_role;
+";
+
+pub const DROP_ROLE_IF_EXISTS: &str = "\
+drop role if exists big_data_role;
+";
+
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#grant-role-statement
+
+pub const GRANT_ROLE: &str = "\
+grant role big_data_role to other_big_data_role;
+";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#revoke-role-statement
 
+pub const REVOKE_ROLE: &str = "\
+revoke role big_data_role from other_big_data_role;
+";
+
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#list-roles-statement
+
+pub const LIST_ROLES: &str = "\
+list roles;
+";
+
+pub const LIST_ROLES_NOT_RECURSIVELY: &str = "\
+list roles norecursive;
+";
+
+pub const LIST_ROLES_OF_ROLE: &str = "\
+list roles of big_data_role;
+";
+
+pub const LIST_ROLES_OF_ROLE_NOT_RECURSIVELY: &str = "\
+list roles of big_data_role norecursive;
+";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#create-user-statement
 
+pub const CREATE_USER: &str = "\
+create user big_data_user;
+";
+
+pub const CREATE_USER_IF_NOT_EXISTS: &str = "\
+create user if not exists big_data_user;
+";
+
+pub const CREATE_USER_SUPERUSER: &str = "\
+create user big_data_user superuser;
+";
+
+pub const CREATE_USER_NOT_SUPERUSER: &str = "\
+create user big_data_user nosuperuser;
+";
+
+pub const CREATE_USER_WITH_PASSWORD: &str = "\
+create user big_data_user with password 'asdf';
+";
+
+pub const CREATE_USER_WITH_PASSWORD_SUPERUSER: &str = "\
+create user big_data_user with password 'asdf' superuser;
+";
+
+pub const CREATE_USER_WITH_PASSWORD_NOT_SUPERUSER: &str = "\
+create user big_data_user with password 'asdf' nosuperuser;
+";
+
+pub const CREATE_USER_WITH_HASHED_PASSWORD: &str = "\
+create user big_data_user with hashed password 'aassddff';
+";
+
+pub const CREATE_USER_WITH_HASHED_PASSWORD_SUPERUSER: &str = "\
+create user big_data_user with hashed password 'aassddff' superuser;
+";
+
+pub const CREATE_USER_WITH_HASHED_PASSWORD_NOT_SUPERUSER: &str = "\
+create user big_data_user with hashed password 'aassddff' nosuperuser;
+";
+
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#alter-user-statement
+
+pub const ALTER_USER: &str = "\
+alter user big_data_user;
+";
+
+pub const ALTER_USER_IF_EXISTS: &str = "\
+alter user if exists big_data_user;
+";
+
+pub const ALTER_USER_SUPERUSER: &str = "\
+alter user big_data_user superuser;
+";
+
+pub const ALTER_USER_NOT_SUPERUSER: &str = "\
+alter user big_data_user nosuperuser;
+";
+
+pub const ALTER_USER_WITH_PASSWORD: &str = "\
+alter user big_data_user with password 'asdf';
+";
+
+pub const ALTER_USER_WITH_PASSWORD_SUPERUSER: &str = "\
+alter user big_data_user with password 'asdf' superuser;
+";
+
+pub const ALTER_USER_WITH_PASSWORD_NOT_SUPERUSER: &str = "\
+alter user big_data_user with password 'asdf' nosuperuser;
+";
+
+pub const ALTER_USER_WITH_HASHED_PASSWORD: &str = "\
+alter user big_data_user with hashed password 'aassddff';
+";
+
+pub const ALTER_USER_WITH_HASHED_PASSWORD_SUPERUSER: &str = "\
+alter user big_data_user with hashed password 'aassddff' superuser;
+";
+
+pub const ALTER_USER_WITH_HASHED_PASSWORD_NOT_SUPERUSER: &str = "\
+alter user big_data_user with hashed password 'aassddff' nosuperuser;
+";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#drop-user-statement
 
+pub const DROP_USER: &str = "\
+drop user big_data_user;
+";
+
+pub const DROP_USER_IF_EXISTS: &str = "\
+drop user if exists big_data_user;
+";
+
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#list-users-statement
+
+pub const LIST_USERS: &str = "\
+list users;
+";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#grant-permission-statement
 
+pub const GRANT_ALL_PERMISSIONS_ON_ALL_KEYSPACES: &str = "\
+grant all permissions on all keyspaces to big_data_user;
+";
+
+pub const GRANT_ALL_ON_ALL_KEYSPACES: &str = "\
+grant all on all keyspaces to big_data_user;
+";
+
+pub const GRANT_ALL_ON_KEYSPACE: &str = "\
+grant all on keyspace big_data_keyspace to big_data_user;
+";
+
+pub const GRANT_ALL_ON_TABLE_IMPLICITLY: &str = "\
+grant all on big_data_table to big_data_user;
+";
+
+pub const GRANT_ALL_ON_TABLE_WITH_EXPLICIT_KEYSPACE_IMPLICITLY: &str = "\
+grant all on big_data_keyspace.big_data_table to big_data_user;
+";
+
+pub const GRANT_ALL_ON_TABLE_EXPLICITLY: &str = "\
+grant all on table big_data_table to big_data_user;
+";
+
+pub const GRANT_ALL_ON_TABLE_WITH_EXPLICIT_KEYSPACE_EXPLICITLY: &str = "\
+grant all on table big_data_keyspace.big_data_table to big_data_user;
+";
+
+pub const GRANT_ALL_ON_ALL_ROLES: &str = "\
+grant all on all roles to big_data_user;
+";
+
+pub const GRANT_ALL_ON_ROLE: &str = "\
+grant all on role big_data_role to big_data_user;
+";
+
+pub const GRANT_ALL_ON_ALL_FUNCTIONS: &str = "\
+grant all on all functions to big_data_user;
+";
+
+pub const GRANT_ALL_ON_FUNCTION: &str = "\
+grant all on function big_data_function(int) to big_data_user;
+";
+
+pub const GRANT_ALL_ON_FUNCTION_WITH_EXPLICIT_KEYSPACE: &str = "\
+grant all on function big_data_keyspace.big_data_function(int) to big_data_user;
+";
+
+pub const GRANT_ALL_ON_ALL_MBEANS: &str = "\
+grant all on all mbeans to big_data_user;
+";
+
+pub const GRANT_ALL_ON_MBEANS: &str = "\
+grant all on mbeans big_data_mbean to big_data_user;
+";
+
+pub const GRANT_ALL_ON_MBEAN: &str = "\
+grant all on mbean big_data_mbean to big_data_user;
+";
+
+pub const GRANT_CREATE_PERMISSION_ON_ALL_KEYSPACES: &str = "\
+grant create permission on all keyspaces to big_data_user;
+";
+
+pub const GRANT_CREATE_ON_ALL_KEYSPACES: &str = "\
+grant create on all keyspaces to big_data_user;
+";
+
+pub const GRANT_ALTER_ON_ALL_KEYSPACES: &str = "\
+grant alter on all keyspaces to big_data_user;
+";
+
+pub const GRANT_DROP_ON_ALL_KEYSPACES: &str = "\
+grant drop on all keyspaces to big_data_user;
+";
+
+pub const GRANT_SELECT_ON_ALL_KEYSPACES: &str = "\
+grant select on all keyspaces to big_data_user;
+";
+
+pub const GRANT_MODIFY_ON_ALL_KEYSPACES: &str = "\
+grant modify on all keyspaces to big_data_user;
+";
+
+pub const GRANT_AUTHORIZE_ON_ALL_KEYSPACES: &str = "\
+grant authorize on all keyspaces to big_data_user;
+";
+
+pub const GRANT_DESCRIBE_ON_ALL_KEYSPACES: &str = "\
+grant describe on all keyspaces to big_data_user;
+";
+
+pub const GRANT_EXECUTE_ON_ALL_KEYSPACES: &str = "\
+grant execute on all keyspaces to big_data_user;
+";
+
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#revoke-permission-statement
+
+pub const REVOKE_ALL_PERMISSIONS_ON_ALL_KEYSPACES: &str = "\
+revoke all permissions on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_ALL_KEYSPACES: &str = "\
+revoke all on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_KEYSPACE: &str = "\
+revoke all on keyspace big_data_keyspace from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_TABLE_IMPLICITLY: &str = "\
+revoke all on big_data_table from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_TABLE_WITH_EXPLICIT_KEYSPACE_IMPLICITLY: &str = "\
+revoke all on big_data_keyspace.big_data_table from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_TABLE_EXPLICITLY: &str = "\
+revoke all on table big_data_table from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_TABLE_WITH_EXPLICIT_KEYSPACE_EXPLICITLY: &str = "\
+revoke all on table big_data_keyspace.big_data_table from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_ALL_ROLES: &str = "\
+revoke all on all roles from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_ROLE: &str = "\
+revoke all on role big_data_role from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_ALL_FUNCTIONS: &str = "\
+revoke all on all functions from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_FUNCTION: &str = "\
+revoke all on function big_data_function(int) from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_FUNCTION_WITH_EXPLICIT_KEYSPACE: &str = "\
+revoke all on function big_data_keyspace.big_data_function(int) from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_ALL_MBEANS: &str = "\
+revoke all on all mbeans from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_MBEANS: &str = "\
+revoke all on mbeans big_data_mbean from big_data_user;
+";
+
+pub const REVOKE_ALL_ON_MBEAN: &str = "\
+revoke all on mbean big_data_mbean from big_data_user;
+";
+
+pub const REVOKE_CREATE_PERMISSION_ON_ALL_KEYSPACES: &str = "\
+revoke create permission on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_CREATE_ON_ALL_KEYSPACES: &str = "\
+revoke create on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_ALTER_ON_ALL_KEYSPACES: &str = "\
+revoke alter on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_DROP_ON_ALL_KEYSPACES: &str = "\
+revoke drop on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_SELECT_ON_ALL_KEYSPACES: &str = "\
+revoke select on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_MODIFY_ON_ALL_KEYSPACES: &str = "\
+revoke modify on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_AUTHORIZE_ON_ALL_KEYSPACES: &str = "\
+revoke authorize on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_DESCRIBE_ON_ALL_KEYSPACES: &str = "\
+revoke describe on all keyspaces from big_data_user;
+";
+
+pub const REVOKE_EXECUTE_ON_ALL_KEYSPACES: &str = "\
+revoke execute on all keyspaces from big_data_user;
+";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#list-permissions-statement
 
+pub const LIST_ALL: &str = "\
+list all;
+";
+
+pub const LIST_ALL_PERMISSIONS: &str = "\
+list all permissions;
+";
+
+pub const LIST_ALL_PERMISSIONS_OF_USER: &str = "\
+list all permissions of big_data_user;
+";
+
+pub const LIST_ALL_PERMISSIONS_OF_USER_NOT_RECURSIVELY: &str = "\
+list all permissions of big_data_user norecursive;
+";
+
+pub const LIST_ALL_PERMISSIONS_ON_ALL_KEYSPACES: &str = "\
+list all permissions on all keyspaces of big_data_user;
+";
+
+pub const LIST_ALL_ON_ALL_KEYSPACES: &str = "\
+list all on all keyspaces of big_data_user;
+";
+
+pub const LIST_ALL_ON_KEYSPACE: &str = "\
+list all on keyspace big_data_keyspace of big_data_user;
+";
+
+pub const LIST_ALL_ON_TABLE_IMPLICITLY: &str = "\
+list all on big_data_table of big_data_user;
+";
+
+pub const LIST_ALL_ON_TABLE_WITH_EXPLICIT_KEYSPACE_IMPLICITLY: &str = "\
+list all on big_data_keyspace.big_data_table of big_data_user;
+";
+
+pub const LIST_ALL_ON_TABLE_EXPLICITLY: &str = "\
+list all on table big_data_table of big_data_user;
+";
+
+pub const LIST_ALL_ON_TABLE_WITH_EXPLICIT_KEYSPACE_EXPLICITLY: &str = "\
+list all on table big_data_keyspace.big_data_table of big_data_user;
+";
+
+pub const LIST_ALL_ON_ALL_ROLES: &str = "\
+list all on all roles of big_data_user;
+";
+
+pub const LIST_ALL_ON_ROLE: &str = "\
+list all on role big_data_role of big_data_user;
+";
+
+pub const LIST_ALL_ON_ALL_FUNCTIONS: &str = "\
+list all on all functions of big_data_user;
+";
+
+pub const LIST_ALL_ON_FUNCTION: &str = "\
+list all on function big_data_function(int) of big_data_user;
+";
+
+pub const LIST_ALL_ON_FUNCTION_WITH_EXPLICIT_KEYSPACE: &str = "\
+list all on function big_data_keyspace.big_data_function(int) of big_data_user;
+";
+
+pub const LIST_ALL_ON_ALL_MBEANS: &str = "\
+list all on all mbeans of big_data_user;
+";
+
+pub const LIST_ALL_ON_MBEANS: &str = "\
+list all on mbeans big_data_mbean of big_data_user;
+";
+
+pub const LIST_ALL_ON_MBEAN: &str = "\
+list all on mbean big_data_mbean of big_data_user;
+";
+
+pub const LIST_CREATE_PERMISSION_ON_ALL_KEYSPACES: &str = "\
+list create permission on all keyspaces of big_data_user;
+";
+
+pub const LIST_CREATE_ON_ALL_KEYSPACES: &str = "\
+list create on all keyspaces of big_data_user;
+";
+
+pub const LIST_ALTER_ON_ALL_KEYSPACES: &str = "\
+list alter on all keyspaces of big_data_user;
+";
+
+pub const LIST_DROP_ON_ALL_KEYSPACES: &str = "\
+list drop on all keyspaces of big_data_user;
+";
+
+pub const LIST_SELECT_ON_ALL_KEYSPACES: &str = "\
+list select on all keyspaces of big_data_user;
+";
+
+pub const LIST_MODIFY_ON_ALL_KEYSPACES: &str = "\
+list modify on all keyspaces of big_data_user;
+";
+
+pub const LIST_AUTHORIZE_ON_ALL_KEYSPACES: &str = "\
+list authorize on all keyspaces of big_data_user;
+";
+
+pub const LIST_DESCRIBE_ON_ALL_KEYSPACES: &str = "\
+list describe on all keyspaces of big_data_user;
+";
+
+pub const LIST_EXECUTE_ON_ALL_KEYSPACES: &str = "\
+list execute on all keyspaces of big_data_user;
+";
+
 // https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html#create-trigger-statement
 
+pub const CREATE_TRIGGER: &str = "\
+create trigger big_data_trigger on big_data_table using 'trigger name';
+";
+
+pub const CREATE_TRIGGER_IF_NOT_EXISTS: &str = "\
+create trigger if not exists big_data_trigger on big_data_table using 'trigger name';
+";
+
 // https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html#drop-trigger-statement
+
+pub const DROP_TRIGGER: &str = "\
+drop trigger big_data_trigger on big_data_table;
+";
+
+pub const DROP_TRIGGER_IF_EXISTS: &str = "\
+drop trigger if exists big_data_trigger on big_data_table;
+";

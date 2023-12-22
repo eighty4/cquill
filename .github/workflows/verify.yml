@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       scylladb:
-        image: scylladb/scylla
+        image: scylladb/scylla:5.2
         ports:
           - 9042:9042
         options: >-
