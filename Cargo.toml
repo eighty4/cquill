@@ -24,16 +24,16 @@ name = "cquill"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.72"
-clap = { version = "4.1.15", features = ["derive"] }
+anyhow = "1.0.81"
+clap = { version = "4.5.3", features = ["derive"] }
 lazy_static = "1.4.0"
 md5 = "0.7.0"
-regex = "1.9.1"
-scylla = "0.8.2"
-thiserror = "1.0.43"
-tokio = { version = "1.29.1", features = ["full"] }
-uuid = "1.4.1"
+regex = "1.10.3"
+scylla = "0.12.0"
+thiserror = "1.0.58"
+tokio = { version = "1.36.0", features = ["full"] }
+uuid = "1.7.0"
 
 [dev-dependencies]
 rand = "0.8.5"
-temp-dir = "0.1.11"
+temp-dir = "0.1.12"

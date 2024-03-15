@@ -1,7 +1,7 @@
 use std::path::Path;
 
+use scylla::frame::value::CqlTimeuuid;
 use scylla::{IntoTypedRows, Session};
-use uuid::Uuid;
 
 use crate::cql_file::CqlFile;
 use crate::queries::QueryError;
@@ -29,7 +29,7 @@ pub(crate) async fn select_all(
     let query_result = session.query(cql, ()).await?;
     let mut result = Vec::new();
     if let Some(rows) = query_result.rows {
-        for row_result in rows.into_typed::<(Uuid, String, String, i16)>() {
+        for row_result in rows.into_typed::<(CqlTimeuuid, String, String, i16)>() {
             let row_values = row_result.unwrap();
             let filename = row_values.1;
             let hash = row_values.2;
@@ -50,8 +50,6 @@ pub(crate) async fn select_all(
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-
-    use uuid::Uuid;
 
     use crate::test_utils;
 
@@ -87,14 +85,14 @@ mod tests {
             Ok(query_result) => {
                 let rows = query_result.rows.unwrap();
                 assert_eq!(rows.len(), 1);
-                for row_result in rows.into_typed::<(Uuid, i16, String, String)>() {
+                for row_result in rows.into_typed::<(CqlTimeuuid, i16, String, String)>() {
                     match row_result {
                         Err(err) => {
                             println!("{err}");
                             panic!();
                         }
                         Ok(row) => {
-                            assert_eq!(row.0.get_version_num(), 1);
+                            assert_eq!(row.0.to_string().len(), 36);
                             assert_eq!(row.1, 73);
                             assert_eq!(row.2, "v073-more_tables.cql");
                             assert_eq!(row.3, "7f5b4bdccd3863f31be5c257ff497704");
