@@ -82,6 +82,7 @@ jobs:
       - name: Create release
         id: create
         env:
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
           VERSION: ${{needs.release.outputs.version}}
         run: |
           CREATED_RELEASE=$(gh api \
