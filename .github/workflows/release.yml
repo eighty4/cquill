@@ -1,3 +1,4 @@
+
 name: Release
 
 on:
@@ -99,35 +100,47 @@ jobs:
           echo "release_id=$(echo $CREATED_RELEASE | jq '.id')" >> "$GITHUB_OUTPUT"
           echo "upload_hostname=$(echo $CREATED_RELEASE | jq '.upload_url' | cut -d'/' -f3)" >> "$GITHUB_OUTPUT"
 
-  publish-gh-artifacts:
+  publish-gh-artifacts-linux:
     runs-on: ubuntu-22.04
     needs: create-gh-release
     strategy:
       matrix:
         include:
-          - target: aarch64-apple-darwin
-          - target: x86_64-apple-darwin
-          - target: aarch64-unknown-linux-gnu
-          - target: x86_64-unknown-linux-gnu
+          - cpu: aarch64
+          - cpu: x86_64
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
       - name: build
         env:
-          RELEASE_ID: ${{needs.create-gh-release.outputs.release_id}}
-          UPLOAD_HOSTNAME: ${{needs.create-gh-release.outputs.upload_hostname}}
+          TAG: ${{needs.release.outputs.version}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
         run: |
-          rustup target add ${{matrix.target}}
-          cargo build --release --target ${{matrix.target}}
-          curl --fail --silent -L -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN"\
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: $(file target/release/cquill -b --mime-type)" \
-            https://$UPLOAD_HOSTNAME/repos/eighty4/maestro/releases/$RELEASE_ID/assets?name=cquill \
-            --data-binary "@target/release/cquill"
+          rustup target add ${{matrix.cpu}}-unknown-linux-gnu
+          cargo build --release --target ${{matrix.cpu}}-unknown-linux-gnu
+          gh release upload $TAG target/release/cquill#cquill-linux-${{matrix.cpu}}
+
+  publish-gh-artifacts-macos:
+    runs-on: macos-14
+    needs: create-gh-release
+    strategy:
+      matrix:
+        include:
+          - cpu: aarch64
+          - cpu: x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - name: build
+        env:
+          TAG: ${{needs.release.outputs.version}}
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
+        run: |
+          rustup target add ${{matrix.cpu}}-apple-darwin
+          cargo build --release --target ${{matrix.cpu}}-apple-darwin
+          gh release upload $TAG target/release/cquill#cquill-darwin-${{matrix.cpu}}
 
   publish-gh-artifacts-windows:
     runs-on: windows-2022
@@ -135,34 +148,28 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: aarch64-pc-windows-msvc
-          - target: x86_64-pc-windows-msvc
+          - cpu: aarch64
+          - cpu: x86_64
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
       - name: build
         env:
-          RELEASE_ID: ${{needs.create-gh-release.outputs.release_id}}
-          UPLOAD_HOSTNAME: ${{needs.create-gh-release.outputs.upload_hostname}}
+          TAG: ${{needs.release.outputs.version}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
         run: |
-          rustup target add ${{matrix.target}}
-          cargo build --release --target ${{matrix.target}}
-          curl --fail --silent -L -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN"\
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: $(file target/release/cquill.exe -b --mime-type)" \
-            https://$UPLOAD_HOSTNAME/repos/eighty4/maestro/releases/$RELEASE_ID/assets?name=cquill.exe \
-            --data-binary "@target/release/cquill.exe"
+          rustup target add ${{matrix.cpu}}-pc-windows-msvc
+          cargo build --release --target ${{matrix.cpu}}-pc-windows-msvc
+          gh release upload $TAG target/release/cquill.exe#cquill-windows-${{matrix.cpu}}.exe
 
   delete-failed-gh-release:
     runs-on: ubuntu-22.04
     needs:
-      - publish-gh-artifacts
+      - publish-gh-artifacts-linux
+      - publish-gh-artifacts-macos
       - publish-gh-artifacts-windows
-    if: ${{always() && (contains(needs.publish-gh-artifacts.result, 'failure') || contains(needs.publish-gh-artifacts-windows.result, 'failure'))}}
+    if: ${{always() && (contains(needs.publish-gh-artifacts-linux.result, 'failure') || contains(needs.publish-gh-artifacts-macos.result, 'failure') || contains(needs.publish-gh-artifacts-windows.result, 'failure'))}}
     steps:
       - name: delete failed release
         env:
