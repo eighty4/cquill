@@ -76,7 +76,7 @@ jobs:
           docker tag 84tech/cquill 84tech/cquill:$VERSION
           docker push -a 84tech/cquill
 
-  create-gh-release:
+  create-release:
     runs-on: ubuntu-22.04
     needs: release
     steps:
@@ -100,9 +100,11 @@ jobs:
           echo "release_id=$(echo $CREATED_RELEASE | jq '.id')" >> "$GITHUB_OUTPUT"
           echo "upload_hostname=$(echo $CREATED_RELEASE | jq '.upload_url' | cut -d'/' -f3)" >> "$GITHUB_OUTPUT"
 
-  publish-gh-artifacts-linux:
+  publish-artifacts-linux:
     runs-on: ubuntu-22.04
-    needs: create-gh-release
+    needs:
+      - release
+      - create-release
     strategy:
       matrix:
         include:
@@ -121,9 +123,11 @@ jobs:
           cargo build --release --target ${{matrix.cpu}}-unknown-linux-gnu
           gh release upload $TAG target/release/cquill#cquill-linux-${{matrix.cpu}}
 
-  publish-gh-artifacts-macos:
+  publish-artifacts-macos:
     runs-on: macos-14
-    needs: create-gh-release
+    needs:
+      - release
+      - create-release
     strategy:
       matrix:
         include:
@@ -142,9 +146,11 @@ jobs:
           cargo build --release --target ${{matrix.cpu}}-apple-darwin
           gh release upload $TAG target/release/cquill#cquill-darwin-${{matrix.cpu}}
 
-  publish-gh-artifacts-windows:
+  publish-artifacts-windows:
     runs-on: windows-2022
-    needs: create-gh-release
+    needs:
+      - release
+      - create-release
     strategy:
       matrix:
         include:
@@ -166,14 +172,14 @@ jobs:
   delete-failed-gh-release:
     runs-on: ubuntu-22.04
     needs:
-      - publish-gh-artifacts-linux
-      - publish-gh-artifacts-macos
-      - publish-gh-artifacts-windows
-    if: ${{always() && (contains(needs.publish-gh-artifacts-linux.result, 'failure') || contains(needs.publish-gh-artifacts-macos.result, 'failure') || contains(needs.publish-gh-artifacts-windows.result, 'failure'))}}
+      - publish-artifacts-linux
+      - publish-artifacts-macos
+      - publish-artifacts-windows
+    if: ${{always() && (contains(needs.publish-artifacts-linux.result, 'failure') || contains(needs.publish-artifacts-macos.result, 'failure') || contains(needs.publish-artifacts-windows.result, 'failure'))}}
     steps:
       - name: delete failed release
         env:
-          RELEASE_ID: ${{needs.create-gh-release.outputs.release_id}}
+          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
         run: |
           gh api \
