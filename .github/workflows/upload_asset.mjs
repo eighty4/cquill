@@ -3,6 +3,7 @@ const repo = process.argv[3]
 const releaseId = process.argv[4]
 const filename = process.argv[5]
 const contentType = process.argv[6]
+const baseUrl = process.argv[7]
 
 import {Octokit} from '@octokit/core'
 
@@ -13,6 +14,7 @@ const octokit = new Octokit({
 })
 
 octokit.request(`POST /repos/${owner}/${repo}/releases/${releaseId}/assets?name=${filename}`, {
+    baseUrl,
     owner,
     repo,
     release_id: releaseId,
