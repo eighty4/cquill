@@ -1,3 +1,4 @@
+
 name: Release
 
 on:
@@ -17,12 +18,11 @@ concurrency: publish
 
 jobs:
 
-  verified:
-    uses: ./.github/workflows/verify.yml
+#  verified:
+#    uses: ./.github/workflows/verify.yml
 
-  release:
-    name: Publish to crates.io
-    needs: verified
+  publish-cargo-crate:
+#    needs: verified
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,12 +36,13 @@ jobs:
           cargo release version $SEMVER_BUMP --no-confirm --execute
           VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/[\"]/, "", $2); printf("%s",$2) }' Cargo.toml)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Cargo publish
-        env:
-          CARGO_REGISTRY_TOKEN: ${{secrets.CRATES_IO_API_TOKEN}}
-        run: |
-          cargo publish --allow-dirty
+#      - name: Cargo publish
+#        env:
+#          CARGO_REGISTRY_TOKEN: ${{secrets.CRATES_IO_API_TOKEN}}
+#        run: cargo publish --allow-dirty
       - name: Bump ver > git
+        env:
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
         run: |
           git config --global user.name "Adam McKee"
           git config --global user.email "adam.be.g84d@gmail.com"
@@ -55,38 +56,38 @@ jobs:
     outputs:
       version: ${{steps.semver.outputs.version}}
 
-  docker:
-    name: Docker build and push
-    needs: release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/login-action@v2
-        with:
-          username: 84tech
-          password: ${{secrets.DOCKERHUB_TOKEN}}
-      - name: docker
-        env:
-          VERSION: ${{needs.release.outputs.version}}
-        run: |
-          docker build -t 84tech/cquill --build-arg CQUILL_VERSION=$VERSION -f cquill.install.Dockerfile .
-          docker tag 84tech/cquill 84tech/cquill:$VERSION
-          docker push -a 84tech/cquill
+#  push-docker-image:
+#    needs: publish-cargo-crate
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: docker/login-action@v3
+#        with:
+#          username: 84tech
+#          password: ${{secrets.DOCKERHUB_TOKEN}}
+#      - name: docker
+#        env:
+#          VERSION: ${{needs.publish-cargo-crate.outputs.version}}
+#        run: |
+#          docker build -t 84tech/cquill --build-arg CQUILL_VERSION=$VERSION -f cquill.install.Dockerfile .
+#          docker tag 84tech/cquill 84tech/cquill:$VERSION
+#          docker push -a 84tech/cquill
 
-  create-gh-release:
+  create-release:
     runs-on: ubuntu-22.04
-    needs: release
+    needs: publish-cargo-crate
     steps:
       - name: Create release
         id: create
         env:
-          VERSION: ${{needs.release.outputs.version}}
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
+          VERSION: ${{needs.publish-cargo-crate.outputs.version}}
         run: |
           CREATED_RELEASE=$(gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            /repos/eighty4/maestro/releases \
+            /repos/eighty4/cquill/releases \
             -f tag_name="$VERSION" \
             -f name="$VERSION" \
             -f body="$VERSION release" \
@@ -96,78 +97,101 @@ jobs:
           echo "release_id=$(echo $CREATED_RELEASE | jq '.id')" >> "$GITHUB_OUTPUT"
           echo "upload_hostname=$(echo $CREATED_RELEASE | jq '.upload_url' | cut -d'/' -f3)" >> "$GITHUB_OUTPUT"
 
-  publish-gh-artifacts:
-    runs-on: ubuntu-22.04
-    needs: create-gh-release
-    strategy:
-      matrix:
-        include:
-          - target: aarch64-apple-darwin
-          - target: x86_64-apple-darwin
-          - target: aarch64-unknown-linux-gnu
-          - target: x86_64-unknown-linux-gnu
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - name: build
-        env:
-          RELEASE_ID: ${{needs.create-gh-release.outputs.release_id}}
-          UPLOAD_HOSTNAME: ${{needs.create-gh-release.outputs.upload_hostname}}
-          GITHUB_TOKEN: ${{secrets.GH_TOKEN}}
-        run: |
-          rustup target add ${{matrix.target}}
-          cargo build --release --target ${{matrix.target}}
-          curl --fail --silent -L -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN"\
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: $(file target/release/cquill -b --mime-type)" \
-            https://$UPLOAD_HOSTNAME/repos/eighty4/maestro/releases/$RELEASE_ID/assets?name=cquill \
-            --data-binary "@target/release/cquill"
-
-  publish-gh-artifacts-windows:
-    runs-on: windows-2022
-    needs: create-gh-release
-    strategy:
-      matrix:
-        include:
-          - target: aarch64-pc-windows-msvc
-          - target: x86_64-pc-windows-msvc
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - name: build
-        env:
-          RELEASE_ID: ${{needs.create-gh-release.outputs.release_id}}
-          UPLOAD_HOSTNAME: ${{needs.create-gh-release.outputs.upload_hostname}}
-          GITHUB_TOKEN: ${{secrets.GH_TOKEN}}
-        run: |
-          rustup target add ${{matrix.target}}
-          cargo build --release --target ${{matrix.target}}
-          curl --fail --silent -L -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN"\
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: $(file target/release/cquill.exe -b --mime-type)" \
-            https://$UPLOAD_HOSTNAME/repos/eighty4/maestro/releases/$RELEASE_ID/assets?name=cquill.exe \
-            --data-binary "@target/release/cquill.exe"
-
-  delete-failed-gh-release:
+  publish-artifacts-linux:
     runs-on: ubuntu-22.04
     needs:
-      - publish-gh-artifacts
-      - publish-gh-artifacts-windows
-    if: ${{always() && (contains(needs.publish-gh-artifacts.result, 'failure') || contains(needs.publish-gh-artifacts-windows.result, 'failure'))}}
+      - publish-cargo-crate
+      - create-release
+    strategy:
+      matrix:
+        include:
+#          - cpu: aarch64
+          - cpu: x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - name: build
+        env:
+          TAG: ${{needs.publish-cargo-crate.outputs.version}}
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
+        run: |
+          FILENAME=cquill-linux-${{matrix.cpu}}
+          TARGET=${{matrix.cpu}}-unknown-linux-gnu
+          rustup target add $TARGET
+          cargo build --release --target $TARGET
+          mv target/$TARGET/release/cquill $FILENAME
+          gh release upload $TAG $FILENAME
+
+  publish-artifacts-macos:
+    runs-on: macos-14
+    needs:
+      - publish-cargo-crate
+      - create-release
+    strategy:
+      matrix:
+        include:
+          - cpu: aarch64
+          - cpu: x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - name: build
+        env:
+          TAG: ${{needs.publish-cargo-crate.outputs.version}}
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
+        run: |
+          FILENAME=cquill-darwin-${{matrix.cpu}}
+          TARGET=${{matrix.cpu}}-apple-darwin
+          rustup target add $TARGET
+          cargo build --release --target $TARGET
+          mv target/$TARGET/release/cquill $FILENAME
+          gh release upload $TAG $FILENAME
+
+  publish-artifacts-windows:
+    runs-on: windows-2022
+    needs:
+      - publish-cargo-crate
+      - create-release
+    strategy:
+      matrix:
+        include:
+          - cpu: aarch64
+          - cpu: x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - name: build
+        shell: powershell
+        env:
+          TAG: ${{needs.publish-cargo-crate.outputs.version}}
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
+        run: |
+          $Filename=cquill-windows-${{matrix.cpu}}.exe
+          $Target=${{matrix.cpu}}-pc-windows-msvc
+          rustup target add $Target
+          cargo build --release --target $Target
+          Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
+          gh release upload $env:TAG $Filename
+
+  cleanup-release-failure:
+    runs-on: ubuntu-22.04
+    needs:
+      - create-release
+      - publish-artifacts-linux
+      - publish-artifacts-macos
+      - publish-artifacts-windows
+    if: ${{always() && (contains(needs.publish-artifacts-linux.result, 'failure') || contains(needs.publish-artifacts-macos.result, 'failure') || contains(needs.publish-artifacts-windows.result, 'failure'))}}
     steps:
       - name: delete failed release
         env:
-          RELEASE_ID: ${{needs.create-gh-release.outputs.release_id}}
-          GITHUB_TOKEN: ${{secrets.GH_TOKEN}}
+          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
         run: |
           gh api \
             --method DELETE \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            /repos/eighty4/maestro/releases/$RELEASE_ID
+            /repos/eighty4/cquill/releases/$RELEASE_ID
