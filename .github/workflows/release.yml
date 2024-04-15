@@ -97,6 +97,7 @@ jobs:
           echo "upload_hostname=$(echo $CREATED_RELEASE | jq '.upload_url' | cut -d'/' -f3)" >> "$GITHUB_OUTPUT"
     outputs:
       release_id: ${{steps.create.outputs.release_id}}
+      upload_hostname: ${{steps.create.outputs.upload_hostname}}
 
   publish-artifact-linux-arm64:
     runs-on: ubuntu-22.04
@@ -113,13 +114,23 @@ jobs:
         env:
           TAG: ${{needs.publish-cargo-crate.outputs.version}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
+          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
+          UPLOAD_HOSTNAME: ${{needs.create-release.outputs.upload_hostname}}
         run: |
           FILENAME=cquill-linux-aarch64
           TARGET=aarch64-unknown-linux-gnu
           rustup target add $TARGET
           cross build --release --target $TARGET
           mv target/$TARGET/release/cquill $FILENAME
-          gh release upload $TAG $FILENAME
+          curl --fail --silent -L -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN"\
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: $(file $FILENAME -b --mime-type)" \
+            https://$UPLOAD_HOSTNAME/repos/eighty4/cquill/releases/$RELEASE_ID/assets?name=$FILENAME \
+            --data-binary "@$FILENAME"
+
+#gh release upload $TAG $FILENAME
 
   publish-artifact-linux-amd64:
     runs-on: ubuntu-22.04
@@ -134,13 +145,23 @@ jobs:
         env:
           TAG: ${{needs.publish-cargo-crate.outputs.version}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
+          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
+          UPLOAD_HOSTNAME: ${{needs.create-release.outputs.upload_hostname}}
         run: |
           FILENAME=cquill-linux-x86_64
           TARGET=x86_64-unknown-linux-gnu
           rustup target add $TARGET
           cargo build --release --target $TARGET
           mv target/$TARGET/release/cquill $FILENAME
-          gh release upload $TAG $FILENAME
+          curl --fail --silent -L -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN"\
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: $(file $FILENAME -b --mime-type)" \
+            https://$UPLOAD_HOSTNAME/repos/eighty4/cquill/releases/$RELEASE_ID/assets?name=$FILENAME \
+            --data-binary "@$FILENAME"
+
+#gh release upload $TAG $FILENAME
 
   publish-artifacts-macos:
     runs-on: macos-14
@@ -160,13 +181,23 @@ jobs:
         env:
           TAG: ${{needs.publish-cargo-crate.outputs.version}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
+          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
+          UPLOAD_HOSTNAME: ${{needs.create-release.outputs.upload_hostname}}
         run: |
           FILENAME=cquill-darwin-${{matrix.cpu}}
           TARGET=${{matrix.cpu}}-apple-darwin
           rustup target add $TARGET
           cargo build --release --target $TARGET
           mv target/$TARGET/release/cquill $FILENAME
-          gh release upload $TAG $FILENAME
+          curl --fail --silent -L -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN"\
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: $(file $FILENAME -b --mime-type)" \
+            https://$UPLOAD_HOSTNAME/repos/eighty4/cquill/releases/$RELEASE_ID/assets?name=$FILENAME \
+            --data-binary "@$FILENAME"
+
+#gh release upload $TAG $FILENAME
 
   publish-artifacts-windows:
     runs-on: windows-2022
@@ -187,13 +218,24 @@ jobs:
         env:
           TAG: ${{needs.publish-cargo-crate.outputs.version}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
+          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
+          UPLOAD_HOSTNAME: ${{needs.create-release.outputs.upload_hostname}}
         run: |
           $Filename = "cquill-windows-${{matrix.cpu}}.exe"
           $Target = "${{matrix.cpu}}-pc-windows-msvc"
           rustup target add $Target
           cargo build --release --target $Target
           Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
-          gh release upload $env:TAG $Filename
+          $Uri = 'https://$env:UPLOAD_HOSTNAME/repos/eighty4/cquill/releases/$env:RELEASE_ID/assets?name=$Filename'
+          $Headers = @{
+            'Accept' = 'application/vnd.github+json'
+            'Authorization' = 'Authorization: Bearer $env:GH_TOKEN'
+            'X-GitHub-Api-Version' = '2022-11-28'
+            'Content-Type' = 'application/x-dosexec'
+          }
+          Invoke-WebRequest -Headers $Headers -SkipHeaderValidation -Uri $Uri -Method 'POST' -Infile $Filename -ContentType 'application/x-dosexec'
+
+#gh release upload $env:TAG $Filename
 
   cleanup-release-failure:
     runs-on: ubuntu-22.04
