@@ -226,7 +226,7 @@ jobs:
           rustup target add $Target
           cargo build --release --target $Target
           Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
-          [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+          [Net.ServicePointManager]::SecurityProtocol
           $Uri = "https://$($env:UPLOAD_HOSTNAME)/repos/eighty4/cquill/releases/$($env:RELEASE_ID)/assets?name=${Filename}"
           $Headers = @{
             'Accept' = 'application/vnd.github+json'
@@ -234,6 +234,7 @@ jobs:
             'Content-Type' = 'application/x-dosexec'
             'X-GitHub-Api-Version' = '2022-11-28'
           }
+          [enum]::GetNames([System.Net.SecurityProtocolType])
           Invoke-WebRequest -Headers $Headers -Uri $Uri -Method 'POST' -InFile $Filename -ContentType 'application/x-dosexec'
 
 #gh release upload $env:TAG $Filename
