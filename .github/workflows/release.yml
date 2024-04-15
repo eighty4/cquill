@@ -221,11 +221,14 @@ jobs:
           RELEASE_ID: ${{needs.create-release.outputs.release_id}}
           UPLOAD_HOSTNAME: ${{needs.create-release.outputs.upload_hostname}}
         run: |
+          $PSVersionTable.PSVersion
+          echo $PSVersionTable.PSVersion
           $Filename = "cquill-windows-${{matrix.cpu}}.exe"
           $Target = "${{matrix.cpu}}-pc-windows-msvc"
           rustup target add $Target
           cargo build --release --target $Target
           Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
+          Test-Path -Path $Filename -PathType leaf
           $Uri = "https://$($env:UPLOAD_HOSTNAME)/repos/eighty4/cquill/releases/$($env:RELEASE_ID)/assets?name=${Filename}"
           $Headers = @{
             'Accept' = 'application/vnd.github+json'
@@ -233,7 +236,7 @@ jobs:
             'Content-Type' = 'application/x-dosexec'
             'X-GitHub-Api-Version' = '2022-11-28'
           }
-          Invoke-WebRequest -SslProtocol Tls13 -Headers $Headers -Uri $Uri -Method 'POST' -InFile $Filename -ContentType 'application/x-dosexec'
+          Invoke-WebRequest -Headers $Headers -Uri $Uri -Method 'POST' -InFile $Filename
 
 #gh release upload $env:TAG $Filename
 
