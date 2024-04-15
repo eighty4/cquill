@@ -1,4 +1,3 @@
-
 name: Release
 
 on:
@@ -96,17 +95,37 @@ jobs:
             -F generate_release_notes=false)
           echo "release_id=$(echo $CREATED_RELEASE | jq '.id')" >> "$GITHUB_OUTPUT"
           echo "upload_hostname=$(echo $CREATED_RELEASE | jq '.upload_url' | cut -d'/' -f3)" >> "$GITHUB_OUTPUT"
+    outputs:
+      release_id: ${{steps.create.outputs.release_id}}
 
-  publish-artifacts-linux:
+  publish-artifact-linux-arm64:
     runs-on: ubuntu-22.04
     needs:
       - publish-cargo-crate
       - create-release
-    strategy:
-      matrix:
-        include:
-#          - cpu: aarch64
-          - cpu: x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+      - name: install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: build
+        env:
+          TAG: ${{needs.publish-cargo-crate.outputs.version}}
+          GH_TOKEN: ${{secrets.GH_TOKEN}}
+        run: |
+          FILENAME=cquill-linux-aarch64
+          TARGET=aarch64-unknown-linux-gnu
+          rustup target add $TARGET
+          cross build --release --target $TARGET
+          mv target/$TARGET/release/cquill $FILENAME
+          gh release upload $TAG $FILENAME
+
+  publish-artifact-linux-amd64:
+    runs-on: ubuntu-22.04
+    needs:
+      - publish-cargo-crate
+      - create-release
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -116,8 +135,8 @@ jobs:
           TAG: ${{needs.publish-cargo-crate.outputs.version}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
         run: |
-          FILENAME=cquill-linux-${{matrix.cpu}}
-          TARGET=${{matrix.cpu}}-unknown-linux-gnu
+          FILENAME=cquill-linux-x86_64
+          TARGET=x86_64-unknown-linux-gnu
           rustup target add $TARGET
           cargo build --release --target $TARGET
           mv target/$TARGET/release/cquill $FILENAME
@@ -169,8 +188,8 @@ jobs:
           TAG: ${{needs.publish-cargo-crate.outputs.version}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
         run: |
-          $Filename=cquill-windows-${{matrix.cpu}}.exe
-          $Target=${{matrix.cpu}}-pc-windows-msvc
+          $Filename = cquill-windows-${{matrix.cpu}}.exe
+          $Target = ${{matrix.cpu}}-pc-windows-msvc
           rustup target add $Target
           cargo build --release --target $Target
           Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
@@ -180,12 +199,13 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - create-release
-      - publish-artifacts-linux
+      - publish-artifact-linux-amd64
+      - publish-artifact-linux-arm64
       - publish-artifacts-macos
       - publish-artifacts-windows
-    if: ${{always() && (contains(needs.publish-artifacts-linux.result, 'failure') || contains(needs.publish-artifacts-macos.result, 'failure') || contains(needs.publish-artifacts-windows.result, 'failure'))}}
+    if: ${{always() && (contains(needs.publish-artifact-linux-amd64.result, 'failure') || contains(needs.publish-artifact-linux-arm64.result, 'failure') || contains(needs.publish-artifacts-macos.result, 'failure') || contains(needs.publish-artifacts-windows.result, 'failure'))}}
     steps:
-      - name: delete failed release
+      - name: delete release
         env:
           RELEASE_ID: ${{needs.create-release.outputs.release_id}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
