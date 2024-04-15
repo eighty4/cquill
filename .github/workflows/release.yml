@@ -229,7 +229,7 @@ jobs:
           rustup target add $Target
           cargo build --release --target $Target
           Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
-          Move-Item -Path .github/workflows/upload_asset.js -Destination upload_asset.js
+          Move-Item -Path .github/workflows/upload_asset.mjs -Destination upload_asset.mjs
           npm i @octokit/core
           node upload_asset.mjs eighty4 cquill $env:RELEASE_ID $Filename application/x-dosexec
 
