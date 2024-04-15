@@ -188,8 +188,8 @@ jobs:
           TAG: ${{needs.publish-cargo-crate.outputs.version}}
           GH_TOKEN: ${{secrets.GH_TOKEN}}
         run: |
-          $Filename = cquill-windows-${{matrix.cpu}}.exe
-          $Target = ${{matrix.cpu}}-pc-windows-msvc
+          $Filename = "cquill-windows-${{matrix.cpu}}.exe"
+          $Target = "${{matrix.cpu}}-pc-windows-msvc"
           rustup target add $Target
           cargo build --release --target $Target
           Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
