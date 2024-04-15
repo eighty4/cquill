@@ -227,13 +227,14 @@ jobs:
           cargo build --release --target $Target
           Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
           $Uri = "https://$($env:UPLOAD_HOSTNAME)/repos/eighty4/cquill/releases/$($env:RELEASE_ID)/assets?name=${Filename}"
+          echo $Uri
           $Headers = @{
             'Accept' = 'application/vnd.github+json'
             'Authorization' = "Authorization: Bearer $($env:GH_TOKEN)"
             'Content-Type' = 'application/x-dosexec'
             'X-GitHub-Api-Version' = '2022-11-28'
           }
-          Invoke-WebRequest -Headers $Headers -Uri $Uri -Method 'POST' -Infile $Filename -ContentType 'application/x-dosexec'
+          Invoke-WebRequest -Headers $Headers -Uri $Uri -Method 'POST' -InFile $Filename -ContentType 'application/x-dosexec'
 
 #gh release upload $env:TAG $Filename
 
