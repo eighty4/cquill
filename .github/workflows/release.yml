@@ -226,8 +226,8 @@ jobs:
           rustup target add $Target
           cargo build --release --target $Target
           Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
+          [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
           $Uri = "https://$($env:UPLOAD_HOSTNAME)/repos/eighty4/cquill/releases/$($env:RELEASE_ID)/assets?name=${Filename}"
-          echo $Uri
           $Headers = @{
             'Accept' = 'application/vnd.github+json'
             'Authorization' = "Authorization: Bearer $($env:GH_TOKEN)"
