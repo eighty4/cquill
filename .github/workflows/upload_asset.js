@@ -7,10 +7,10 @@ const contentType = process.argv[6]
 console.log('upload_asset.js', owner, repo, releaseId, filename, contentType)
 
 const octokit = new Octokit({
-    auth: process.env.GH_TOKEN
+    auth: process.env.GH_TOKEN,
 })
 
-await octokit.request(`POST /repos/${owner}/${repo}/releases/${releaseId}/assets?name=${filename}`, {
+octokit.request(`POST /repos/${owner}/${repo}/releases/${releaseId}/assets?name=${filename}`, {
     owner,
     repo,
     release_id: releaseId,
@@ -18,6 +18,6 @@ await octokit.request(`POST /repos/${owner}/${repo}/releases/${releaseId}/assets
     headers: {
         'Accept': 'application/vnd.github+json',
         'Content-Type': contentType,
-        'X-GitHub-Api-Version': '2022-11-28'
-    }
-})
+        'X-GitHub-Api-Version': '2022-11-28',
+    },
+}).then(() => console.log('finished')).catch(console.error)
