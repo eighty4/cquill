@@ -1,6 +1,6 @@
 [package]
 name = "cquill"
-version = "0.0.13"
+version = "0.0.14"
 edition = "2021"
 license = "MIT"
 description = "Versioned CQL migrations for Cassandra and ScyllaDB"
