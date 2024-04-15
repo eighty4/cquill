@@ -3,17 +3,15 @@ const repo = process.argv[3]
 const releaseId = process.argv[4]
 const filename = process.argv[5]
 const contentType = process.argv[6]
-const baseUrl = process.argv[7]
+const baseUrl = 'https://' + process.argv[7]
 
 import {Octokit} from '@octokit/core'
 
-console.log('upload_asset.js', owner, repo, releaseId, filename, contentType)
+const auth = process.env.GH_TOKEN
 
-const octokit = new Octokit({
-    auth: process.env.GH_TOKEN,
-})
+const url = `POST /repos/${owner}/${repo}/releases/${releaseId}/assets?name=${filename}`
 
-octokit.request(`POST /repos/${owner}/${repo}/releases/${releaseId}/assets?name=${filename}`, {
+const options = {
     baseUrl,
     owner,
     repo,
@@ -24,4 +22,11 @@ octokit.request(`POST /repos/${owner}/${repo}/releases/${releaseId}/assets?name=
         'Content-Type': contentType,
         'X-GitHub-Api-Version': '2022-11-28',
     },
-}).then(() => console.log('finished')).catch(console.error)
+}
+
+new Octokit({auth}).request(url, options)
+    .then(() => console.log('finished'))
+    .catch((e) => {
+        console.error(e)
+        process.exit(1)
+    })
