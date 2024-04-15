@@ -231,7 +231,7 @@ jobs:
           Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
           Move-Item -Path .github/workflows/upload_asset.js -Destination upload_asset.js
           npm i @octokit/core
-          node upload_asset.js eighty4 cquill $env:RELEASE_ID $Filename application/x-dosexec
+          node upload_asset.mjs eighty4 cquill $env:RELEASE_ID $Filename application/x-dosexec
 
 #gh release upload $env:TAG $Filename
 

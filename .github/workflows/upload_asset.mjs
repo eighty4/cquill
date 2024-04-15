@@ -4,6 +4,8 @@ const releaseId = process.argv[4]
 const filename = process.argv[5]
 const contentType = process.argv[6]
 
+import {Octokit} from '@octokit/core'
+
 console.log('upload_asset.js', owner, repo, releaseId, filename, contentType)
 
 const octokit = new Octokit({
