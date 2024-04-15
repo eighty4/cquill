@@ -233,7 +233,7 @@ jobs:
             'Content-Type' = 'application/x-dosexec'
             'X-GitHub-Api-Version' = '2022-11-28'
           }
-          Invoke-WebRequest -Headers $Headers -SkipHeaderValidation -Uri $Uri -Method 'POST' -Infile $Filename -ContentType 'application/x-dosexec'
+          Invoke-WebRequest -Headers $Headers -Uri $Uri -Method 'POST' -Infile $Filename -ContentType 'application/x-dosexec'
 
 #gh release upload $env:TAG $Filename
 
