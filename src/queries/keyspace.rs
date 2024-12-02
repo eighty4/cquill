@@ -50,12 +50,12 @@ fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String, QueryErro
     }
 }
 
-fn create_simple_strategy_keyspace_replication_map_str(replication_factor: &u8) -> String {
+fn create_simple_strategy_keyspace_replication_map_str(replication_factor: &i8) -> String {
     format!("{{ 'class': 'SimpleStrategy', 'replication_factor': {replication_factor} }}")
 }
 
 fn create_network_topology_strategy_keyspace_replication_map_str(
-    datacenter_factors: &HashMap<String, u8>,
+    datacenter_factors: &HashMap<String, i8>,
 ) -> Result<String> {
     if datacenter_factors.is_empty() {
         return Err(anyhow!(

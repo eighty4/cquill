@@ -20,7 +20,7 @@ pub struct KeyspaceOpts {
 }
 
 impl KeyspaceOpts {
-    pub fn simple(name: String, factor: u8) -> Self {
+    pub fn simple(name: String, factor: i8) -> Self {
         KeyspaceOpts {
             name,
             replication: Some(SimpleStrategy { factor }),
@@ -33,12 +33,12 @@ pub enum ReplicationFactor {
     /// NetworkTopologyStrategy specifies how many replications will be placed in specific
     /// datacenters within the cluster.
     NetworkTopologyStrategy {
-        datacenter_factors: HashMap<String, u8>,
+        datacenter_factors: HashMap<String, i8>,
     },
     /// SimpleStrategy specifies a single number of replications distributed throughout any nodes
     /// within the cluster. This strategy does not provide sufficient resiliency and fault tolerance
     /// and should not be used with production systems.
-    SimpleStrategy { factor: u8 },
+    SimpleStrategy { factor: i8 },
 }
 
 impl FromStr for ReplicationFactor {
@@ -89,16 +89,15 @@ impl FromStr for ReplicationFactor {
                     if fields.is_empty() {
                         return Err(anyhow!("network replication must specify at least one datacenter's replication factor"));
                     }
-                    let mut datacenter_factors: HashMap<String, u8> = HashMap::new();
+                    let mut datacenter_factors: HashMap<String, i8> = HashMap::new();
                     lazy_static! {
-                        static ref DATACENTER_REGEX: Regex =
-                            regex::Regex::new(r"^[a-z\d_]{2,}$").unwrap();
+                        static ref DATACENTER_REGEX: Regex = Regex::new(r"^[a-z\d_]{2,}$").unwrap();
                     }
                     for (datacenter, factor_string) in fields.iter() {
                         if !DATACENTER_REGEX.is_match(datacenter) {
                             return Err(anyhow!("datacenter {datacenter} is not a valid name"));
                         }
-                        match factor_string.parse::<u8>() {
+                        match factor_string.parse::<i8>() {
                             Ok(factor) => {
                                 datacenter_factors.insert(datacenter.clone(), factor);
                             }
@@ -108,7 +107,7 @@ impl FromStr for ReplicationFactor {
                     Ok(NetworkTopologyStrategy { datacenter_factors })
                 }
                 "SimpleStrategy" => match fields.get("replication_factor") {
-                    Some(factor_string) => match factor_string.parse::<u8>() {
+                    Some(factor_string) => match factor_string.parse::<i8>() {
                         Ok(factor) => Ok(SimpleStrategy { factor }),
                         Err(_) => Err(anyhow!(
                             "replication factor {factor_string} must be a number"
