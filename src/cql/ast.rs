@@ -167,6 +167,7 @@ pub enum DropStatement {
     Table(DropTableStatement),
     Trigger(DropTriggerStatement),
     Type(DropTypeStatement),
+    User(DropUserStatement),
 }
 
 #[derive(Debug, PartialEq)]
@@ -230,4 +231,10 @@ pub struct DropTypeStatement {
     pub type_name: TokenView,
     pub if_exists: bool,
     pub keyspace_name: Option<TokenView>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct DropUserStatement {
+    pub user_name: TokenView,
+    pub if_exists: bool,
 }

@@ -135,6 +135,7 @@ fn parse_drop_statement(
             TableKeyword => parse_drop_table_statement(cql, iter).map(DropStatement::Table),
             TriggerKeyword => parse_drop_trigger_statement(cql, iter).map(DropStatement::Trigger),
             TypeKeyword => parse_drop_type_statement(cql, iter).map(DropStatement::Type),
+            UserKeyword => parse_drop_user_statement(cql, iter).map(DropStatement::User),
             _ => todo!("parse error"),
         },
     }
@@ -258,6 +259,18 @@ fn parse_drop_type_statement(
         type_name,
         if_exists,
         keyspace_name,
+    })
+}
+
+fn parse_drop_user_statement(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<DropUserStatement> {
+    let if_exists = peek_match_advance(iter, &[IfKeyword, ExistsKeyword])?;
+    let user_name = create_view(cql, next(iter, Identifier)?);
+    Ok(DropUserStatement {
+        user_name,
+        if_exists,
     })
 }
 
