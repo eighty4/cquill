@@ -4,15 +4,24 @@ use crate::cql::ast::TokenView;
 
 #[derive(Debug, PartialEq)]
 pub enum CreateStatement {
+    // todo
     Aggregate(CreateAggregateStatement),
+    // todo
     Function(CreateFunctionStatement),
+    // todo
     Index(CreateIndexStatement),
+    // todo
     Keyspace(CreateKeyspaceStatement),
+    // todo
     MaterializedView(CreateMaterializedViewStatement),
+    // todo
     Role(CreateRoleStatement),
+    // todo
     Table(CreateTableStatement),
+    // todo
     Trigger(CreateTriggerStatement),
     Type(CreateTypeStatement),
+    // todo
     User(CreateUserStatement),
 }
 
