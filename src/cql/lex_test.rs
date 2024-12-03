@@ -3287,7 +3287,7 @@ mod user_defined_types {
         #[test]
         fn test_drop_type() {
             tokenize_expect(
-                DROP_UDT,
+                DROP_UDT_DEFAULT_KEYSPACE,
                 vec![
                     (DropKeyword, "drop"),
                     (TypeKeyword, "type"),
@@ -3300,7 +3300,7 @@ mod user_defined_types {
         #[test]
         fn test_drop_type_if_exists() {
             tokenize_expect(
-                DROP_UDT_IF_EXISTS,
+                DROP_UDT_DEFAULT_KEYSPACE_IF_EXISTS,
                 vec![
                     (DropKeyword, "drop"),
                     (TypeKeyword, "type"),

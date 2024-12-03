@@ -229,4 +229,5 @@ pub struct DropTriggerStatement {
 pub struct DropTypeStatement {
     pub type_name: TokenView,
     pub if_exists: bool,
+    pub keyspace_name: Option<TokenView>,
 }

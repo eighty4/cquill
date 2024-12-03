@@ -5,7 +5,7 @@ use crate::cql::test_cql::*;
 use std::sync::Arc;
 
 fn find_token(cql: &str, s: &str) -> TokenView {
-    let b = cql.find(s).unwrap();
+    let b = cql.find(s).expect("find str in cql to create token view");
     let e = b + s.len() - 1;
     let range = TokenRange::new(b, e);
     TokenView {
@@ -145,6 +145,32 @@ fn test_parsing_drop_index_with_explicit_keyspace_if_exists() {
                     DROP_INDEX_EXPLICIT_KEYSPACE_IF_EXISTS,
                     "big_data_keyspace"
                 ))
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_keyspace() {
+    assert_eq!(
+        parse_cql(DROP_KEYSPACE.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Keyspace(
+            DropKeyspaceStatement {
+                keyspace_name: find_token(DROP_KEYSPACE, "big_data_keyspace"),
+                if_exists: false,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_keyspace_if_exists() {
+    assert_eq!(
+        parse_cql(DROP_KEYSPACE_IF_EXISTS.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Keyspace(
+            DropKeyspaceStatement {
+                keyspace_name: find_token(DROP_KEYSPACE_IF_EXISTS, "big_data_keyspace"),
+                if_exists: true,
             }
         )))
     );
@@ -371,26 +397,60 @@ fn test_parsing_drop_trigger_explicit_keyspace_if_exists() {
 }
 
 #[test]
-fn test_parsing_drop_keyspace() {
+fn test_parsing_drop_type_default_keyspace() {
+    let cql = DROP_UDT_DEFAULT_KEYSPACE;
     assert_eq!(
-        parse_cql(DROP_KEYSPACE.to_string()).unwrap(),
-        vec!(CqlStatement::Drop(DropStatement::Keyspace(
-            DropKeyspaceStatement {
-                keyspace_name: find_token(DROP_KEYSPACE, "big_data_keyspace"),
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Type(
+            DropTypeStatement {
+                type_name: find_token(cql, "big_data_udt"),
                 if_exists: false,
+                keyspace_name: None,
             }
         )))
     );
 }
 
 #[test]
-fn test_parsing_drop_if_exists_keyspace() {
+fn test_parsing_drop_type_default_keyspace_if_exists() {
+    let cql = DROP_UDT_DEFAULT_KEYSPACE_IF_EXISTS;
     assert_eq!(
-        parse_cql(DROP_KEYSPACE_IF_EXISTS.to_string()).unwrap(),
-        vec!(CqlStatement::Drop(DropStatement::Keyspace(
-            DropKeyspaceStatement {
-                keyspace_name: find_token(DROP_KEYSPACE_IF_EXISTS, "big_data_keyspace"),
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Type(
+            DropTypeStatement {
+                type_name: find_token(cql, "big_data_udt"),
                 if_exists: true,
+                keyspace_name: None,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_type_explicit_keyspace() {
+    let cql = DROP_UDT_EXPLICIT_KEYSPACE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Type(
+            DropTypeStatement {
+                type_name: find_token(cql, "big_data_udt"),
+                if_exists: false,
+                keyspace_name: Some(find_token(cql, "big_data_keyspace"))
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_type_explicit_keyspace_if_exists() {
+    let cql = DROP_UDT_EXPLICIT_KEYSPACE_IF_EXISTS;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Type(
+            DropTypeStatement {
+                type_name: find_token(cql, "big_data_udt"),
+                if_exists: true,
+                keyspace_name: Some(find_token(cql, "big_data_keyspace"))
             }
         )))
     );

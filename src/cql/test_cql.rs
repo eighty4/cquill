@@ -737,12 +737,20 @@ alter type big_data_udt rename if exists big_data_text_column to modest_data_tex
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#dropping-a-udt
 
-pub const DROP_UDT: &str = "\
+pub const DROP_UDT_DEFAULT_KEYSPACE: &str = "\
 drop type big_data_udt;
 ";
 
-pub const DROP_UDT_IF_EXISTS: &str = "\
+pub const DROP_UDT_DEFAULT_KEYSPACE_IF_EXISTS: &str = "\
 drop type if exists big_data_udt;
+";
+
+pub const DROP_UDT_EXPLICIT_KEYSPACE: &str = "\
+drop type big_data_keyspace.big_data_udt;
+";
+
+pub const DROP_UDT_EXPLICIT_KEYSPACE_IF_EXISTS: &str = "\
+drop type if exists big_data_keyspace.big_data_udt;
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#create-role-statement

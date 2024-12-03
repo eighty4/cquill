@@ -252,7 +252,13 @@ fn parse_drop_type_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropTypeStatement> {
-    todo!("parse error")
+    let if_exists = peek_match_advance(iter, &[IfKeyword, ExistsKeyword])?;
+    let (keyspace_name, type_name) = parse_keyspace_object_names(cql, iter)?;
+    Ok(DropTypeStatement {
+        type_name,
+        if_exists,
+        keyspace_name,
+    })
 }
 
 fn parse_keyspace_object_names(
