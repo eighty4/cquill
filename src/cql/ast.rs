@@ -39,16 +39,26 @@ pub enum CqlStatement {
 
 #[derive(Debug, PartialEq)]
 pub enum CreateStatement {
-    Aggregate,
-    Function,
+    Aggregate(CreateAggregateStatement),
+    Function(CreateFunctionStatement),
     Index(CreateIndexStatement),
     Keyspace(CreateKeyspaceStatement),
-    MaterializedView,
+    MaterializedView(CreateMaterializedViewStatement),
     Role(CreateRoleStatement),
     Table(CreateTableStatement),
-    Trigger,
+    Trigger(CreateTriggerStatement),
     Type(CreateTypeStatement),
-    User,
+    User(CreateUserStatement),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CreateAggregateStatement {
+    
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CreateFunctionStatement {
+    
 }
 
 #[derive(Debug, PartialEq)]
@@ -75,6 +85,12 @@ pub struct KeyspaceReplication {
 pub enum KeyspaceReplicationStrategy {
     NetworkTopology(HashMap<String, i8>),
     Simple(i8),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CreateMaterializedViewStatement {
+    if_not_exists: bool,
+    role_name: TokenView,
 }
 
 #[derive(Debug, PartialEq)]
@@ -162,11 +178,21 @@ pub struct TablePrimaryKeyDefinition {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct CreateTriggerStatement {
+    
+}
+
+#[derive(Debug, PartialEq)]
 pub struct CreateTypeStatement {
     pub type_name: TokenView,
     pub if_not_exists: bool,
     pub keyspace_name: Option<TokenView>,
     pub fields: HashMap<TokenView, TokenView>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CreateUserStatement {
+    
 }
 
 #[derive(Debug, PartialEq)]

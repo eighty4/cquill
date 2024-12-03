@@ -45,45 +45,73 @@ fn parse_create_statement(
     match iter.next() {
         None => todo!("parse error"),
         Some(token) => match token.name {
-            IndexKeyword => Ok(CreateStatement::Index(parse_create_index_statement(
-                cql, iter,
-            )?)),
-            KeyspaceKeyword => Ok(CreateStatement::Keyspace(parse_create_keyspace_statement(
-                cql, iter,
-            )?)),
-            RoleKeyword => Ok(CreateStatement::Role(parse_create_role_statement(
-                cql, iter,
-            )?)),
-            TableKeyword => Ok(CreateStatement::Table(parse_create_table_statement(
-                cql, iter,
-            )?)),
-            TypeKeyword => Ok(CreateStatement::Type(parse_create_type_statement(
-                cql, iter,
-            )?)),
+            AggregateKeyword => {
+                parse_create_aggregate_statement(cql, iter).map(CreateStatement::Aggregate)
+            }
+            FunctionKeyword => {
+                parse_create_function_statement(cql, iter).map(CreateStatement::Function)
+            }
+            IndexKeyword => parse_create_index_statement(cql, iter).map(CreateStatement::Index),
+            KeyspaceKeyword => {
+                parse_create_keyspace_statement(cql, iter).map(CreateStatement::Keyspace)
+            }
+            MaterializedKeyword => {
+                _ = next(iter, ViewKeyword)?;
+                parse_create_materialized_view_statement(cql, iter)
+                    .map(CreateStatement::MaterializedView)
+            }
+            RoleKeyword => parse_create_role_statement(cql, iter).map(CreateStatement::Role),
+            TableKeyword => parse_create_table_statement(cql, iter).map(CreateStatement::Table),
+            TriggerKeyword => {
+                parse_create_trigger_statement(cql, iter).map(CreateStatement::Trigger)
+            }
+            TypeKeyword => parse_create_type_statement(cql, iter).map(CreateStatement::Type),
+            UserKeyword => parse_create_user_statement(cql, iter).map(CreateStatement::User),
             _ => todo!("parse error"),
         },
     }
+}
+
+fn parse_create_aggregate_statement(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<CreateAggregateStatement> {
+    unimplemented!()
+}
+
+fn parse_create_function_statement(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<CreateFunctionStatement> {
+    unimplemented!()
 }
 
 fn parse_create_index_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateIndexStatement> {
-    todo!("parse result")
+    unimplemented!()
 }
 
 fn parse_create_keyspace_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateKeyspaceStatement> {
-    todo!("parse result")
+    unimplemented!()
+}
+
+fn parse_create_materialized_view_statement(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<CreateMaterializedViewStatement> {
+    unimplemented!()
 }
 
 fn parse_create_role_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateRoleStatement> {
-    todo!("parse result")
+    unimplemented!()
 }
 
 fn parse_create_table_statement(
@@ -99,6 +127,13 @@ fn parse_create_table_statement(
         attributes: Vec::new(),
         if_not_exists: false,
     })
+}
+
+fn parse_create_trigger_statement(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<CreateTriggerStatement> {
+    unimplemented!()
 }
 
 // todo fields with collections, collections with generics and udts
@@ -146,6 +181,13 @@ fn parse_create_table_column_definitions(
     //     primary_key: None,
     //     view: create_view(),
     // }
+}
+
+fn parse_create_user_statement(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<CreateUserStatement> {
+    unimplemented!()
 }
 
 fn parse_drop_statement(
