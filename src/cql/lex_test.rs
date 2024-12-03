@@ -1,6 +1,7 @@
 use super::lex::*;
 use crate::cql::test_cql::*;
 use TokenName::*;
+use crate::cql::ast::StringStyle;
 
 fn tokenize_expect(cql: &'static str, expected: Vec<(TokenName, &str)>) {
     let result = Tokenizer::new(cql).tokenize().unwrap();
@@ -91,6 +92,7 @@ mod comments {
 }
 
 mod data_types {
+    use crate::cql::ast::StringStyle;
     use super::*;
 
     #[test]
@@ -3800,7 +3802,7 @@ mod security {
                 ],
             );
             tokenize_expect(
-                CREATE_USER,
+                CREATE_USER_WITHOUT_PASSWORD,
                 vec![
                     (CreateKeyword, "create"),
                     (UserKeyword, "user"),

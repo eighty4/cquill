@@ -1,7 +1,7 @@
 use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
-use crate::cql::parser::iter::{advance_peek_match, pop_next};
+use crate::cql::parser::iter::{advance_peek_match, pop_next_match, pop_string_literal};
 use crate::cql::parser::token::{create_view, parse_object_identifiers};
 use crate::cql::parser::ParseResult;
 use std::collections::HashMap;
@@ -27,7 +27,7 @@ pub fn parse_create_statement(
                 parse_create_keyspace_statement(cql, iter).map(CreateStatement::Keyspace)
             }
             MaterializedKeyword => {
-                _ = pop_next(iter, ViewKeyword)?;
+                _ = pop_next_match(iter, ViewKeyword)?;
                 parse_create_materialized_view_statement(cql, iter)
                     .map(CreateStatement::MaterializedView)
             }
@@ -114,10 +114,10 @@ fn parse_create_type_statement(
 ) -> ParseResult<CreateTypeStatement> {
     let if_not_exists = advance_peek_match(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
     let (keyspace_name, type_name) = parse_object_identifiers(cql, iter)?;
-    _ = pop_next(iter, LeftParenthesis)?;
+    _ = pop_next_match(iter, LeftParenthesis)?;
     let mut fields = HashMap::new();
     loop {
-        let field_name = create_view(cql, pop_next(iter, Identifier)?);
+        let field_name = create_view(cql, pop_next_match(iter, Identifier)?);
         let field_type = match iter.next() {
             None => todo!("panic error"),
             Some(popped) => {
@@ -133,7 +133,7 @@ fn parse_create_type_statement(
             break;
         }
     }
-    _ = pop_next(iter, RightParenthesis)?;
+    _ = pop_next_match(iter, RightParenthesis)?;
     Ok(CreateTypeStatement {
         keyspace_name,
         type_name,
@@ -158,5 +158,49 @@ fn parse_create_user_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateUserStatement> {
-    unimplemented!()
+    let if_not_exists = advance_peek_match(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let user_name = create_view(cql, pop_next_match(iter, Identifier)?);
+    let password = match iter.peek() {
+        None => None,
+        Some(peeked) => match peeked.name {
+            WithKeyword => {
+                _ = iter.next();
+                Some(match iter.next() {
+                    None => todo!("parse error"),
+                    Some(popped) => match popped.name {
+                        HashedKeyword => {
+                            _ = pop_next_match(iter, PasswordKeyword)?;
+                            CreateUserPassword::Hashed(pop_string_literal(cql, iter)?)
+                        }
+                        PasswordKeyword => {
+                            CreateUserPassword::PlainText(pop_string_literal(cql, iter)?)
+                        }
+                        _ => todo!("parse error"),
+                    },
+                })
+            }
+            _ => None,
+        },
+    };
+    let user_status = match iter.peek() {
+        None => None,
+        Some(peeked) => {
+            let status = match peeked.name {
+                NoSuperUserKeyword => Some(CreateUserStatus::NoSuperuser),
+                SuperUserKeyword => Some(CreateUserStatus::Superuser),
+                Semicolon => None,
+                _ => todo!("parse error"),
+            };
+            if status.is_some() {
+                _ = iter.next();
+            }
+            status
+        }
+    };
+    Ok(CreateUserStatement {
+        user_name,
+        if_not_exists,
+        password,
+        user_status,
+    })
 }

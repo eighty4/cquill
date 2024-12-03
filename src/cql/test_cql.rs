@@ -899,7 +899,7 @@ list roles of big_data_role norecursive;
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#create-user-statement
 
-pub const CREATE_USER: &str = "\
+pub const CREATE_USER_WITHOUT_PASSWORD: &str = "\
 create user big_data_user;
 ";
 
@@ -937,6 +937,10 @@ create user big_data_user with hashed password 'aassddff' superuser;
 
 pub const CREATE_USER_WITH_HASHED_PASSWORD_NOT_SUPERUSER: &str = "\
 create user big_data_user with hashed password 'aassddff' nosuperuser;
+";
+
+pub const CREATE_USER_IF_NOT_EXISTS_WITH_HASHED_PASSWORD_NOT_SUPERUSER: &str = "\
+create user if not exists big_data_user with hashed password 'aassddff' nosuperuser;
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#alter-user-statement

@@ -1,6 +1,20 @@
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum StringStyle {
+    DollarSign,
+    SingleQuote,
+    TripleQuote,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct StringView {
+    pub cql: Arc<String>,
+    pub range: TokenRange,
+    pub style: StringStyle,
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct TokenRange(usize, usize);
 

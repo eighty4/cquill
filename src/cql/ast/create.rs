@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::cql::ast::table::TableAlias;
-use crate::cql::ast::TokenView;
+use crate::cql::ast::{StringView, TokenView};
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
 pub enum CreateStatement {
@@ -21,19 +21,14 @@ pub enum CreateStatement {
     // todo
     Trigger(CreateTriggerStatement),
     Type(CreateTypeStatement),
-    // todo
     User(CreateUserStatement),
 }
 
 #[derive(Debug, PartialEq)]
-pub struct CreateAggregateStatement {
-
-}
+pub struct CreateAggregateStatement {}
 
 #[derive(Debug, PartialEq)]
-pub struct CreateFunctionStatement {
-
-}
+pub struct CreateFunctionStatement {}
 
 #[derive(Debug, PartialEq)]
 pub struct CreateIndexStatement {
@@ -152,9 +147,7 @@ pub struct TablePrimaryKeyDefinition {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct CreateTriggerStatement {
-
-}
+pub struct CreateTriggerStatement {}
 
 #[derive(Debug, PartialEq)]
 pub struct CreateTypeStatement {
@@ -168,13 +161,18 @@ pub struct CreateTypeStatement {
 pub struct CreateUserStatement {
     pub user_name: TokenView,
     pub if_not_exists: bool,
-    pub password: TokenView,
-    pub user_status: CreateUserStatus,
+    pub password: Option<CreateUserPassword>,
+    pub user_status: Option<CreateUserStatus>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CreateUserPassword {
+    Hashed(StringView),
+    PlainText(StringView),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum CreateUserStatus {
     NoSuperuser,
     Superuser,
-    Undeclared,
 }

@@ -1,13 +1,6 @@
-use crate::cql::ast::TokenRange;
+use crate::cql::ast::{StringStyle, TokenRange};
 use crate::cql::lex::TokenName::*;
 use uuid::Uuid;
-
-#[derive(Debug, PartialEq)]
-pub(crate) enum StringStyle {
-    DollarSign,
-    SingleQuote,
-    TripleQuote,
-}
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum TokenName {

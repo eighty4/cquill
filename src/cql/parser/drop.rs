@@ -1,7 +1,7 @@
 use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
-use crate::cql::parser::iter::{advance_peek_match, pop_next};
+use crate::cql::parser::iter::{advance_peek_match, pop_next_match};
 use crate::cql::parser::token::{create_view, parse_object_identifiers};
 use crate::cql::parser::ParseResult;
 use std::iter::Peekable;
@@ -26,7 +26,7 @@ pub fn parse_drop_statement(
                 parse_drop_keyspace_statement(cql, iter).map(DropStatement::Keyspace)
             }
             MaterializedKeyword => {
-                _ = pop_next(iter, ViewKeyword)?;
+                _ = pop_next_match(iter, ViewKeyword)?;
                 parse_drop_materialized_view_statement(cql, iter)
                     .map(DropStatement::MaterializedView)
             }
@@ -88,7 +88,7 @@ fn parse_drop_keyspace_statement(
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropKeyspaceStatement> {
     let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
-    let keyspace_name = create_view(cql, pop_next(iter, Identifier)?);
+    let keyspace_name = create_view(cql, pop_next_match(iter, Identifier)?);
     Ok(DropKeyspaceStatement {
         keyspace_name,
         if_exists,
@@ -113,7 +113,7 @@ fn parse_drop_role_statement(
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropRoleStatement> {
     let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
-    let role_name = create_view(cql, pop_next(iter, Identifier)?);
+    let role_name = create_view(cql, pop_next_match(iter, Identifier)?);
     Ok(DropRoleStatement {
         role_name,
         if_exists,
@@ -139,8 +139,8 @@ fn parse_drop_trigger_statement(
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropTriggerStatement> {
     let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
-    let trigger_name = create_view(cql, pop_next(iter, Identifier)?);
-    pop_next(iter, OnKeyword)?;
+    let trigger_name = create_view(cql, pop_next_match(iter, Identifier)?);
+    pop_next_match(iter, OnKeyword)?;
     let (keyspace_name, table_name) = parse_object_identifiers(cql, iter)?;
     Ok(DropTriggerStatement {
         trigger_name,
@@ -168,7 +168,7 @@ fn parse_drop_user_statement(
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropUserStatement> {
     let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
-    let user_name = create_view(cql, pop_next(iter, Identifier)?);
+    let user_name = create_view(cql, pop_next_match(iter, Identifier)?);
     Ok(DropUserStatement {
         user_name,
         if_exists,
