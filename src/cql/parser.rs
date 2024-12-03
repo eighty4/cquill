@@ -1,5 +1,6 @@
 use crate::cql::ast::*;
 use crate::cql::lex::*;
+use std::collections::HashMap;
 use std::iter::Peekable;
 use std::slice::Iter;
 use std::sync::Arc;
@@ -56,6 +57,9 @@ fn parse_create_statement(
             TableKeyword => Ok(CreateStatement::Table(parse_create_table_statement(
                 cql, iter,
             )?)),
+            TypeKeyword => Ok(CreateStatement::Type(parse_create_type_statement(
+                cql, iter,
+            )?)),
             _ => todo!("parse error"),
         },
     }
@@ -94,6 +98,41 @@ fn parse_create_table_statement(
         table_alias: None,
         attributes: Vec::new(),
         if_not_exists: false,
+    })
+}
+
+// todo fields with collections, collections with generics and udts
+fn parse_create_type_statement(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<CreateTypeStatement> {
+    let if_not_exists = peek_match_advance(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let (keyspace_name, type_name) = parse_keyspace_object_names(cql, iter)?;
+    _ = next(iter, LeftParenthesis)?;
+    let mut fields = HashMap::new();
+    loop {
+        let field_name = create_view(cql, next(iter, Identifier)?);
+        let field_type = match iter.next() {
+            None => todo!("panic error"),
+            Some(popped) => {
+                if popped.name.is_cql_data_type() {
+                    create_view(cql, popped)
+                } else {
+                    todo!("panic error")
+                }
+            }
+        };
+        fields.insert(field_name, field_type);
+        if iter.next_if(|t| t.name == Comma).is_none() {
+            break;
+        }
+    }
+    _ = next(iter, RightParenthesis)?;
+    Ok(CreateTypeStatement {
+        keyspace_name,
+        type_name,
+        if_not_exists,
+        fields,
     })
 }
 

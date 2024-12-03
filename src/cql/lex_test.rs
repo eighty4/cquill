@@ -3112,7 +3112,7 @@ mod user_defined_types {
         #[test]
         fn test_create_type() {
             tokenize_expect(
-                CREATE_UDT_WITH_SINGLE_ATTRIBUTE,
+                CREATE_DEFAULT_KEYSPACE_UDT_WITH_SINGLE_ATTRIBUTE,
                 vec![
                     (CreateKeyword, "create"),
                     (TypeKeyword, "type"),
@@ -3129,7 +3129,7 @@ mod user_defined_types {
         #[test]
         fn test_create_type_with_multiple_attributes() {
             tokenize_expect(
-                CREATE_UDT_WITH_MULTIPLE_ATTRIBUTES,
+                CREATE_DEFAULT_KEYSPACE_UDT_WITH_MULTIPLE_ATTRIBUTES,
                 vec![
                     (CreateKeyword, "create"),
                     (TypeKeyword, "type"),
@@ -3149,7 +3149,7 @@ mod user_defined_types {
         #[test]
         fn test_create_type_if_not_exists() {
             tokenize_expect(
-                CREATE_UDT_IF_NOT_EXISTS,
+                CREATE_DEFAULT_KEYSPACE_UDT_IF_NOT_EXISTS,
                 vec![
                     (CreateKeyword, "create"),
                     (TypeKeyword, "type"),

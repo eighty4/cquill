@@ -346,7 +346,7 @@ impl TokenName {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct TokenRange(usize, usize);
 
 impl TokenRange {

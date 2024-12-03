@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct TokenView {
     pub cql: Arc<String>,
     pub range: TokenRange,
@@ -30,20 +30,25 @@ pub enum TableAlias {
 #[derive(Debug, PartialEq)]
 pub enum CqlStatement {
     Create(CreateStatement),
-    Drop(DropStatement),
-    Select,
-    Insert,
-    Update,
     Delete,
+    Drop(DropStatement),
+    Insert,
+    Select,
+    Update,
 }
 
 #[derive(Debug, PartialEq)]
-// todo CREATE MATERIALIZED VIEW
 pub enum CreateStatement {
+    Aggregate,
+    Function,
     Index(CreateIndexStatement),
     Keyspace(CreateKeyspaceStatement),
+    MaterializedView,
     Role(CreateRoleStatement),
     Table(CreateTableStatement),
+    Trigger,
+    Type(CreateTypeStatement),
+    User,
 }
 
 #[derive(Debug, PartialEq)]
@@ -154,6 +159,14 @@ pub enum ColumnDefinitionAttributeKind {
 pub struct TablePrimaryKeyDefinition {
     pub view: TokenView,
     pub column_names: Vec<TokenView>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct CreateTypeStatement {
+    pub type_name: TokenView,
+    pub if_not_exists: bool,
+    pub keyspace_name: Option<TokenView>,
+    pub fields: HashMap<TokenView, TokenView>,
 }
 
 #[derive(Debug, PartialEq)]

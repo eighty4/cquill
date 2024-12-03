@@ -691,16 +691,28 @@ drop aggregate if exists big_data_agg;
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#creating-a-udt
 
-pub const CREATE_UDT_WITH_SINGLE_ATTRIBUTE: &str = "\
+pub const CREATE_DEFAULT_KEYSPACE_UDT_WITH_SINGLE_ATTRIBUTE: &str = "\
 create type big_data_udt (int_attribute int);
 ";
 
-pub const CREATE_UDT_WITH_MULTIPLE_ATTRIBUTES: &str = "\
+pub const CREATE_DEFAULT_KEYSPACE_UDT_WITH_MULTIPLE_ATTRIBUTES: &str = "\
 create type big_data_udt (int_attr int, text_attr text);
 ";
 
-pub const CREATE_UDT_IF_NOT_EXISTS: &str = "\
+pub const CREATE_DEFAULT_KEYSPACE_UDT_IF_NOT_EXISTS: &str = "\
 create type if not exists big_data_udt (int_attr int);
+";
+
+pub const CREATE_EXPLICIT_KEYSPACE_UDT_WITH_SINGLE_ATTRIBUTE: &str = "\
+create type big_data_keyspace.big_data_udt (int_attribute int);
+";
+
+pub const CREATE_EXPLICIT_KEYSPACE_UDT_WITH_MULTIPLE_ATTRIBUTES: &str = "\
+create type big_data_keyspace.big_data_udt (int_attr int, text_attr text);
+";
+
+pub const CREATE_EXPLICIT_KEYSPACE_UDT_IF_NOT_EXISTS: &str = "\
+create type if not exists big_data_keyspace.big_data_udt (int_attr int);
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#udt-literals
