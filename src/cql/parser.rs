@@ -3,6 +3,7 @@ use crate::cql::lex::*;
 use std::iter::Peekable;
 use std::slice::Iter;
 use std::sync::Arc;
+use TokenName::*;
 
 pub type ParseResult<T> = Result<T, anyhow::Error>;
 
@@ -13,7 +14,7 @@ pub fn parse_cql(cql: String) -> ParseResult<Vec<CqlStatement>> {
     let mut result = Vec::new();
     while iter.peek().is_some() {
         result.push(parse_statement(&cql, &mut iter)?);
-        while iter.next_if(|t| t.name == TokenName::Semicolon).is_some() {}
+        while iter.next_if(|t| t.name == Semicolon).is_some() {}
     }
     if result.is_empty() {
         todo!("parse error")
@@ -29,8 +30,8 @@ fn parse_statement(
     match iter.next() {
         None => todo!("parse error"),
         Some(token) => match token.name {
-            TokenName::CreateKeyword => parse_create_statement(cql, iter).map(CqlStatement::Create),
-            TokenName::DropKeyword => parse_drop_statement(cql, iter).map(CqlStatement::Drop),
+            CreateKeyword => parse_create_statement(cql, iter).map(CqlStatement::Create),
+            DropKeyword => parse_drop_statement(cql, iter).map(CqlStatement::Drop),
             _ => todo!("parse error {:?}", token.name),
         },
     }
@@ -43,16 +44,16 @@ fn parse_create_statement(
     match iter.next() {
         None => todo!("parse error"),
         Some(token) => match token.name {
-            TokenName::IndexKeyword => Ok(CreateStatement::Index(parse_create_index_statement(
+            IndexKeyword => Ok(CreateStatement::Index(parse_create_index_statement(
                 cql, iter,
             )?)),
-            TokenName::KeyspaceKeyword => Ok(CreateStatement::Keyspace(
-                parse_create_keyspace_statement(cql, iter)?,
-            )),
-            TokenName::RoleKeyword => Ok(CreateStatement::Role(parse_create_role_statement(
+            KeyspaceKeyword => Ok(CreateStatement::Keyspace(parse_create_keyspace_statement(
                 cql, iter,
             )?)),
-            TokenName::TableKeyword => Ok(CreateStatement::Table(parse_create_table_statement(
+            RoleKeyword => Ok(CreateStatement::Role(parse_create_role_statement(
+                cql, iter,
+            )?)),
+            TableKeyword => Ok(CreateStatement::Table(parse_create_table_statement(
                 cql, iter,
             )?)),
             _ => todo!("parse error"),
@@ -115,33 +116,24 @@ fn parse_drop_statement(
     match iter.next() {
         None => todo!("parse error"),
         Some(token) => match token.name {
-            TokenName::AggregateKeyword => {
+            AggregateKeyword => {
                 parse_drop_aggregate_statement(cql, iter).map(DropStatement::Aggregate)
             }
-            TokenName::FunctionKeyword => {
+            FunctionKeyword => {
                 parse_drop_function_statement(cql, iter).map(DropStatement::Function)
             }
-            TokenName::IndexKeyword => {
-                parse_drop_index_statement(cql, iter).map(DropStatement::Index)
-            }
-            TokenName::KeyspaceKeyword => {
+            IndexKeyword => parse_drop_index_statement(cql, iter).map(DropStatement::Index),
+            KeyspaceKeyword => {
                 parse_drop_keyspace_statement(cql, iter).map(DropStatement::Keyspace)
             }
-            TokenName::MaterializedKeyword => match iter.next() {
-                None => todo!("parse error"),
-                Some(next) => match next.name {
-                    TokenName::ViewKeyword => parse_drop_materialized_view_statement(cql, iter)
-                        .map(DropStatement::MaterializedView),
-                    _ => todo!("parse error"),
-                },
-            },
-            TokenName::TableKeyword => {
-                parse_drop_table_statement(cql, iter).map(DropStatement::Table)
+            MaterializedKeyword => {
+                _ = next(iter, ViewKeyword)?;
+                parse_drop_materialized_view_statement(cql, iter)
+                    .map(DropStatement::MaterializedView)
             }
-            TokenName::TriggerKeyword => {
-                parse_drop_trigger_statement(cql, iter).map(DropStatement::Trigger)
-            }
-            TokenName::TypeKeyword => parse_drop_type_statement(cql, iter).map(DropStatement::Type),
+            TableKeyword => parse_drop_table_statement(cql, iter).map(DropStatement::Table),
+            TriggerKeyword => parse_drop_trigger_statement(cql, iter).map(DropStatement::Trigger),
+            TypeKeyword => parse_drop_type_statement(cql, iter).map(DropStatement::Type),
             _ => todo!("parse error"),
         },
     }
@@ -152,7 +144,7 @@ fn parse_drop_aggregate_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropAggregateStatement> {
-    let if_exists = peek_match_advance(iter, &[TokenName::IfKeyword, TokenName::ExistsKeyword])?;
+    let if_exists = peek_match_advance(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, aggregate_name) = parse_keyspace_object_identifier(cql, iter)?;
     Ok(DropAggregateStatement {
         aggregate_name,
@@ -166,7 +158,7 @@ fn parse_drop_function_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropFunctionStatement> {
-    let if_exists = peek_match_advance(iter, &[TokenName::IfKeyword, TokenName::ExistsKeyword])?;
+    let if_exists = peek_match_advance(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, function_name) = parse_keyspace_object_identifier(cql, iter)?;
     Ok(DropFunctionStatement {
         function_name,
@@ -179,7 +171,7 @@ fn parse_drop_index_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropIndexStatement> {
-    let if_exists = peek_match_advance(iter, &[TokenName::IfKeyword, TokenName::ExistsKeyword])?;
+    let if_exists = peek_match_advance(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, index_name) = parse_keyspace_object_identifier(cql, iter)?;
     Ok(DropIndexStatement {
         index_name,
@@ -192,23 +184,8 @@ fn parse_drop_keyspace_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropKeyspaceStatement> {
-    let (keyspace_name, if_exists) = match iter.next() {
-        None => todo!("parse error"),
-        Some(token) => match token.name {
-            TokenName::IfKeyword => match iter.next() {
-                None => todo!("parse error"),
-                Some(exists_token) => match exists_token.name {
-                    TokenName::ExistsKeyword => match iter.next() {
-                        None => todo!("parse error"),
-                        Some(keyword_token) => (create_view(cql, keyword_token), true),
-                    },
-                    _ => todo!("parse error"),
-                },
-            },
-            TokenName::Identifier => (create_view(cql, token), false),
-            _ => todo!("parse error"),
-        },
-    };
+    let if_exists = peek_match_advance(iter, &[IfKeyword, ExistsKeyword])?;
+    let keyspace_name = create_view(cql, next(iter, Identifier)?);
     Ok(DropKeyspaceStatement {
         keyspace_name,
         if_exists,
@@ -219,7 +196,13 @@ fn parse_drop_materialized_view_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropMaterializedViewStatement> {
-    todo!("parse error")
+    let if_exists = peek_match_advance(iter, &[IfKeyword, ExistsKeyword])?;
+    let (keyspace_name, view_name) = parse_keyspace_object_identifier(cql, iter)?;
+    Ok(DropMaterializedViewStatement {
+        view_name,
+        if_exists,
+        keyspace_name,
+    })
 }
 
 fn parse_drop_table_statement(
@@ -247,13 +230,13 @@ fn parse_keyspace_object_identifier(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> Result<(Option<TokenView>, TokenView), anyhow::Error> {
-    let object_or_keyspace = create_view(cql, next(iter, TokenName::Identifier)?);
+    let object_or_keyspace = create_view(cql, next(iter, Identifier)?);
     match iter.peek().map(|t| &t.name) {
-        Some(TokenName::Dot) => {
+        Some(Dot) => {
             _ = iter.next();
             Ok((
                 Some(object_or_keyspace),
-                create_view(cql, next(iter, TokenName::Identifier)?),
+                create_view(cql, next(iter, Identifier)?),
             ))
         }
         _ => Ok((None, object_or_keyspace)),

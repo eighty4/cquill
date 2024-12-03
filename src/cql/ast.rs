@@ -199,6 +199,7 @@ pub struct DropKeyspaceStatement {
 pub struct DropMaterializedViewStatement {
     pub view_name: TokenView,
     pub if_exists: bool,
+    pub keyspace_name: Option<TokenView>,
 }
 
 #[derive(Debug, PartialEq)]
