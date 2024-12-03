@@ -901,7 +901,7 @@ mod data_definition {
         #[test]
         fn test_drop_table() {
             tokenize_expect(
-                DROP_TABLE,
+                DROP_TABLE_DEFAULT_KEYSPACE,
                 vec![
                     (DropKeyword, "drop"),
                     (TableKeyword, "table"),
@@ -914,7 +914,7 @@ mod data_definition {
         #[test]
         fn test_drop_table_if_exists() {
             tokenize_expect(
-                DROP_TABLE_IF_EXISTS,
+                DROP_TABLE_DEFAULT_KEYSPACE_IF_EXISTS,
                 vec![
                     (DropKeyword, "drop"),
                     (TableKeyword, "table"),

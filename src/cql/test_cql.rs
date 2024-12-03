@@ -181,12 +181,20 @@ alter table big_data_table rename text_column to text_col and uuid_column to uui
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/ddl.html#drop-table-statement
 
-pub const DROP_TABLE: &str = "\
+pub const DROP_TABLE_DEFAULT_KEYSPACE: &str = "\
 drop table big_data_table;
 ";
 
-pub const DROP_TABLE_IF_EXISTS: &str = "\
+pub const DROP_TABLE_DEFAULT_KEYSPACE_IF_EXISTS: &str = "\
 drop table if exists big_data_table;
+";
+
+pub const DROP_TABLE_EXPLICIT_KEYSPACE: &str = "\
+drop table big_data_keyspace.big_data_table;
+";
+
+pub const DROP_TABLE_EXPLICIT_KEYSPACE_IF_EXISTS: &str = "\
+drop table if exists big_data_keyspace.big_data_table;
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/ddl.html#truncate-statement
@@ -1292,6 +1300,10 @@ create trigger if not exists big_data_trigger on big_data_table using 'trigger n
 // https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html#drop-trigger-statement
 
 pub const DROP_TRIGGER: &str = "\
+drop trigger big_data_trigger on big_data_table;
+";
+
+pub const DROP_TRIGGER_EXPLICIT_KEYSPACE: &str = "\
 drop trigger big_data_trigger on big_data_table;
 ";
 

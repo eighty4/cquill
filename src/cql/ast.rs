@@ -163,6 +163,7 @@ pub enum DropStatement {
     Index(DropIndexStatement),
     Keyspace(DropKeyspaceStatement),
     MaterializedView(DropMaterializedViewStatement),
+    Role(DropRoleStatement),
     Table(DropTableStatement),
     Trigger(DropTriggerStatement),
     Type(DropTypeStatement),
@@ -203,10 +204,17 @@ pub struct DropMaterializedViewStatement {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct DropRoleStatement {
+    pub role_name: TokenView,
+    pub if_exists: bool,
+}
+
+#[derive(Debug, PartialEq)]
 pub struct DropTableStatement {
     pub table_name: TokenView,
     pub alias: Option<TableAlias>,
     pub if_exists: bool,
+    pub keyspace_name: Option<TokenView>,
 }
 
 #[derive(Debug, PartialEq)]

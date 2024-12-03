@@ -131,6 +131,7 @@ fn parse_drop_statement(
                 parse_drop_materialized_view_statement(cql, iter)
                     .map(DropStatement::MaterializedView)
             }
+            RoleKeyword => parse_drop_role_statement(cql, iter).map(DropStatement::Role),
             TableKeyword => parse_drop_table_statement(cql, iter).map(DropStatement::Table),
             TriggerKeyword => parse_drop_trigger_statement(cql, iter).map(DropStatement::Trigger),
             TypeKeyword => parse_drop_type_statement(cql, iter).map(DropStatement::Type),
@@ -205,11 +206,30 @@ fn parse_drop_materialized_view_statement(
     })
 }
 
+fn parse_drop_role_statement(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<DropRoleStatement> {
+    let if_exists = peek_match_advance(iter, &[IfKeyword, ExistsKeyword])?;
+    let role_name = create_view(cql, next(iter, Identifier)?);
+    Ok(DropRoleStatement {
+        role_name,
+        if_exists,
+    })
+}
+
 fn parse_drop_table_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropTableStatement> {
-    todo!("parse error")
+    let if_exists = peek_match_advance(iter, &[IfKeyword, ExistsKeyword])?;
+    let (keyspace_name, table_name) = parse_keyspace_object_identifier(cql, iter)?;
+    Ok(DropTableStatement {
+        alias: None,
+        table_name,
+        if_exists,
+        keyspace_name,
+    })
 }
 
 fn parse_drop_trigger_statement(
