@@ -222,12 +222,10 @@ fn test_parsing_drop_materialized_view_with_explicit_keyspace_if_exists() {
 fn test_parsing_drop_role() {
     assert_eq!(
         parse_cql(DROP_ROLE.to_string()).unwrap(),
-        vec!(CqlStatement::Drop(DropStatement::Role(
-            DropRoleStatement {
-                role_name: find_token(DROP_ROLE, "big_data_role"),
-                if_exists: false,
-            }
-        )))
+        vec!(CqlStatement::Drop(DropStatement::Role(DropRoleStatement {
+            role_name: find_token(DROP_ROLE, "big_data_role"),
+            if_exists: false,
+        })))
     );
 }
 
@@ -235,12 +233,10 @@ fn test_parsing_drop_role() {
 fn test_parsing_drop_role_if_exists() {
     assert_eq!(
         parse_cql(DROP_ROLE_IF_EXISTS.to_string()).unwrap(),
-        vec!(CqlStatement::Drop(DropStatement::Role(
-            DropRoleStatement {
-                role_name: find_token(DROP_ROLE_IF_EXISTS, "big_data_role"),
-                if_exists: true,
-            }
-        )))
+        vec!(CqlStatement::Drop(DropStatement::Role(DropRoleStatement {
+            role_name: find_token(DROP_ROLE_IF_EXISTS, "big_data_role"),
+            if_exists: true,
+        })))
     );
 }
 
@@ -305,6 +301,70 @@ fn test_parsing_drop_table_with_explicit_keyspace_if_exists() {
                     DROP_TABLE_EXPLICIT_KEYSPACE_IF_EXISTS,
                     "big_data_keyspace"
                 ))
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_trigger_default_keyspace() {
+    let cql = DROP_TRIGGER_DEFAULT_KEYSPACE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Trigger(
+            DropTriggerStatement {
+                table_name: find_token(cql, "big_data_table"),
+                trigger_name: find_token(cql, "big_data_trigger"),
+                if_exists: false,
+                keyspace_name: None,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_trigger_default_keyspace_if_exists() {
+    let cql = DROP_TRIGGER_DEFAULT_KEYSPACE_IF_EXISTS;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Trigger(
+            DropTriggerStatement {
+                table_name: find_token(cql, "big_data_table"),
+                trigger_name: find_token(cql, "big_data_trigger"),
+                if_exists: true,
+                keyspace_name: None,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_trigger_explicit_keyspace() {
+    let cql = DROP_TRIGGER_EXPLICIT_KEYSPACE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Trigger(
+            DropTriggerStatement {
+                table_name: find_token(cql, "big_data_table"),
+                trigger_name: find_token(cql, "big_data_trigger"),
+                if_exists: false,
+                keyspace_name: Some(find_token(cql, "big_data_keyspace"))
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_trigger_explicit_keyspace_if_exists() {
+    let cql = DROP_TRIGGER_EXPLICIT_KEYSPACE_IF_EXISTS;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Trigger(
+            DropTriggerStatement {
+                table_name: find_token(cql, "big_data_table"),
+                trigger_name: find_token(cql, "big_data_trigger"),
+                if_exists: true,
+                keyspace_name: Some(find_token(cql, "big_data_keyspace"))
             }
         )))
     );

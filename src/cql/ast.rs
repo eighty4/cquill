@@ -219,8 +219,10 @@ pub struct DropTableStatement {
 
 #[derive(Debug, PartialEq)]
 pub struct DropTriggerStatement {
+    pub table_name: TokenView,
     pub trigger_name: TokenView,
     pub if_exists: bool,
+    pub keyspace_name: Option<TokenView>,
 }
 
 #[derive(Debug, PartialEq)]

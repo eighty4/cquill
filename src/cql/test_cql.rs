@@ -1299,14 +1299,18 @@ create trigger if not exists big_data_trigger on big_data_table using 'trigger n
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html#drop-trigger-statement
 
-pub const DROP_TRIGGER: &str = "\
+pub const DROP_TRIGGER_DEFAULT_KEYSPACE: &str = "\
 drop trigger big_data_trigger on big_data_table;
+";
+
+pub const DROP_TRIGGER_DEFAULT_KEYSPACE_IF_EXISTS: &str = "\
+drop trigger if exists big_data_trigger on big_data_table;
 ";
 
 pub const DROP_TRIGGER_EXPLICIT_KEYSPACE: &str = "\
-drop trigger big_data_trigger on big_data_table;
+drop trigger big_data_trigger on big_data_keyspace.big_data_table;
 ";
 
-pub const DROP_TRIGGER_IF_EXISTS: &str = "\
-drop trigger if exists big_data_trigger on big_data_table;
+pub const DROP_TRIGGER_EXPLICIT_KEYSPACE_IF_EXISTS: &str = "\
+drop trigger if exists big_data_trigger on big_data_keyspace.big_data_table;
 ";

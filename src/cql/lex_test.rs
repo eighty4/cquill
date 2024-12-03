@@ -5144,7 +5144,7 @@ mod triggers {
         #[test]
         fn test_drop_trigger() {
             tokenize_expect(
-                DROP_TRIGGER,
+                DROP_TRIGGER_DEFAULT_KEYSPACE,
                 vec![
                     (DropKeyword, "drop"),
                     (TriggerKeyword, "trigger"),
@@ -5159,7 +5159,7 @@ mod triggers {
         #[test]
         fn test_drop_trigger_if_not_exists() {
             tokenize_expect(
-                DROP_TRIGGER_IF_EXISTS,
+                DROP_TRIGGER_DEFAULT_KEYSPACE_IF_EXISTS,
                 vec![
                     (DropKeyword, "drop"),
                     (TriggerKeyword, "trigger"),
