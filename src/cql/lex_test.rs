@@ -2190,7 +2190,7 @@ mod secondary_indexes {
         #[test]
         fn test_drop_index() {
             tokenize_expect(
-                DROP_INDEX,
+                DROP_INDEX_DEFAULT_KEYSPACE,
                 vec![
                     (DropKeyword, "drop"),
                     (IndexKeyword, "index"),
@@ -2203,12 +2203,44 @@ mod secondary_indexes {
         #[test]
         fn test_drop_index_if_exists() {
             tokenize_expect(
-                DROP_INDEX_IF_EXISTS,
+                DROP_INDEX_DEFAULT_KEYSPACE_IF_EXISTS,
                 vec![
                     (DropKeyword, "drop"),
                     (IndexKeyword, "index"),
                     (IfKeyword, "if"),
                     (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_index"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_index_explicit_keyspace() {
+            tokenize_expect(
+                DROP_INDEX_EXPLICIT_KEYSPACE,
+                vec![
+                    (DropKeyword, "drop"),
+                    (IndexKeyword, "index"),
+                    (Identifier, "big_data_keyspace"),
+                    (Dot, "."),
+                    (Identifier, "big_data_index"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_index_explicit_keyspace_if_exists() {
+            tokenize_expect(
+                DROP_INDEX_EXPLICIT_KEYSPACE_IF_EXISTS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (IndexKeyword, "index"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_keyspace"),
+                    (Dot, "."),
                     (Identifier, "big_data_index"),
                     (Semicolon, ";"),
                 ],
@@ -2363,7 +2395,7 @@ mod materialized_views {
         #[test]
         fn test_drop_materialized_view() {
             tokenize_expect(
-                DROP_MATERIALIZED_VIEW,
+                DROP_MATERIALIZED_VIEW_DEFAULT_KEYSPACE,
                 vec![
                     (DropKeyword, "drop"),
                     (MaterializedKeyword, "materialized"),
@@ -2377,13 +2409,47 @@ mod materialized_views {
         #[test]
         fn test_drop_materialized_view_if_exists() {
             tokenize_expect(
-                DROP_MATERIALIZED_VIEW_IF_EXISTS,
+                DROP_MATERIALIZED_VIEW_DEFAULT_KEYSPACE_IF_EXISTS,
                 vec![
                     (DropKeyword, "drop"),
                     (MaterializedKeyword, "materialized"),
                     (ViewKeyword, "view"),
                     (IfKeyword, "if"),
                     (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_view"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_materialized_view_explicit_keyspace() {
+            tokenize_expect(
+                DROP_MATERIALIZED_VIEW_EXPLICIT_KEYSPACE,
+                vec![
+                    (DropKeyword, "drop"),
+                    (MaterializedKeyword, "materialized"),
+                    (ViewKeyword, "view"),
+                    (Identifier, "big_data_keyspace"),
+                    (Dot, "."),
+                    (Identifier, "big_data_view"),
+                    (Semicolon, ";"),
+                ],
+            );
+        }
+
+        #[test]
+        fn test_drop_materialized_view_if_exists_explicit_keyspace() {
+            tokenize_expect(
+                DROP_MATERIALIZED_VIEW_EXPLICIT_KEYSPACE_IF_EXISTS,
+                vec![
+                    (DropKeyword, "drop"),
+                    (MaterializedKeyword, "materialized"),
+                    (ViewKeyword, "view"),
+                    (IfKeyword, "if"),
+                    (ExistsKeyword, "exists"),
+                    (Identifier, "big_data_keyspace"),
+                    (Dot, "."),
                     (Identifier, "big_data_view"),
                     (Semicolon, ";"),
                 ],

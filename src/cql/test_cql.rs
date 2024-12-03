@@ -448,12 +448,20 @@ create custom index big_data_index on big_data_table (text_column)
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/indexes.html#drop-index-statement
 
-pub const DROP_INDEX: &str = "\
+pub const DROP_INDEX_DEFAULT_KEYSPACE: &str = "\
 drop index big_data_index;
 ";
 
-pub const DROP_INDEX_IF_EXISTS: &str = "\
+pub const DROP_INDEX_DEFAULT_KEYSPACE_IF_EXISTS: &str = "\
 drop index if exists big_data_index;
+";
+
+pub const DROP_INDEX_EXPLICIT_KEYSPACE: &str = "\
+drop index big_data_keyspace.big_data_index;
+";
+
+pub const DROP_INDEX_EXPLICIT_KEYSPACE_IF_EXISTS: &str = "\
+drop index if exists big_data_keyspace.big_data_index;
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/mvs.html#create-materialized-view-statement
@@ -491,12 +499,20 @@ alter materialized view if exists big_data_view with comment = 'quoi de neuf';
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/mvs.html#drop-materialized-view-statement
-pub const DROP_MATERIALIZED_VIEW: &str = "\
+pub const DROP_MATERIALIZED_VIEW_DEFAULT_KEYSPACE: &str = "\
 drop materialized view big_data_view;
 ";
 
-pub const DROP_MATERIALIZED_VIEW_IF_EXISTS: &str = "\
+pub const DROP_MATERIALIZED_VIEW_DEFAULT_KEYSPACE_IF_EXISTS: &str = "\
 drop materialized view if exists big_data_view;
+";
+
+pub const DROP_MATERIALIZED_VIEW_EXPLICIT_KEYSPACE: &str = "\
+drop materialized view big_data_keyspace.big_data_view;
+";
+
+pub const DROP_MATERIALIZED_VIEW_EXPLICIT_KEYSPACE_IF_EXISTS: &str = "\
+drop materialized view if exists big_data_keyspace.big_data_view;
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/functions.html#create-function-statement

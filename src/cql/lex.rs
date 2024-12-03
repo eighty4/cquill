@@ -310,12 +310,20 @@ impl TokenName {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct TokenRange(usize, usize);
 
 impl TokenRange {
-    fn new(b: usize, e: usize) -> Self {
+    pub fn new(b: usize, e: usize) -> Self {
         Self(b, e)
+    }
+    
+    pub fn begin(&self) -> usize {
+        self.0
+    }
+    
+    pub fn end(&self) -> usize {
+        self.1
     }
 
     pub fn splice(&self, cql: &'static str) -> &'static str {
@@ -332,6 +340,7 @@ impl TokenRange {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct Token {
     pub line: usize,
     pub name: TokenName,
@@ -614,7 +623,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn add_token(&mut self, name: TokenName) {
-        let token = Token::new(name, self.line, self.current);
+        let token = Token::new(name, self.line, self.current.clone());
         self.tokens.push(token);
     }
 
