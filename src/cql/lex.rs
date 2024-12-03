@@ -1,3 +1,4 @@
+use crate::cql::ast::TokenRange;
 use crate::cql::lex::TokenName::*;
 use uuid::Uuid;
 
@@ -346,36 +347,6 @@ impl TokenName {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) struct TokenRange(usize, usize);
-
-impl TokenRange {
-    pub fn new(b: usize, e: usize) -> Self {
-        Self(b, e)
-    }
-
-    pub fn begin(&self) -> usize {
-        self.0
-    }
-
-    pub fn end(&self) -> usize {
-        self.1
-    }
-
-    pub fn splice(&self, cql: &'static str) -> &'static str {
-        &cql[self.0..=self.1]
-    }
-
-    pub fn next_char(&mut self) {
-        self.0 = self.1 + 1;
-        self.1 = self.0;
-    }
-
-    pub fn extend(&mut self, i: usize) {
-        self.1 += i;
-    }
-}
-
 #[derive(Debug)]
 pub(crate) struct Token {
     pub line: usize,
@@ -408,7 +379,7 @@ impl<'a> Tokenizer<'a> {
 
     pub fn tokenize(mut self) -> Result<Vec<Token>, ()> {
         loop {
-            if self.current.0 >= self.cql.len() {
+            if self.current.begin() >= self.cql.len() {
                 break;
             }
             let c = self.splice();
@@ -664,7 +635,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn advance(&mut self) -> Option<&'a str> {
-        let maybe_c = self.char_at(self.current.1 + 1);
+        let maybe_c = self.char_at(self.current.end() + 1);
         if let Some(c) = maybe_c {
             self.current.extend(c.len());
         }
@@ -700,7 +671,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn peek_nth(&self, nth: usize) -> Option<&'a str> {
-        let i = self.current.1 + 1 + nth;
+        let i = self.current.end() + 1 + nth;
         if i >= self.cql.len() {
             None
         } else {
@@ -724,6 +695,6 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn splice(&self) -> &'a str {
-        &self.cql[self.current.0..=self.current.1]
+        &self.cql[self.current.begin()..=self.current.end()]
     }
 }

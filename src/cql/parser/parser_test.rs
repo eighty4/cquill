@@ -1,5 +1,4 @@
 use crate::cql::ast::*;
-use crate::cql::lex::TokenRange;
 use crate::cql::parser::parse_cql;
 use crate::cql::test_cql::*;
 use std::collections::HashMap;
