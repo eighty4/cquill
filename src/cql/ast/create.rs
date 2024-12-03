@@ -157,5 +157,15 @@ pub struct CreateTypeStatement {
 
 #[derive(Debug, PartialEq)]
 pub struct CreateUserStatement {
+    pub user_name: TokenView,
+    pub if_not_exists: bool,
+    pub password: TokenView,
+    pub user_status: CreateUserStatus,
+}
 
+#[derive(Debug, PartialEq)]
+pub enum CreateUserStatus {
+    NoSuperuser,
+    Superuser,
+    Undeclared,
 }

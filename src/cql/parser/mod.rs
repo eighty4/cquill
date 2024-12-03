@@ -4,7 +4,13 @@ mod iter;
 mod token;
 
 #[cfg(test)]
-mod parser_test;
+mod create_test;
+
+#[cfg(test)]
+mod drop_test;
+
+#[cfg(test)]
+mod token_test;
 
 use crate::cql::ast::*;
 use crate::cql::lex::*;

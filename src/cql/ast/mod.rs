@@ -5,9 +5,8 @@ mod token;
 
 pub use create::*;
 pub use drop::*;
+pub use table::*;
 pub use token::*;
-
-use std::fmt::Display;
 
 #[derive(Debug, PartialEq)]
 pub enum CqlStatement {
