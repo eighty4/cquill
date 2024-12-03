@@ -198,6 +198,42 @@ fn test_parsing_create_user_with_password() {
 }
 
 #[test]
+fn test_parsing_create_user_with_triple_quote_password() {
+    let cql = CREATE_USER_WITH_TRIPLE_QUOTE_PASSWORD;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::User(
+            CreateUserStatement {
+                user_name: find_token(cql, "big_data_user"),
+                if_not_exists: false,
+                password: Some(CreateUserPassword::PlainText(find_string_literal(
+                    cql, "'''asdf'''"
+                ))),
+                user_status: None,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_create_user_with_dollar_quote_password() {
+    let cql = CREATE_USER_WITH_DOLLAR_QUOTE_PASSWORD;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::User(
+            CreateUserStatement {
+                user_name: find_token(cql, "big_data_user"),
+                if_not_exists: false,
+                password: Some(CreateUserPassword::PlainText(find_string_literal(
+                    cql, "$$asdf$$"
+                ))),
+                user_status: None,
+            }
+        )))
+    );
+}
+
+#[test]
 fn test_parsing_create_user_with_superuser_status_and_password() {
     let cql = CREATE_USER_WITH_PASSWORD_SUPERUSER;
     assert_eq!(

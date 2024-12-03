@@ -919,6 +919,14 @@ pub const CREATE_USER_WITH_PASSWORD: &str = "\
 create user big_data_user with password 'asdf';
 ";
 
+pub const CREATE_USER_WITH_TRIPLE_QUOTE_PASSWORD: &str = "\
+create user big_data_user with password '''asdf''';
+";
+
+pub const CREATE_USER_WITH_DOLLAR_QUOTE_PASSWORD: &str = "\
+create user big_data_user with password $$asdf$$;
+";
+
 pub const CREATE_USER_WITH_PASSWORD_SUPERUSER: &str = "\
 create user big_data_user with password 'asdf' superuser;
 ";
