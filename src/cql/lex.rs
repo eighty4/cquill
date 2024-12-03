@@ -93,6 +93,7 @@ pub(crate) enum TokenName {
     InputKeyword,
     InsertKeyword,
     IntKeyword,
+    IntegerKeyword, // todo test lex
     IntoKeyword,
     JsonKeyword,
     KeyKeyword,
@@ -135,6 +136,7 @@ pub(crate) enum TokenName {
     SmallIntKeyword,
     StaticKeyword, // todo test lex
     StorageKeyword,
+    StringKeyword, // todo test lex
     STypeKeyword,
     SumKeyword, // todo test lex
     SuperUserKeyword,
@@ -163,6 +165,7 @@ pub(crate) enum TokenName {
     ValuesKeyword,
     VarCharKeyword,
     VarIntKeyword,
+    VectorKeyword, // todo test lex
     ViewKeyword,
     WhereKeyword,
     WithKeyword,
@@ -233,6 +236,7 @@ impl TokenName {
             "input" => InputKeyword,
             "insert" => InsertKeyword,
             "int" => IntKeyword,
+            "integer" => IntegerKeyword,
             "into" => IntoKeyword,
             "json" => JsonKeyword,
             "key" => KeyKeyword,
@@ -274,6 +278,7 @@ impl TokenName {
             "smallint" => SmallIntKeyword,
             "static" => StaticKeyword,
             "storage" => StorageKeyword,
+            "string" => StringKeyword,
             "stype" => STypeKeyword,
             "sum" => SumKeyword,
             "superuser" => SuperUserKeyword,
@@ -302,11 +307,42 @@ impl TokenName {
             "values" => ValuesKeyword,
             "varchar" => VarCharKeyword,
             "varint" => VarIntKeyword,
+            "vector" => VectorKeyword,
             "view" => ViewKeyword,
             "where" => WhereKeyword,
             "with" => WithKeyword,
             &_ => Identifier,
         }
+    }
+
+    pub fn is_cql_data_type(&self) -> bool {
+        matches!(
+            self,
+            AsciiKeyword
+                | BigIntKeyword
+                | BlobKeyword
+                | BooleanKeyword
+                | CounterKeyword
+                | DateKeyword
+                | DecimalKeyword
+                | DoubleKeyword
+                | DurationKeyword
+                | FloatKeyword
+                | InetKeyword
+                | IntKeyword
+                | IntegerKeyword
+                | SmallIntKeyword
+                | StringKeyword
+                | TextKeyword
+                | TimeKeyword
+                | TimestampKeyword
+                | TimeUuidKeyword
+                | TinyIntKeyword
+                | UuidKeyword
+                | VarCharKeyword
+                | VarIntKeyword
+                | VectorKeyword
+        )
     }
 }
 
@@ -317,11 +353,11 @@ impl TokenRange {
     pub fn new(b: usize, e: usize) -> Self {
         Self(b, e)
     }
-    
+
     pub fn begin(&self) -> usize {
         self.0
     }
-    
+
     pub fn end(&self) -> usize {
         self.1
     }

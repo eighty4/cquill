@@ -175,6 +175,7 @@ pub struct DropAggregateStatement {
     pub aggregate_name: TokenView,
     pub if_exists: bool,
     pub keyspace_name: Option<TokenView>,
+    pub signature: Option<Vec<TokenView>>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -182,6 +183,7 @@ pub struct DropFunctionStatement {
     pub function_name: TokenView,
     pub if_exists: bool,
     pub keyspace_name: Option<TokenView>,
+    pub signature: Option<Vec<TokenView>>,
 }
 
 #[derive(Debug, PartialEq)]

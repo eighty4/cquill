@@ -27,7 +27,7 @@ fn test_token_view() {
 }
 
 #[test]
-fn test_parsing_drop_aggregate_without_keyspace() {
+fn test_parsing_drop_aggregate_default_keyspace() {
     assert_eq!(
         parse_cql(DROP_AGGREGATE_WITHOUT_ARGS.to_string()).unwrap(),
         vec!(CqlStatement::Drop(DropStatement::Aggregate(
@@ -35,13 +35,30 @@ fn test_parsing_drop_aggregate_without_keyspace() {
                 aggregate_name: find_token(DROP_AGGREGATE_WITHOUT_ARGS, "big_data_agg"),
                 if_exists: false,
                 keyspace_name: None,
+                signature: None,
             }
         )))
     );
 }
 
 #[test]
-fn test_parsing_drop_aggregate_with_keyspace() {
+fn test_parsing_drop_aggregate_default_keyspace_single_arg() {
+    let cql = DROP_AGGREGATE_WITH_SINGLE_ARG;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Aggregate(
+            DropAggregateStatement {
+                aggregate_name: find_token(cql, "big_data_agg"),
+                if_exists: false,
+                keyspace_name: None,
+                signature: Some(vec!(find_token(cql, "int"))),
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_aggregate_explicit_keyspace() {
     assert_eq!(
         parse_cql(DROP_AGGREGATE_WITH_EXPLICIT_KEYSPACE.to_string()).unwrap(),
         vec!(CqlStatement::Drop(DropStatement::Aggregate(
@@ -51,7 +68,24 @@ fn test_parsing_drop_aggregate_with_keyspace() {
                 keyspace_name: Some(find_token(
                     DROP_AGGREGATE_WITH_EXPLICIT_KEYSPACE,
                     "big_data_keyspace"
-                ))
+                )),
+                signature: None,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_aggregate_explicit_keyspace_multiple_args() {
+    let cql = DROP_AGGREGATE_WITH_EXPLICIT_KEYSPACE_AND_MULTIPLE_ARGS;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Aggregate(
+            DropAggregateStatement {
+                aggregate_name: find_token(cql, "big_data_agg"),
+                if_exists: false,
+                keyspace_name: Some(find_token(cql, "big_data_keyspace")),
+                signature: Some(vec!(find_token(cql, "int"), find_token(cql, "text"))),
             }
         )))
     );
@@ -66,6 +100,7 @@ fn test_parsing_drop_function_without_keyspace() {
                 function_name: find_token(DROP_FUNCTION_WITHOUT_ARGS, "big_data_fn"),
                 if_exists: false,
                 keyspace_name: None,
+                signature: None,
             }
         )))
     );
@@ -82,7 +117,24 @@ fn test_parsing_drop_function_with_keyspace() {
                 keyspace_name: Some(find_token(
                     DROP_FUNCTION_WITH_EXPLICIT_KEYSPACE,
                     "big_data_keyspace"
-                ))
+                )),
+                signature: None,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_drop_function_explicit_keyspace_multiple_args() {
+    let cql = DROP_FUNCTION_WITH_EXPLICIT_KEYSPACE_AND_MULTIPLE_ARGS;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Drop(DropStatement::Function(
+            DropFunctionStatement {
+                function_name: find_token(cql, "big_data_fn"),
+                if_exists: false,
+                keyspace_name: Some(find_token(cql, "big_data_keyspace")),
+                signature: Some(vec!(find_token(cql, "int"), find_token(cql, "text"))),
             }
         )))
     );
@@ -401,13 +453,11 @@ fn test_parsing_drop_type_default_keyspace() {
     let cql = DROP_UDT_DEFAULT_KEYSPACE;
     assert_eq!(
         parse_cql(cql.to_string()).unwrap(),
-        vec!(CqlStatement::Drop(DropStatement::Type(
-            DropTypeStatement {
-                type_name: find_token(cql, "big_data_udt"),
-                if_exists: false,
-                keyspace_name: None,
-            }
-        )))
+        vec!(CqlStatement::Drop(DropStatement::Type(DropTypeStatement {
+            type_name: find_token(cql, "big_data_udt"),
+            if_exists: false,
+            keyspace_name: None,
+        })))
     );
 }
 
@@ -416,13 +466,11 @@ fn test_parsing_drop_type_default_keyspace_if_exists() {
     let cql = DROP_UDT_DEFAULT_KEYSPACE_IF_EXISTS;
     assert_eq!(
         parse_cql(cql.to_string()).unwrap(),
-        vec!(CqlStatement::Drop(DropStatement::Type(
-            DropTypeStatement {
-                type_name: find_token(cql, "big_data_udt"),
-                if_exists: true,
-                keyspace_name: None,
-            }
-        )))
+        vec!(CqlStatement::Drop(DropStatement::Type(DropTypeStatement {
+            type_name: find_token(cql, "big_data_udt"),
+            if_exists: true,
+            keyspace_name: None,
+        })))
     );
 }
 
@@ -431,13 +479,11 @@ fn test_parsing_drop_type_explicit_keyspace() {
     let cql = DROP_UDT_EXPLICIT_KEYSPACE;
     assert_eq!(
         parse_cql(cql.to_string()).unwrap(),
-        vec!(CqlStatement::Drop(DropStatement::Type(
-            DropTypeStatement {
-                type_name: find_token(cql, "big_data_udt"),
-                if_exists: false,
-                keyspace_name: Some(find_token(cql, "big_data_keyspace"))
-            }
-        )))
+        vec!(CqlStatement::Drop(DropStatement::Type(DropTypeStatement {
+            type_name: find_token(cql, "big_data_udt"),
+            if_exists: false,
+            keyspace_name: Some(find_token(cql, "big_data_keyspace"))
+        })))
     );
 }
 
@@ -446,13 +492,11 @@ fn test_parsing_drop_type_explicit_keyspace_if_exists() {
     let cql = DROP_UDT_EXPLICIT_KEYSPACE_IF_EXISTS;
     assert_eq!(
         parse_cql(cql.to_string()).unwrap(),
-        vec!(CqlStatement::Drop(DropStatement::Type(
-            DropTypeStatement {
-                type_name: find_token(cql, "big_data_udt"),
-                if_exists: true,
-                keyspace_name: Some(find_token(cql, "big_data_keyspace"))
-            }
-        )))
+        vec!(CqlStatement::Drop(DropStatement::Type(DropTypeStatement {
+            type_name: find_token(cql, "big_data_udt"),
+            if_exists: true,
+            keyspace_name: Some(find_token(cql, "big_data_keyspace"))
+        })))
     );
 }
 
