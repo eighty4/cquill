@@ -2,13 +2,13 @@ use crate::cql::ast::table::TableAlias;
 use crate::cql::ast::{StringView, TokenView};
 use std::collections::HashMap;
 
+// todo create custom index
 #[derive(Debug, PartialEq)]
 pub enum CreateStatement {
     // todo
     Aggregate(CreateAggregateStatement),
     // todo
     Function(CreateFunctionStatement),
-    // todo
     Index(CreateIndexStatement),
     // todo
     Keyspace(CreateKeyspaceStatement),
@@ -32,8 +32,25 @@ pub struct CreateFunctionStatement {}
 
 #[derive(Debug, PartialEq)]
 pub struct CreateIndexStatement {
-    index_name: TokenView,
-    if_not_exists: bool,
+    pub index_name: Option<TokenView>,
+    pub table_name: TokenView,
+    pub keyspace_name: Option<TokenView>,
+    pub if_not_exists: bool,
+    pub on_column: CreateIndexColumn,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CreateIndexColumn {
+    /// For an index on a scalar data type, set or list.
+    Column(TokenView),
+    /// For a full index on a frozen collection with `FULL(collection_col)`.
+    FullCollection(TokenView),
+    /// For an index on map entries with `ENTRIES(map_col)`.
+    MapEntries(TokenView),
+    /// Alias for `ENTRIES` with `VALUES(map_col)`.
+    MapValues(TokenView),
+    /// For an index on map keys with `KEYS(map_col)`.
+    MapKeys(TokenView),
 }
 
 #[derive(Debug, PartialEq)]

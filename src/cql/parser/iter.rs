@@ -35,6 +35,17 @@ pub fn advance_peek_match(
     Ok(true)
 }
 
+/// Errors if there peek returns None, otherwise returns true/false if peeked token matches.
+pub fn peek_next_match(
+    iter: &mut Peekable<Iter<Token>>,
+    next: TokenName,
+) -> Result<bool, anyhow::Error> {
+    match iter.peek() {
+        None => todo!("panic error"),
+        Some(peeked) => Ok(peeked.name == next),
+    }
+}
+
 pub fn pop_next_match<'a>(
     iter: &'a mut Peekable<Iter<Token>>,
     next: TokenName,
@@ -45,7 +56,7 @@ pub fn pop_next_match<'a>(
             if popped.name == next {
                 Ok(popped)
             } else {
-                todo!("panic error")
+                todo!("panic error {:?}", popped.name)
             }
         }
     }

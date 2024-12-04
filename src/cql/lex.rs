@@ -164,6 +164,11 @@ pub(crate) enum TokenName {
     WhereKeyword,
     WithKeyword,
 
+    // index column keywords
+    EntriesKeyword, // todo test lex
+    FullKeyword, // todo test lex
+    KeysKeyword, // todo test lex
+
     UuidLiteral,
     StringLiteral(StringStyle),
     NumberLiteral,
@@ -210,6 +215,7 @@ impl TokenName {
             "double" => DoubleKeyword,
             "drop" => DropKeyword,
             "duration" => DurationKeyword,
+            "entries" => EntriesKeyword,
             "execute" => ExecuteKeyword,
             "exists" => ExistsKeyword,
             "false" => FalseKeyword,
@@ -217,6 +223,7 @@ impl TokenName {
             "finalfunc" => FinalFuncKeyword,
             "float" => FloatKeyword,
             "from" => FromKeyword,
+            "full" => FullKeyword,
             "function" => FunctionKeyword,
             "functions" => FunctionsKeyword,
             "grant" => GrantKeyword,
@@ -234,6 +241,7 @@ impl TokenName {
             "into" => IntoKeyword,
             "json" => JsonKeyword,
             "key" => KeyKeyword,
+            "keys" => KeysKeyword,
             "keyspace" => KeyspaceKeyword,
             "keyspaces" => KeyspacesKeyword,
             "language" => LanguageKeyword,

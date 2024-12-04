@@ -424,6 +424,10 @@ pub const CREATE_INDEX: &str = "\
 create index big_data_index on big_data_table (text_column);
 ";
 
+pub const CREATE_INDEX_WITHOUT_NAME: &str = "\
+create index on big_data_table (text_column);
+";
+
 pub const CREATE_INDEX_IF_NOT_EXISTS: &str = "\
 create index if not exists big_data_index on big_data_table (text_column);
 ";

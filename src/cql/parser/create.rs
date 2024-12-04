@@ -1,7 +1,9 @@
 use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
-use crate::cql::parser::iter::{advance_peek_match, pop_next_match, pop_string_literal};
+use crate::cql::parser::iter::{
+    advance_peek_match, peek_next_match, pop_next_match, pop_string_literal,
+};
 use crate::cql::parser::token::{create_view, parse_object_identifiers};
 use crate::cql::parser::ParseResult;
 use std::collections::HashMap;
@@ -61,7 +63,42 @@ fn parse_create_index_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateIndexStatement> {
-    unimplemented!()
+    let if_not_exists = advance_peek_match(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let index_name = if peek_next_match(iter, Identifier)? {
+        Some(create_view(cql, pop_next_match(iter, Identifier)?))
+    } else {
+        None
+    };
+    _ = pop_next_match(iter, OnKeyword)?;
+    let (keyspace_name, table_name) = parse_object_identifiers(cql, iter)?;
+    _ = pop_next_match(iter, LeftParenthesis)?;
+    let on_column = match iter.next() {
+        None => todo!("parse error"),
+        Some(popped) => match popped.name {
+            FullKeyword | EntriesKeyword | KeysKeyword | ValuesKeyword => {
+                _ = pop_next_match(iter, LeftParenthesis)?;
+                let column_name = create_view(cql, pop_next_match(iter, Identifier)?);
+                _ = pop_next_match(iter, RightParenthesis)?;
+                match popped.name {
+                    FullKeyword => CreateIndexColumn::FullCollection(column_name),
+                    EntriesKeyword => CreateIndexColumn::MapEntries(column_name),
+                    KeysKeyword => CreateIndexColumn::MapKeys(column_name),
+                    ValuesKeyword => CreateIndexColumn::MapValues(column_name),
+                    _ => unreachable!(),
+                }
+            }
+            Identifier => CreateIndexColumn::Column(create_view(cql, popped)),
+            _ => todo!("parse error"),
+        },
+    };
+    _ = pop_next_match(iter, RightParenthesis)?;
+    Ok(CreateIndexStatement {
+        if_not_exists,
+        keyspace_name,
+        table_name,
+        index_name,
+        on_column,
+    })
 }
 
 fn parse_create_keyspace_statement(
