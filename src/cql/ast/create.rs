@@ -28,8 +28,8 @@ pub struct CreateAggregateStatement {}
 #[derive(Debug, PartialEq)]
 pub struct CreateFunctionStatement {
     pub function_name: TokenView,
-    pub function_args: HashMap<TokenView, CqlDataType>,
-    pub exists_behavior: CreateExistsBehavior,
+    pub function_args: Vec<(TokenView, CqlDataType)>,
+    pub if_exists: CreateIfExistsBehavior,
     pub on_null_input: OnNullInput,
     pub returns: CqlDataType,
     pub language: TokenView,
@@ -37,10 +37,12 @@ pub struct CreateFunctionStatement {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum CreateExistsBehavior {
-    IfNotExists,
+pub enum CreateIfExistsBehavior {
+    /// Specifies `if not exists`
+    DoNotError,
     /// Does not specify `or replace` or `if not exists`
-    ErrorIfExists,
+    Error,
+    /// Specifies `or replace`
     Replace,
 }
 
@@ -219,7 +221,7 @@ pub struct CreateTypeStatement {
     pub type_name: TokenView,
     pub if_not_exists: bool,
     pub keyspace_name: Option<TokenView>,
-    pub fields: HashMap<TokenView, CqlDataType>,
+    pub fields: Vec<(TokenView, CqlDataType)>,
 }
 
 #[derive(Debug, PartialEq)]

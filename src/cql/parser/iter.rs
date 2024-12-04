@@ -1,3 +1,4 @@
+use crate::cql::ast::CqlUserDefinedType::Unfrozen;
 use crate::cql::ast::{
     CqlDataType, CqlDataType::*, CqlNativeType::*, CqlValueType::*, StringView, TokenView,
 };
@@ -40,7 +41,7 @@ pub fn pop_next_match<'a>(
             if popped.name == next {
                 Ok(popped)
             } else {
-                todo!("parse error {:?}", popped.name)
+                todo!("parse error expected={:?} actual={:?}", next, popped.name)
             }
         }
     }
@@ -100,7 +101,10 @@ pub fn pop_boolean_literal(iter: &mut Peekable<Iter<Token>>) -> Result<bool, any
     }
 }
 
-pub fn pop_cql_data_type(iter: &mut Peekable<Iter<Token>>) -> Result<CqlDataType, anyhow::Error> {
+pub fn pop_cql_data_type(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> Result<CqlDataType, anyhow::Error> {
     Ok(match iter.next() {
         None => todo!("parse error"),
         Some(popped) => match popped.name {
@@ -125,6 +129,7 @@ pub fn pop_cql_data_type(iter: &mut Peekable<Iter<Token>>) -> Result<CqlDataType
             UuidKeyword => ValueType(NativeType(Uuid)),
             VarCharKeyword => ValueType(NativeType(VarChar)),
             VarIntKeyword => ValueType(NativeType(VarInt)),
+            Identifier => ValueType(UserDefinedType(Unfrozen(popped.to_token_view(cql)))),
             _ => todo!("parse error"),
         },
     })

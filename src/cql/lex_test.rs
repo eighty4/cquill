@@ -2469,7 +2469,7 @@ mod user_defined_functions {
         #[test]
         fn test_create_function_with_string_literal() {
             tokenize_expect(
-                CREATE_FUNCTION_WITH_STRING_LITERAL,
+                CREATE_FUNCTION_CALLED_ON_NULL_AS_SINGLE_QUOTE_STRING,
                 vec![
                     (CreateKeyword, "create"),
                     (FunctionKeyword, "function"),
@@ -2499,7 +2499,7 @@ mod user_defined_functions {
         #[test]
         fn test_create_function_called_on_null_input() {
             tokenize_expect(
-                CREATE_FUNCTION_WITH_STRING_LITERAL,
+                CREATE_FUNCTION_CALLED_ON_NULL_AS_SINGLE_QUOTE_STRING,
                 vec![
                     (CreateKeyword, "create"),
                     (FunctionKeyword, "function"),

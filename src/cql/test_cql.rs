@@ -529,7 +529,7 @@ drop materialized view if exists big_data_keyspace.big_data_view;
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/functions.html#create-function-statement
 
-pub const CREATE_FUNCTION_WITH_STRING_LITERAL: &str = "\
+pub const CREATE_FUNCTION_CALLED_ON_NULL_AS_SINGLE_QUOTE_STRING: &str = "\
 create function big_data_fn(fn_arg int)
     called on null input
     returns text
@@ -537,7 +537,7 @@ create function big_data_fn(fn_arg int)
     as 'return fn_arg.toString();';
 ";
 
-pub const CREATE_FUNCTION_CALLED_ON_NULL_INPUT: &str = "\
+pub const CREATE_FUNCTION_CALLED_ON_NULL_AS_DOLLAR_DOLLAR: &str = "\
 create function big_data_fn(fn_arg int)
     called on null input
     returns text

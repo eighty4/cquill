@@ -18,6 +18,7 @@ pub enum CqlValueType {
     UserDefinedType(CqlUserDefinedType),
 }
 
+// todo handle Frozen<T> at CqlDataType level
 #[derive(Debug, PartialEq)]
 pub enum CqlUserDefinedType {
     Frozen(TokenView),

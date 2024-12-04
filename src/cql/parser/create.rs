@@ -28,9 +28,9 @@ pub fn parse_create_statement(
             OrKeyword => {
                 pop_next_match(iter, ReplaceKeyword)?;
                 match pop_next(iter)?.name {
-                    AggregateKeyword => parse_create_aggregate_statement(cql, iter, false)
+                    AggregateKeyword => parse_create_aggregate_statement(cql, iter, true)
                         .map(CreateStatement::Aggregate),
-                    FunctionKeyword => parse_create_function_statement(cql, iter, false)
+                    FunctionKeyword => parse_create_function_statement(cql, iter, true)
                         .map(CreateStatement::Function),
                     _ => todo!("parse error"),
                 }
@@ -61,7 +61,7 @@ fn parse_create_aggregate_statement(
     iter: &mut Peekable<Iter<Token>>,
     create_or_replace: bool,
 ) -> ParseResult<CreateAggregateStatement> {
-    let exists_behavior = CreateExistsBehavior::new(
+    let exists_behavior = CreateIfExistsBehavior::new(
         create_or_replace,
         pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?,
     )?;
@@ -73,7 +73,7 @@ fn parse_create_function_statement(
     iter: &mut Peekable<Iter<Token>>,
     create_or_replace: bool,
 ) -> ParseResult<CreateFunctionStatement> {
-    let exists_behavior = CreateExistsBehavior::new(
+    let if_exists = CreateIfExistsBehavior::new(
         create_or_replace,
         pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?,
     )?;
@@ -87,14 +87,17 @@ fn parse_create_function_statement(
         }
         _ => todo!("parse error"),
     };
+    pop_next_match(iter, OnKeyword)?;
+    pop_next_match(iter, NullKeyword)?;
+    pop_next_match(iter, InputKeyword)?;
     pop_next_match(iter, ReturnsKeyword)?;
-    let returns = pop_cql_data_type(iter)?;
+    let returns = pop_cql_data_type(cql, iter)?;
     pop_next_match(iter, LanguageKeyword)?;
     let language = pop_identifier(cql, iter)?;
     pop_next_match(iter, AsKeyword)?;
     let function_body = pop_string_literal(cql, iter)?;
     Ok(CreateFunctionStatement {
-        exists_behavior,
+        if_exists,
         function_name,
         function_args,
         on_null_input,
@@ -104,19 +107,19 @@ fn parse_create_function_statement(
     })
 }
 
-impl CreateExistsBehavior {
+impl CreateIfExistsBehavior {
     fn new(
         create_or_replace: bool,
         if_not_exists: bool,
-    ) -> Result<CreateExistsBehavior, anyhow::Error> {
+    ) -> Result<CreateIfExistsBehavior, anyhow::Error> {
         if create_or_replace && if_not_exists {
             todo!("parse error")
         } else if create_or_replace {
-            Ok(CreateExistsBehavior::Replace)
+            Ok(CreateIfExistsBehavior::Replace)
         } else if if_not_exists {
-            Ok(CreateExistsBehavior::IfNotExists)
+            Ok(CreateIfExistsBehavior::DoNotError)
         } else {
-            Ok(CreateExistsBehavior::ErrorIfExists)
+            Ok(CreateIfExistsBehavior::Error)
         }
     }
 }
@@ -386,13 +389,13 @@ fn parse_create_user_statement(
 fn pop_named_data_types_map(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
-) -> ParseResult<HashMap<TokenView, CqlDataType>> {
+) -> ParseResult<Vec<(TokenView, CqlDataType)>> {
     pop_next_match(iter, LeftParenthesis)?;
-    let mut fields = HashMap::new();
+    let mut fields = Vec::new();
     loop {
         let field_name = pop_identifier(cql, iter)?;
-        let field_type = pop_cql_data_type(iter)?;
-        fields.insert(field_name, field_type);
+        let field_type = pop_cql_data_type(cql, iter)?;
+        fields.push((field_name, field_type));
         if pop_next_if(iter, Comma).is_none() {
             break;
         }
