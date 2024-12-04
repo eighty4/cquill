@@ -1,5 +1,5 @@
 use crate::cql::ast::StringView;
-use crate::cql::lex::TokenName::StringLiteral;
+use crate::cql::lex::TokenName::{FalseKeyword, StringLiteral, TrueKeyword};
 use crate::cql::lex::{Token, TokenName};
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -35,7 +35,7 @@ pub fn advance_peek_match(
     Ok(true)
 }
 
-/// Errors if there peek returns None, otherwise returns true/false if peeked token matches.
+/// Returns true/false whether peeked token matches and Err if peek returns None.
 pub fn peek_next_match(
     iter: &mut Peekable<Iter<Token>>,
     next: TokenName,
@@ -46,6 +46,17 @@ pub fn peek_next_match(
     }
 }
 
+/// Returns next Token or Err if next returns None.
+pub fn pop_next<'a>(iter: &'a mut Peekable<Iter<Token>>) -> Result<&'a Token, anyhow::Error> {
+    iter.next().ok_or_else(|| todo!("panic error"))
+}
+
+/// Returns next Token if it matches TokenName or Err if next returns None.
+pub fn pop_next_if<'a>(iter: &'a mut Peekable<Iter<Token>>, next: TokenName) -> Option<&'a Token> {
+    iter.next_if(|t| t.name == next)
+}
+
+/// Returns Token if it matches TokenName or Err if next returns None or Token does not match.
 pub fn pop_next_match<'a>(
     iter: &'a mut Peekable<Iter<Token>>,
     next: TokenName,
@@ -62,6 +73,20 @@ pub fn pop_next_match<'a>(
     }
 }
 
+/// Pops and returns bool or Err if next returns None or does not return TrueKeyword or
+/// FalseKeyword.
+pub fn pop_boolean_literal(iter: &mut Peekable<Iter<Token>>) -> Result<bool, anyhow::Error> {
+    match iter.next() {
+        None => todo!("panic error"),
+        Some(popped) => match &popped.name {
+            TrueKeyword => Ok(true),
+            FalseKeyword => Ok(false),
+            _ => todo!("panic error"),
+        },
+    }
+}
+
+/// Pops and returns StringView or Err if next returns None or does not return StringLiteral.
 pub fn pop_string_literal(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,

@@ -14,7 +14,6 @@ pub enum CreateStatement {
     Keyspace(CreateKeyspaceStatement),
     // todo
     MaterializedView(CreateMaterializedViewStatement),
-    // todo
     Role(CreateRoleStatement),
     // todo
     Table(CreateTableStatement),
@@ -80,10 +79,32 @@ pub struct CreateMaterializedViewStatement {
 }
 
 #[derive(Debug, PartialEq)]
-// todo WITH statements
 pub struct CreateRoleStatement {
-    if_not_exists: bool,
-    role_name: TokenView,
+    pub if_not_exists: bool,
+    pub role_name: TokenView,
+    pub attributes: Option<Vec<RoleConfigAttribute>>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum RoleConfigAttribute {
+    Superuser(bool),
+    Login(bool),
+    Password(AuthPassword),
+    // todo proper map literal type
+    Options(HashMap<StringView, TokenView>),
+    Access(Datacenters),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum AuthPassword {
+    Hashed(StringView),
+    PlainText(StringView),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Datacenters {
+    All,
+    Explicit(Vec<StringView>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -178,14 +199,8 @@ pub struct CreateTypeStatement {
 pub struct CreateUserStatement {
     pub user_name: TokenView,
     pub if_not_exists: bool,
-    pub password: Option<CreateUserPassword>,
+    pub password: Option<AuthPassword>,
     pub user_status: Option<CreateUserStatus>,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum CreateUserPassword {
-    Hashed(StringView),
-    PlainText(StringView),
 }
 
 #[derive(Debug, PartialEq)]

@@ -771,8 +771,20 @@ drop type if exists big_data_keyspace.big_data_udt;
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#create-role-statement
 
+pub const CREATE_ROLE: &str = "\
+create role big_data_role;
+";
+
+pub const CREATE_ROLE_IF_NOT_EXISTS: &str = "\
+create role if not exists big_data_role;
+";
+
 pub const CREATE_ROLE_WITH_PASSWORD: &str = "\
 create role big_data_role with password = 'asdf';
+";
+
+pub const CREATE_ROLE_WITH_PASSWORD_IF_NOT_EXISTS: &str = "\
+create role if not exists big_data_role with password = 'asdf';
 ";
 
 pub const CREATE_ROLE_WITH_HASHED_PASSWORD: &str = "\
@@ -809,10 +821,6 @@ create role big_data_role with access to all datacenters;
 
 pub const CREATE_ROLE_WITH_MULTIPLE_ROLE_OPTIONS: &str = "\
 create role big_data_role with password = 'asdf' and login = true;
-";
-
-pub const CREATE_ROLE_IF_NOT_EXISTS: &str = "\
-create role if not exists big_data_role with password = 'asdf';
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/security.html#alter-role-statement

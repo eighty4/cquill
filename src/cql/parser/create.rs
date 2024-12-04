@@ -2,7 +2,8 @@ use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
 use crate::cql::parser::iter::{
-    advance_peek_match, peek_next_match, pop_next_match, pop_string_literal,
+    advance_peek_match, peek_next_match, pop_boolean_literal, pop_next, pop_next_if,
+    pop_next_match, pop_string_literal,
 };
 use crate::cql::parser::token::{create_view, parse_object_identifiers};
 use crate::cql::parser::ParseResult;
@@ -119,7 +120,96 @@ fn parse_create_role_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateRoleStatement> {
-    unimplemented!()
+    let if_not_exists = advance_peek_match(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let role_name = create_view(cql, pop_next_match(iter, Identifier)?);
+    let attributes = if peek_next_match(iter, WithKeyword)? {
+        let mut attributes = Vec::new();
+        _ = iter.next();
+        loop {
+            attributes.push(match iter.next() {
+                None => todo!("parse error"),
+                Some(popped) => match popped.name {
+                    SuperUserKeyword => {
+                        _ = pop_next_match(iter, Equal);
+                        RoleConfigAttribute::Superuser(pop_boolean_literal(iter)?)
+                    }
+                    LoginKeyword => {
+                        _ = pop_next_match(iter, Equal);
+                        RoleConfigAttribute::Login(pop_boolean_literal(iter)?)
+                    }
+                    PasswordKeyword => {
+                        _ = pop_next_match(iter, Equal);
+                        RoleConfigAttribute::Password(AuthPassword::PlainText(pop_string_literal(
+                            cql, iter,
+                        )?))
+                    }
+                    HashedKeyword => {
+                        _ = pop_next_match(iter, PasswordKeyword);
+                        _ = pop_next_match(iter, Equal);
+                        RoleConfigAttribute::Password(AuthPassword::Hashed(pop_string_literal(
+                            cql, iter,
+                        )?))
+                    }
+                    OptionsKeyword => {
+                        _ = pop_next_match(iter, Equal);
+                        _ = pop_next_match(iter, LeftCurvedBracket);
+                        let mut options = HashMap::new();
+                        loop {
+                            let key = pop_string_literal(cql, iter)?;
+                            _ = pop_next_match(iter, Colon);
+                            let value_token = pop_next(iter)?;
+                            match value_token.name {
+                                StringLiteral(_) | UuidLiteral | NumberLiteral | TrueKeyword
+                                | FalseKeyword => {}
+                                _ => todo!("parse error"),
+                            };
+                            let value = create_view(cql, value_token);
+                            options.insert(key, value);
+                            match pop_next(iter)?.name {
+                                Comma => continue,
+                                RightCurvedBracket => break,
+                                _ => todo!("parse error"),
+                            }
+                        }
+                        RoleConfigAttribute::Options(options)
+                    }
+                    AccessKeyword => {
+                        _ = pop_next_match(iter, ToKeyword);
+                        if peek_next_match(iter, AllKeyword)? {
+                            _ = iter.next();
+                            _ = pop_next_match(iter, DatacentersKeyword);
+                            RoleConfigAttribute::Access(Datacenters::All)
+                        } else {
+                            _ = pop_next_match(iter, DatacentersKeyword);
+                            _ = pop_next_match(iter, LeftCurvedBracket);
+                            let mut datacenters = Vec::new();
+                            loop {
+                                datacenters.push(pop_string_literal(cql, iter)?);
+                                match pop_next(iter)?.name {
+                                    Comma => continue,
+                                    RightCurvedBracket => break,
+                                    _ => todo!("parse error"),
+                                }
+                            }
+                            RoleConfigAttribute::Access(Datacenters::Explicit(datacenters))
+                        }
+                    }
+                    _ => todo!("parse error {:?}", popped.name),
+                },
+            });
+            if pop_next_if(iter, AndKeyword).is_none() {
+                break;
+            }
+        }
+        Some(attributes)
+    } else {
+        None
+    };
+    Ok(CreateRoleStatement {
+        if_not_exists,
+        role_name,
+        attributes,
+    })
 }
 
 fn parse_create_table_statement(
@@ -207,11 +297,9 @@ fn parse_create_user_statement(
                     Some(popped) => match popped.name {
                         HashedKeyword => {
                             _ = pop_next_match(iter, PasswordKeyword)?;
-                            CreateUserPassword::Hashed(pop_string_literal(cql, iter)?)
+                            AuthPassword::Hashed(pop_string_literal(cql, iter)?)
                         }
-                        PasswordKeyword => {
-                            CreateUserPassword::PlainText(pop_string_literal(cql, iter)?)
-                        }
+                        PasswordKeyword => AuthPassword::PlainText(pop_string_literal(cql, iter)?),
                         _ => todo!("parse error"),
                     },
                 })

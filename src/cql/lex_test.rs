@@ -3474,7 +3474,7 @@ mod security {
                 ],
             );
             tokenize_expect(
-                CREATE_ROLE_IF_NOT_EXISTS,
+                CREATE_ROLE_WITH_PASSWORD_IF_NOT_EXISTS,
                 vec![
                     (CreateKeyword, "create"),
                     (RoleKeyword, "role"),
