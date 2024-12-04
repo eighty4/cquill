@@ -1,5 +1,5 @@
 use crate::cql::ast::table::TableAlias;
-use crate::cql::ast::TokenView;
+use crate::cql::ast::{CqlDataType, TokenView};
 
 #[derive(Debug, PartialEq)]
 pub enum DropStatement {
@@ -20,7 +20,7 @@ pub struct DropAggregateStatement {
     pub aggregate_name: TokenView,
     pub if_exists: bool,
     pub keyspace_name: Option<TokenView>,
-    pub signature: Option<Vec<TokenView>>,
+    pub signature: Option<Vec<CqlDataType>>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -28,7 +28,7 @@ pub struct DropFunctionStatement {
     pub function_name: TokenView,
     pub if_exists: bool,
     pub keyspace_name: Option<TokenView>,
-    pub signature: Option<Vec<TokenView>>,
+    pub signature: Option<Vec<CqlDataType>>,
 }
 
 #[derive(Debug, PartialEq)]

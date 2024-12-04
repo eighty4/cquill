@@ -1,7 +1,6 @@
 mod create;
 mod drop;
 mod iter;
-mod token;
 
 #[cfg(test)]
 mod create_test;
@@ -10,7 +9,7 @@ mod create_test;
 mod drop_test;
 
 #[cfg(test)]
-mod token_test;
+mod testing;
 
 use crate::cql::ast::*;
 use crate::cql::lex::*;
@@ -20,6 +19,7 @@ use std::iter::Peekable;
 use std::slice::Iter;
 use std::sync::Arc;
 use TokenName::*;
+use crate::cql::parser::iter::pop_next_if;
 
 pub type ParseResult<T> = Result<T, anyhow::Error>;
 
@@ -30,7 +30,7 @@ pub fn parse_cql(cql: String) -> ParseResult<Vec<CqlStatement>> {
     let mut result = Vec::new();
     while iter.peek().is_some() {
         result.push(parse_statement(&cql, &mut iter)?);
-        while iter.next_if(|t| t.name == Semicolon).is_some() {}
+        while pop_next_if(&mut iter, Semicolon).is_some() {}
     }
     if result.is_empty() {
         todo!("parse error")

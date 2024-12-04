@@ -1,5 +1,5 @@
 use crate::cql::ast::table::TableAlias;
-use crate::cql::ast::{StringView, TokenView};
+use crate::cql::ast::{CqlDataType, StringView, TokenView};
 use std::collections::HashMap;
 
 // todo create custom index
@@ -7,7 +7,6 @@ use std::collections::HashMap;
 pub enum CreateStatement {
     // todo
     Aggregate(CreateAggregateStatement),
-    // todo
     Function(CreateFunctionStatement),
     Index(CreateIndexStatement),
     // todo
@@ -27,7 +26,29 @@ pub enum CreateStatement {
 pub struct CreateAggregateStatement {}
 
 #[derive(Debug, PartialEq)]
-pub struct CreateFunctionStatement {}
+pub struct CreateFunctionStatement {
+    pub function_name: TokenView,
+    pub function_args: HashMap<TokenView, CqlDataType>,
+    pub exists_behavior: CreateExistsBehavior,
+    pub on_null_input: OnNullInput,
+    pub returns: CqlDataType,
+    pub language: TokenView,
+    pub function_body: StringView,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CreateExistsBehavior {
+    IfNotExists,
+    /// Does not specify `or replace` or `if not exists`
+    ErrorIfExists,
+    Replace,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum OnNullInput {
+    Called,
+    ReturnsNull,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct CreateIndexStatement {
@@ -198,7 +219,7 @@ pub struct CreateTypeStatement {
     pub type_name: TokenView,
     pub if_not_exists: bool,
     pub keyspace_name: Option<TokenView>,
-    pub fields: HashMap<TokenView, TokenView>,
+    pub fields: HashMap<TokenView, CqlDataType>,
 }
 
 #[derive(Debug, PartialEq)]

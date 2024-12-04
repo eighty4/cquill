@@ -1,5 +1,6 @@
-use crate::cql::ast::{StringStyle, TokenRange};
+use crate::cql::ast::{StringStyle, TokenRange, TokenView};
 use crate::cql::lex::TokenName::*;
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq)]
@@ -87,7 +88,6 @@ pub(crate) enum TokenName {
     InputKeyword,
     InsertKeyword,
     IntKeyword,
-    IntegerKeyword, // todo test lex
     IntoKeyword,
     JsonKeyword,
     KeyKeyword,
@@ -130,7 +130,6 @@ pub(crate) enum TokenName {
     SmallIntKeyword,
     StaticKeyword, // todo test lex
     StorageKeyword,
-    StringKeyword, // todo test lex
     STypeKeyword,
     SumKeyword, // todo test lex
     SuperUserKeyword,
@@ -159,15 +158,14 @@ pub(crate) enum TokenName {
     ValuesKeyword,
     VarCharKeyword,
     VarIntKeyword,
-    VectorKeyword, // todo test lex
     ViewKeyword,
     WhereKeyword,
     WithKeyword,
 
     // index column keywords
     EntriesKeyword, // todo test lex
-    FullKeyword, // todo test lex
-    KeysKeyword, // todo test lex
+    FullKeyword,    // todo test lex
+    KeysKeyword,    // todo test lex
 
     UuidLiteral,
     StringLiteral(StringStyle),
@@ -237,7 +235,6 @@ impl TokenName {
             "input" => InputKeyword,
             "insert" => InsertKeyword,
             "int" => IntKeyword,
-            "integer" => IntegerKeyword,
             "into" => IntoKeyword,
             "json" => JsonKeyword,
             "key" => KeyKeyword,
@@ -280,7 +277,6 @@ impl TokenName {
             "smallint" => SmallIntKeyword,
             "static" => StaticKeyword,
             "storage" => StorageKeyword,
-            "string" => StringKeyword,
             "stype" => STypeKeyword,
             "sum" => SumKeyword,
             "superuser" => SuperUserKeyword,
@@ -309,42 +305,11 @@ impl TokenName {
             "values" => ValuesKeyword,
             "varchar" => VarCharKeyword,
             "varint" => VarIntKeyword,
-            "vector" => VectorKeyword,
             "view" => ViewKeyword,
             "where" => WhereKeyword,
             "with" => WithKeyword,
             &_ => Identifier,
         }
-    }
-
-    pub fn is_cql_data_type(&self) -> bool {
-        matches!(
-            self,
-            AsciiKeyword
-                | BigIntKeyword
-                | BlobKeyword
-                | BooleanKeyword
-                | CounterKeyword
-                | DateKeyword
-                | DecimalKeyword
-                | DoubleKeyword
-                | DurationKeyword
-                | FloatKeyword
-                | InetKeyword
-                | IntKeyword
-                | IntegerKeyword
-                | SmallIntKeyword
-                | StringKeyword
-                | TextKeyword
-                | TimeKeyword
-                | TimestampKeyword
-                | TimeUuidKeyword
-                | TinyIntKeyword
-                | UuidKeyword
-                | VarCharKeyword
-                | VarIntKeyword
-                | VectorKeyword
-        )
     }
 }
 
@@ -358,6 +323,13 @@ pub(crate) struct Token {
 impl Token {
     fn new(name: TokenName, line: usize, range: TokenRange) -> Self {
         Self { line, name, range }
+    }
+
+    pub fn to_token_view(&self, cql: &Arc<String>) -> TokenView {
+        TokenView {
+            cql: cql.clone(),
+            range: self.range.clone(),
+        }
     }
 }
 

@@ -1,6 +1,9 @@
-use crate::cql::ast::StringView;
-use crate::cql::lex::TokenName::{FalseKeyword, StringLiteral, TrueKeyword};
+use crate::cql::ast::{
+    CqlDataType, CqlDataType::*, CqlNativeType::*, CqlValueType::*, StringView, TokenView,
+};
+use crate::cql::lex::TokenName::*;
 use crate::cql::lex::{Token, TokenName};
+use crate::cql::ParseResult;
 use std::iter::Peekable;
 use std::slice::Iter;
 use std::sync::Arc;
@@ -11,14 +14,14 @@ pub fn peek_next_match(
     next: TokenName,
 ) -> Result<bool, anyhow::Error> {
     match iter.peek() {
-        None => todo!("panic error"),
+        None => todo!("parse error"),
         Some(peeked) => Ok(peeked.name == next),
     }
 }
 
 /// Returns next Token or Err if next returns None.
 pub fn pop_next<'a>(iter: &'a mut Peekable<Iter<Token>>) -> Result<&'a Token, anyhow::Error> {
-    iter.next().ok_or_else(|| todo!("panic error"))
+    iter.next().ok_or_else(|| todo!("parse error"))
 }
 
 /// Returns next Token if it matches TokenName or Err if next returns None.
@@ -32,12 +35,12 @@ pub fn pop_next_match<'a>(
     next: TokenName,
 ) -> Result<&'a Token, anyhow::Error> {
     match iter.next() {
-        None => todo!("panic error"),
+        None => todo!("parse error"),
         Some(popped) => {
             if popped.name == next {
                 Ok(popped)
             } else {
-                todo!("panic error {:?}", popped.name)
+                todo!("parse error {:?}", popped.name)
             }
         }
     }
@@ -73,17 +76,69 @@ pub fn pop_sequence(
     Ok(true)
 }
 
+pub fn pop_identifier(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<TokenView> {
+    let popped = pop_next_match(iter, Identifier)?;
+    Ok(TokenView {
+        cql: cql.clone(),
+        range: popped.range.clone(),
+    })
+}
+
 /// Pops and returns bool or Err if next returns None or does not return TrueKeyword or
 /// FalseKeyword.
 pub fn pop_boolean_literal(iter: &mut Peekable<Iter<Token>>) -> Result<bool, anyhow::Error> {
     match iter.next() {
-        None => todo!("panic error"),
+        None => todo!("parse error"),
         Some(popped) => match &popped.name {
             TrueKeyword => Ok(true),
             FalseKeyword => Ok(false),
-            _ => todo!("panic error"),
+            _ => todo!("parse error"),
         },
     }
+}
+
+pub fn pop_cql_data_type(iter: &mut Peekable<Iter<Token>>) -> Result<CqlDataType, anyhow::Error> {
+    Ok(match iter.next() {
+        None => todo!("parse error"),
+        Some(popped) => match popped.name {
+            AsciiKeyword => ValueType(NativeType(Ascii)),
+            BigIntKeyword => ValueType(NativeType(BigInt)),
+            BlobKeyword => ValueType(NativeType(Blob)),
+            BooleanKeyword => ValueType(NativeType(Boolean)),
+            CounterKeyword => ValueType(NativeType(Counter)),
+            DateKeyword => ValueType(NativeType(Date)),
+            DecimalKeyword => ValueType(NativeType(Decimal)),
+            DoubleKeyword => ValueType(NativeType(Double)),
+            DurationKeyword => ValueType(NativeType(Duration)),
+            FloatKeyword => ValueType(NativeType(Float)),
+            InetKeyword => ValueType(NativeType(INet)),
+            IntKeyword => ValueType(NativeType(Int)),
+            SmallIntKeyword => ValueType(NativeType(SmallInt)),
+            TextKeyword => ValueType(NativeType(Text)),
+            TimeKeyword => ValueType(NativeType(Time)),
+            TimestampKeyword => ValueType(NativeType(Timestamp)),
+            TimeUuidKeyword => ValueType(NativeType(TimeUuid)),
+            TinyIntKeyword => ValueType(NativeType(TinyInt)),
+            UuidKeyword => ValueType(NativeType(Uuid)),
+            VarCharKeyword => ValueType(NativeType(VarChar)),
+            VarIntKeyword => ValueType(NativeType(VarInt)),
+            _ => todo!("parse error"),
+        },
+    })
+}
+
+pub fn pop_keyspace_object_name(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> Result<(Option<TokenView>, TokenView), anyhow::Error> {
+    let object_or_keyspace = pop_identifier(cql, iter)?;
+    Ok(match pop_next_if(iter, Dot) {
+        Some(_) => (Some(object_or_keyspace), pop_identifier(cql, iter)?),
+        None => (None, object_or_keyspace),
+    })
 }
 
 /// Pops and returns StringView or Err if next returns None or does not return StringLiteral.
@@ -92,14 +147,14 @@ pub fn pop_string_literal(
     iter: &mut Peekable<Iter<Token>>,
 ) -> Result<StringView, anyhow::Error> {
     match iter.next() {
-        None => todo!("panic error"),
+        None => todo!("parse error"),
         Some(popped) => match &popped.name {
             StringLiteral(style) => Ok(StringView {
                 cql: cql.clone(),
                 range: popped.range.clone(),
                 style: style.clone(),
             }),
-            _ => todo!("panic error"),
+            _ => todo!("parse error"),
         },
     }
 }

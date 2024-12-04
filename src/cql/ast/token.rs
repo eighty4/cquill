@@ -1,8 +1,65 @@
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
+// todo support vector
+#[derive(Debug, PartialEq)]
+pub enum CqlDataType {
+    CollectionType(CqlCollectionType),
+    /// A custom type implemented in Java.
+    CustomType(StringView),
+    /// Composite of native type and user defined types.
+    ValueType(CqlValueType),
+    Tuple(Box<CqlDataType>, Box<CqlDataType>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CqlValueType {
+    NativeType(CqlNativeType),
+    UserDefinedType(CqlUserDefinedType),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CqlUserDefinedType {
+    Frozen(TokenView),
+    Unfrozen(TokenView),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CqlNativeType {
+    Ascii,
+    BigInt,
+    Blob,
+    Boolean,
+    Counter,
+    Date,
+    Decimal,
+    Double,
+    Duration,
+    Float,
+    INet,
+    Int,
+    SmallInt,
+    Text,
+    Time,
+    Timestamp,
+    TimeUuid,
+    TinyInt,
+    Uuid,
+    VarChar,
+    VarInt,
+}
+
+// todo should CqlValueType for collection generics be CqlDataType
+// todo are collection generics optional
+#[derive(Debug, PartialEq)]
+pub enum CqlCollectionType {
+    List(CqlValueType),
+    Map(CqlValueType, CqlValueType),
+    Set(CqlValueType),
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) enum StringStyle {
+pub enum StringStyle {
     DollarSign,
     SingleQuote,
     TripleQuote,
@@ -16,7 +73,7 @@ pub struct StringView {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) struct TokenRange(usize, usize);
+pub struct TokenRange(usize, usize);
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 pub struct TokenView {

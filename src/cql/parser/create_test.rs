@@ -1,10 +1,10 @@
 use crate::cql::ast::{
-    AuthPassword, CqlStatement, CreateIndexColumn, CreateIndexStatement, CreateRoleStatement,
-    CreateStatement, CreateTriggerStatement, CreateTypeStatement, CreateUserStatement,
-    CreateUserStatus, Datacenters, RoleConfigAttribute,
+    AuthPassword, CqlDataType, CqlNativeType, CqlStatement, CqlValueType, CreateIndexColumn,
+    CreateIndexStatement, CreateRoleStatement, CreateStatement, CreateTriggerStatement,
+    CreateTypeStatement, CreateUserStatement, CreateUserStatus, Datacenters, RoleConfigAttribute,
 };
 use crate::cql::parse_cql;
-use crate::cql::parser::token::testing::{find_string_literal, find_token, rfind_token};
+use crate::cql::parser::testing::{find_string_literal, find_token};
 use crate::cql::test_cql::*;
 use std::collections::HashMap;
 
@@ -421,7 +421,7 @@ fn test_parsing_create_type_with_default_keyspace_and_single_field() {
                 keyspace_name: None,
                 fields: HashMap::from([(
                     find_token(cql, "int_attribute"),
-                    rfind_token(cql, "int"),
+                    CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
                 )]),
             }
         )))
@@ -438,7 +438,10 @@ fn test_parsing_create_type_with_default_keyspace_and_single_field_if_not_exists
                 type_name: find_token(cql, "big_data_udt"),
                 if_not_exists: true,
                 keyspace_name: None,
-                fields: HashMap::from([(find_token(cql, "int_attr"), rfind_token(cql, "int"),)]),
+                fields: HashMap::from([(
+                    find_token(cql, "int_attr"),
+                    CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                )]),
             }
         )))
     );
@@ -455,8 +458,14 @@ fn test_parsing_create_type_with_default_keyspace_and_multiple_fields() {
                 if_not_exists: false,
                 keyspace_name: None,
                 fields: HashMap::from([
-                    (find_token(cql, "int_attr"), rfind_token(cql, "int"),),
-                    (find_token(cql, "text_attr"), rfind_token(cql, "text"),)
+                    (
+                        find_token(cql, "int_attr"),
+                        CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                    ),
+                    (
+                        find_token(cql, "text_attr"),
+                        CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
+                    )
                 ]),
             }
         )))
@@ -475,7 +484,7 @@ fn test_parsing_create_type_with_explicit_keyspace_and_single_field() {
                 keyspace_name: Some(find_token(cql, "big_data_keyspace")),
                 fields: HashMap::from([(
                     find_token(cql, "int_attribute"),
-                    rfind_token(cql, "int"),
+                    CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
                 )]),
             }
         )))
@@ -492,7 +501,10 @@ fn test_parsing_create_type_with_explicit_keyspace_and_single_field_if_not_exist
                 type_name: find_token(cql, "big_data_udt"),
                 if_not_exists: true,
                 keyspace_name: Some(find_token(cql, "big_data_keyspace")),
-                fields: HashMap::from([(find_token(cql, "int_attr"), rfind_token(cql, "int"),)]),
+                fields: HashMap::from([(
+                    find_token(cql, "int_attr"),
+                    CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                )]),
             }
         )))
     );
@@ -509,8 +521,14 @@ fn test_parsing_create_type_with_explicit_keyspace_and_multiple_fields() {
                 if_not_exists: false,
                 keyspace_name: Some(find_token(cql, "big_data_keyspace")),
                 fields: HashMap::from([
-                    (find_token(cql, "int_attr"), rfind_token(cql, "int"),),
-                    (find_token(cql, "text_attr"), rfind_token(cql, "text"),)
+                    (
+                        find_token(cql, "int_attr"),
+                        CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                    ),
+                    (
+                        find_token(cql, "text_attr"),
+                        CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
+                    )
                 ]),
             }
         )))

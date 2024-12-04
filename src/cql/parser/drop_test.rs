@@ -1,10 +1,11 @@
 use crate::cql::ast::{
-    CqlStatement, DropAggregateStatement, DropFunctionStatement, DropIndexStatement,
-    DropKeyspaceStatement, DropMaterializedViewStatement, DropRoleStatement, DropStatement,
-    DropTableStatement, DropTriggerStatement, DropTypeStatement, DropUserStatement,
+    CqlDataType, CqlNativeType, CqlStatement, CqlValueType, DropAggregateStatement,
+    DropFunctionStatement, DropIndexStatement, DropKeyspaceStatement,
+    DropMaterializedViewStatement, DropRoleStatement, DropStatement, DropTableStatement,
+    DropTriggerStatement, DropTypeStatement, DropUserStatement,
 };
 use crate::cql::parse_cql;
-use crate::cql::parser::token::testing::find_token;
+use crate::cql::parser::testing::find_token;
 use crate::cql::test_cql::*;
 
 #[test]
@@ -32,7 +33,9 @@ fn test_parsing_drop_aggregate_default_keyspace_single_arg() {
                 aggregate_name: find_token(cql, "big_data_agg"),
                 if_exists: false,
                 keyspace_name: None,
-                signature: Some(vec!(find_token(cql, "int"))),
+                signature: Some(vec!(CqlDataType::ValueType(CqlValueType::NativeType(
+                    CqlNativeType::Int
+                )))),
             }
         )))
     );
@@ -66,7 +69,10 @@ fn test_parsing_drop_aggregate_explicit_keyspace_multiple_args() {
                 aggregate_name: find_token(cql, "big_data_agg"),
                 if_exists: false,
                 keyspace_name: Some(find_token(cql, "big_data_keyspace")),
-                signature: Some(vec!(find_token(cql, "int"), find_token(cql, "text"))),
+                signature: Some(vec!(
+                    CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                    CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
+                )),
             }
         )))
     );
@@ -115,7 +121,10 @@ fn test_parsing_drop_function_explicit_keyspace_multiple_args() {
                 function_name: find_token(cql, "big_data_fn"),
                 if_exists: false,
                 keyspace_name: Some(find_token(cql, "big_data_keyspace")),
-                signature: Some(vec!(find_token(cql, "int"), find_token(cql, "text"))),
+                signature: Some(vec!(
+                    CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                    CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
+                )),
             }
         )))
     );

@@ -2,10 +2,10 @@ use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
 use crate::cql::parser::iter::{
-    peek_next_match, pop_boolean_literal, pop_next, pop_next_if, pop_next_match, pop_sequence,
+    peek_next_match, pop_boolean_literal, pop_cql_data_type, pop_identifier,
+    pop_keyspace_object_name, pop_next, pop_next_if, pop_next_match, pop_sequence,
     pop_string_literal,
 };
-use crate::cql::parser::token::{create_view, parse_object_identifiers};
 use crate::cql::parser::ParseResult;
 use std::collections::HashMap;
 use std::iter::Peekable;
@@ -20,17 +20,27 @@ pub fn parse_create_statement(
         None => todo!("parse error"),
         Some(token) => match token.name {
             AggregateKeyword => {
-                parse_create_aggregate_statement(cql, iter).map(CreateStatement::Aggregate)
+                parse_create_aggregate_statement(cql, iter, false).map(CreateStatement::Aggregate)
             }
             FunctionKeyword => {
-                parse_create_function_statement(cql, iter).map(CreateStatement::Function)
+                parse_create_function_statement(cql, iter, false).map(CreateStatement::Function)
+            }
+            OrKeyword => {
+                pop_next_match(iter, ReplaceKeyword)?;
+                match pop_next(iter)?.name {
+                    AggregateKeyword => parse_create_aggregate_statement(cql, iter, false)
+                        .map(CreateStatement::Aggregate),
+                    FunctionKeyword => parse_create_function_statement(cql, iter, false)
+                        .map(CreateStatement::Function),
+                    _ => todo!("parse error"),
+                }
             }
             IndexKeyword => parse_create_index_statement(cql, iter).map(CreateStatement::Index),
             KeyspaceKeyword => {
                 parse_create_keyspace_statement(cql, iter).map(CreateStatement::Keyspace)
             }
             MaterializedKeyword => {
-                _ = pop_next_match(iter, ViewKeyword)?;
+                pop_next_match(iter, ViewKeyword)?;
                 parse_create_materialized_view_statement(cql, iter)
                     .map(CreateStatement::MaterializedView)
             }
@@ -49,15 +59,66 @@ pub fn parse_create_statement(
 fn parse_create_aggregate_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
+    create_or_replace: bool,
 ) -> ParseResult<CreateAggregateStatement> {
+    let exists_behavior = CreateExistsBehavior::new(
+        create_or_replace,
+        pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?,
+    )?;
     unimplemented!()
 }
 
 fn parse_create_function_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
+    create_or_replace: bool,
 ) -> ParseResult<CreateFunctionStatement> {
-    unimplemented!()
+    let exists_behavior = CreateExistsBehavior::new(
+        create_or_replace,
+        pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?,
+    )?;
+    let function_name = pop_identifier(cql, iter)?;
+    let function_args = pop_named_data_types_map(cql, iter)?;
+    let on_null_input = match pop_next(iter)?.name {
+        CalledKeyword => OnNullInput::Called,
+        ReturnsKeyword => {
+            pop_next_match(iter, NullKeyword)?;
+            OnNullInput::ReturnsNull
+        }
+        _ => todo!("parse error"),
+    };
+    pop_next_match(iter, ReturnsKeyword)?;
+    let returns = pop_cql_data_type(iter)?;
+    pop_next_match(iter, LanguageKeyword)?;
+    let language = pop_identifier(cql, iter)?;
+    pop_next_match(iter, AsKeyword)?;
+    let function_body = pop_string_literal(cql, iter)?;
+    Ok(CreateFunctionStatement {
+        exists_behavior,
+        function_name,
+        function_args,
+        on_null_input,
+        returns,
+        language,
+        function_body,
+    })
+}
+
+impl CreateExistsBehavior {
+    fn new(
+        create_or_replace: bool,
+        if_not_exists: bool,
+    ) -> Result<CreateExistsBehavior, anyhow::Error> {
+        if create_or_replace && if_not_exists {
+            todo!("parse error")
+        } else if create_or_replace {
+            Ok(CreateExistsBehavior::Replace)
+        } else if if_not_exists {
+            Ok(CreateExistsBehavior::IfNotExists)
+        } else {
+            Ok(CreateExistsBehavior::ErrorIfExists)
+        }
+    }
 }
 
 fn parse_create_index_statement(
@@ -66,20 +127,20 @@ fn parse_create_index_statement(
 ) -> ParseResult<CreateIndexStatement> {
     let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
     let index_name = if peek_next_match(iter, Identifier)? {
-        Some(create_view(cql, pop_next_match(iter, Identifier)?))
+        Some(pop_identifier(cql, iter)?)
     } else {
         None
     };
-    _ = pop_next_match(iter, OnKeyword)?;
-    let (keyspace_name, table_name) = parse_object_identifiers(cql, iter)?;
-    _ = pop_next_match(iter, LeftParenthesis)?;
+    pop_next_match(iter, OnKeyword)?;
+    let (keyspace_name, table_name) = pop_keyspace_object_name(cql, iter)?;
+    pop_next_match(iter, LeftParenthesis)?;
     let on_column = match iter.next() {
         None => todo!("parse error"),
         Some(popped) => match popped.name {
             FullKeyword | EntriesKeyword | KeysKeyword | ValuesKeyword => {
-                _ = pop_next_match(iter, LeftParenthesis)?;
-                let column_name = create_view(cql, pop_next_match(iter, Identifier)?);
-                _ = pop_next_match(iter, RightParenthesis)?;
+                pop_next_match(iter, LeftParenthesis)?;
+                let column_name = pop_identifier(cql, iter)?;
+                pop_next_match(iter, RightParenthesis)?;
                 match popped.name {
                     FullKeyword => CreateIndexColumn::FullCollection(column_name),
                     EntriesKeyword => CreateIndexColumn::MapEntries(column_name),
@@ -88,11 +149,11 @@ fn parse_create_index_statement(
                     _ => unreachable!(),
                 }
             }
-            Identifier => CreateIndexColumn::Column(create_view(cql, popped)),
+            Identifier => CreateIndexColumn::Column(popped.to_token_view(cql)),
             _ => todo!("parse error"),
         },
     };
-    _ = pop_next_match(iter, RightParenthesis)?;
+    pop_next_match(iter, RightParenthesis)?;
     Ok(CreateIndexStatement {
         if_not_exists,
         keyspace_name,
@@ -121,50 +182,49 @@ fn parse_create_role_statement(
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateRoleStatement> {
     let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
-    let role_name = create_view(cql, pop_next_match(iter, Identifier)?);
+    let role_name = pop_identifier(cql, iter)?;
     let attributes = if peek_next_match(iter, WithKeyword)? {
-        let mut attributes = Vec::new();
         _ = iter.next();
+        let mut attributes = Vec::new();
         loop {
             attributes.push(match iter.next() {
                 None => todo!("parse error"),
                 Some(popped) => match popped.name {
                     SuperUserKeyword => {
-                        _ = pop_next_match(iter, Equal);
+                        pop_next_match(iter, Equal)?;
                         RoleConfigAttribute::Superuser(pop_boolean_literal(iter)?)
                     }
                     LoginKeyword => {
-                        _ = pop_next_match(iter, Equal);
+                        pop_next_match(iter, Equal)?;
                         RoleConfigAttribute::Login(pop_boolean_literal(iter)?)
                     }
                     PasswordKeyword => {
-                        _ = pop_next_match(iter, Equal);
+                        pop_next_match(iter, Equal)?;
                         RoleConfigAttribute::Password(AuthPassword::PlainText(pop_string_literal(
                             cql, iter,
                         )?))
                     }
                     HashedKeyword => {
-                        _ = pop_next_match(iter, PasswordKeyword);
-                        _ = pop_next_match(iter, Equal);
+                        pop_next_match(iter, PasswordKeyword)?;
+                        pop_next_match(iter, Equal)?;
                         RoleConfigAttribute::Password(AuthPassword::Hashed(pop_string_literal(
                             cql, iter,
                         )?))
                     }
                     OptionsKeyword => {
-                        _ = pop_next_match(iter, Equal);
-                        _ = pop_next_match(iter, LeftCurvedBracket);
+                        pop_next_match(iter, Equal)?;
+                        pop_next_match(iter, LeftCurvedBracket)?;
                         let mut options = HashMap::new();
                         loop {
                             let key = pop_string_literal(cql, iter)?;
-                            _ = pop_next_match(iter, Colon);
-                            let value_token = pop_next(iter)?;
-                            match value_token.name {
+                            pop_next_match(iter, Colon)?;
+                            let popped = pop_next(iter)?;
+                            match popped.name {
                                 StringLiteral(_) | UuidLiteral | NumberLiteral | TrueKeyword
                                 | FalseKeyword => {}
                                 _ => todo!("parse error"),
                             };
-                            let value = create_view(cql, value_token);
-                            options.insert(key, value);
+                            options.insert(key, popped.to_token_view(cql));
                             match pop_next(iter)?.name {
                                 Comma => continue,
                                 RightCurvedBracket => break,
@@ -174,14 +234,14 @@ fn parse_create_role_statement(
                         RoleConfigAttribute::Options(options)
                     }
                     AccessKeyword => {
-                        _ = pop_next_match(iter, ToKeyword);
+                        pop_next_match(iter, ToKeyword)?;
                         if peek_next_match(iter, AllKeyword)? {
                             _ = iter.next();
-                            _ = pop_next_match(iter, DatacentersKeyword);
+                            pop_next_match(iter, DatacentersKeyword)?;
                             RoleConfigAttribute::Access(Datacenters::All)
                         } else {
-                            _ = pop_next_match(iter, DatacentersKeyword);
-                            _ = pop_next_match(iter, LeftCurvedBracket);
+                            pop_next_match(iter, DatacentersKeyword)?;
+                            pop_next_match(iter, LeftCurvedBracket)?;
                             let mut datacenters = Vec::new();
                             loop {
                                 datacenters.push(pop_string_literal(cql, iter)?);
@@ -216,7 +276,7 @@ fn parse_create_table_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateTableStatement> {
-    let (keyspace_name, table_name) = parse_object_identifiers(cql, iter)?;
+    let (keyspace_name, table_name) = pop_keyspace_object_name(cql, iter)?;
     Ok(CreateTableStatement {
         keyspace_name,
         table_name,
@@ -232,10 +292,10 @@ fn parse_create_trigger_statement(
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateTriggerStatement> {
     let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
-    let trigger_name = create_view(cql, pop_next_match(iter, Identifier)?);
-    _ = pop_next_match(iter, OnKeyword)?;
-    let (keyspace_name, table_name) = parse_object_identifiers(cql, iter)?;
-    _ = pop_next_match(iter, UsingKeyword)?;
+    let trigger_name = pop_identifier(cql, iter)?;
+    pop_next_match(iter, OnKeyword)?;
+    let (keyspace_name, table_name) = pop_keyspace_object_name(cql, iter)?;
+    pop_next_match(iter, UsingKeyword)?;
     let index_classpath = pop_string_literal(cql, iter)?;
     Ok(CreateTriggerStatement {
         if_not_exists,
@@ -246,33 +306,14 @@ fn parse_create_trigger_statement(
     })
 }
 
-// todo fields with collections, collections with generics and udts
+// todo fields with collections, collections with generics and UDTs
 fn parse_create_type_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateTypeStatement> {
     let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
-    let (keyspace_name, type_name) = parse_object_identifiers(cql, iter)?;
-    _ = pop_next_match(iter, LeftParenthesis)?;
-    let mut fields = HashMap::new();
-    loop {
-        let field_name = create_view(cql, pop_next_match(iter, Identifier)?);
-        let field_type = match iter.next() {
-            None => todo!("panic error"),
-            Some(popped) => {
-                if popped.name.is_cql_data_type() {
-                    create_view(cql, popped)
-                } else {
-                    todo!("panic error")
-                }
-            }
-        };
-        fields.insert(field_name, field_type);
-        if iter.next_if(|t| t.name == Comma).is_none() {
-            break;
-        }
-    }
-    _ = pop_next_match(iter, RightParenthesis)?;
+    let (keyspace_name, type_name) = pop_keyspace_object_name(cql, iter)?;
+    let fields = pop_named_data_types_map(cql, iter)?;
     Ok(CreateTypeStatement {
         keyspace_name,
         type_name,
@@ -298,22 +339,20 @@ fn parse_create_user_statement(
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateUserStatement> {
     let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
-    let user_name = create_view(cql, pop_next_match(iter, Identifier)?);
+    let user_name = pop_identifier(cql, iter)?;
     let password = match iter.peek() {
         None => None,
         Some(peeked) => match peeked.name {
             WithKeyword => {
                 _ = iter.next();
-                Some(match iter.next() {
-                    None => todo!("parse error"),
-                    Some(popped) => match popped.name {
-                        HashedKeyword => {
-                            _ = pop_next_match(iter, PasswordKeyword)?;
-                            AuthPassword::Hashed(pop_string_literal(cql, iter)?)
-                        }
-                        PasswordKeyword => AuthPassword::PlainText(pop_string_literal(cql, iter)?),
-                        _ => todo!("parse error"),
-                    },
+                let popped = pop_next(iter)?;
+                Some(match popped.name {
+                    HashedKeyword => {
+                        pop_next_match(iter, PasswordKeyword)?;
+                        AuthPassword::Hashed(pop_string_literal(cql, iter)?)
+                    }
+                    PasswordKeyword => AuthPassword::PlainText(pop_string_literal(cql, iter)?),
+                    _ => todo!("parse error"),
                 })
             }
             _ => None,
@@ -340,4 +379,24 @@ fn parse_create_user_statement(
         password,
         user_status,
     })
+}
+
+/// Parses `(datum1 int, datum2 text)` constructs used by UDTs and function arguments.
+// todo is `()` valid to create a function or UDT with an empty args signature?
+fn pop_named_data_types_map(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<HashMap<TokenView, CqlDataType>> {
+    pop_next_match(iter, LeftParenthesis)?;
+    let mut fields = HashMap::new();
+    loop {
+        let field_name = pop_identifier(cql, iter)?;
+        let field_type = pop_cql_data_type(iter)?;
+        fields.insert(field_name, field_type);
+        if pop_next_if(iter, Comma).is_none() {
+            break;
+        }
+    }
+    pop_next_match(iter, RightParenthesis)?;
+    Ok(fields)
 }
