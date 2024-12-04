@@ -25,3 +25,5 @@ Lexer, parser and AST for [CQL 3.0](https://cassandra.apache.org/doc/stable/cass
   - error reporting
 - parser
 - ast
+
+https://issues.apache.org/jira/browse/CASSANDRA-18504

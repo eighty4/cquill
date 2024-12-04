@@ -5105,7 +5105,7 @@ mod triggers {
         #[test]
         fn test_create_trigger() {
             tokenize_expect(
-                CREATE_TRIGGER,
+                CREATE_TRIGGER_DEFAULT_KEYSPACE,
                 vec![
                     (CreateKeyword, "create"),
                     (TriggerKeyword, "trigger"),
@@ -5122,7 +5122,7 @@ mod triggers {
         #[test]
         fn test_create_trigger_if_not_exists() {
             tokenize_expect(
-                CREATE_TRIGGER_IF_NOT_EXISTS,
+                CREATE_TRIGGER_IF_NOT_EXISTS_DEFAULT_KEYSPACE,
                 vec![
                     (CreateKeyword, "create"),
                     (TriggerKeyword, "trigger"),

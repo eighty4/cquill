@@ -1333,12 +1333,20 @@ list execute on all keyspaces of big_data_user;
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html#create-trigger-statement
 
-pub const CREATE_TRIGGER: &str = "\
+pub const CREATE_TRIGGER_DEFAULT_KEYSPACE: &str = "\
 create trigger big_data_trigger on big_data_table using 'trigger name';
 ";
 
-pub const CREATE_TRIGGER_IF_NOT_EXISTS: &str = "\
+pub const CREATE_TRIGGER_IF_NOT_EXISTS_DEFAULT_KEYSPACE: &str = "\
 create trigger if not exists big_data_trigger on big_data_table using 'trigger name';
+";
+
+pub const CREATE_TRIGGER_EXPLICIT_KEYSPACE: &str = "\
+create trigger big_data_trigger on big_data_keyspace.big_data_table using 'trigger name';
+";
+
+pub const CREATE_TRIGGER_IF_NOT_EXISTS_EXPLICIT_KEYSPACE: &str = "\
+create trigger if not exists big_data_trigger on big_data_keyspace.big_data_table using 'trigger name';
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/triggers.html#drop-trigger-statement

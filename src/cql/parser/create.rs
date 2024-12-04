@@ -2,8 +2,8 @@ use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
 use crate::cql::parser::iter::{
-    advance_peek_match, peek_next_match, pop_boolean_literal, pop_next, pop_next_if,
-    pop_next_match, pop_string_literal,
+    peek_next_match, pop_boolean_literal, pop_next, pop_next_if, pop_next_match, pop_sequence,
+    pop_string_literal,
 };
 use crate::cql::parser::token::{create_view, parse_object_identifiers};
 use crate::cql::parser::ParseResult;
@@ -64,7 +64,7 @@ fn parse_create_index_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateIndexStatement> {
-    let if_not_exists = advance_peek_match(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
     let index_name = if peek_next_match(iter, Identifier)? {
         Some(create_view(cql, pop_next_match(iter, Identifier)?))
     } else {
@@ -120,7 +120,7 @@ fn parse_create_role_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateRoleStatement> {
-    let if_not_exists = advance_peek_match(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
     let role_name = create_view(cql, pop_next_match(iter, Identifier)?);
     let attributes = if peek_next_match(iter, WithKeyword)? {
         let mut attributes = Vec::new();
@@ -231,7 +231,19 @@ fn parse_create_trigger_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateTriggerStatement> {
-    unimplemented!()
+    let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let trigger_name = create_view(cql, pop_next_match(iter, Identifier)?);
+    _ = pop_next_match(iter, OnKeyword)?;
+    let (keyspace_name, table_name) = parse_object_identifiers(cql, iter)?;
+    _ = pop_next_match(iter, UsingKeyword)?;
+    let index_classpath = pop_string_literal(cql, iter)?;
+    Ok(CreateTriggerStatement {
+        if_not_exists,
+        trigger_name,
+        table_name,
+        keyspace_name,
+        index_classpath,
+    })
 }
 
 // todo fields with collections, collections with generics and udts
@@ -239,7 +251,7 @@ fn parse_create_type_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateTypeStatement> {
-    let if_not_exists = advance_peek_match(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
     let (keyspace_name, type_name) = parse_object_identifiers(cql, iter)?;
     _ = pop_next_match(iter, LeftParenthesis)?;
     let mut fields = HashMap::new();
@@ -285,7 +297,7 @@ fn parse_create_user_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateUserStatement> {
-    let if_not_exists = advance_peek_match(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
     let user_name = create_view(cql, pop_next_match(iter, Identifier)?);
     let password = match iter.peek() {
         None => None,

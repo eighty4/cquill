@@ -1,7 +1,7 @@
 use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
-use crate::cql::parser::iter::{advance_peek_match, pop_next_match};
+use crate::cql::parser::iter::{pop_sequence, pop_next_match};
 use crate::cql::parser::token::{create_view, parse_object_identifiers};
 use crate::cql::parser::ParseResult;
 use std::iter::Peekable;
@@ -44,7 +44,7 @@ fn parse_drop_aggregate_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropAggregateStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, aggregate_name) = parse_object_identifiers(cql, iter)?;
     let signature = parse_function_type_signature(cql, iter);
     Ok(DropAggregateStatement {
@@ -59,7 +59,7 @@ fn parse_drop_function_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropFunctionStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, function_name) = parse_object_identifiers(cql, iter)?;
     let signature = parse_function_type_signature(cql, iter);
     Ok(DropFunctionStatement {
@@ -74,7 +74,7 @@ fn parse_drop_index_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropIndexStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, index_name) = parse_object_identifiers(cql, iter)?;
     Ok(DropIndexStatement {
         index_name,
@@ -87,7 +87,7 @@ fn parse_drop_keyspace_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropKeyspaceStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let keyspace_name = create_view(cql, pop_next_match(iter, Identifier)?);
     Ok(DropKeyspaceStatement {
         keyspace_name,
@@ -99,7 +99,7 @@ fn parse_drop_materialized_view_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropMaterializedViewStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, view_name) = parse_object_identifiers(cql, iter)?;
     Ok(DropMaterializedViewStatement {
         view_name,
@@ -112,7 +112,7 @@ fn parse_drop_role_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropRoleStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let role_name = create_view(cql, pop_next_match(iter, Identifier)?);
     Ok(DropRoleStatement {
         role_name,
@@ -124,7 +124,7 @@ fn parse_drop_table_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropTableStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, table_name) = parse_object_identifiers(cql, iter)?;
     Ok(DropTableStatement {
         alias: None,
@@ -138,7 +138,7 @@ fn parse_drop_trigger_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropTriggerStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let trigger_name = create_view(cql, pop_next_match(iter, Identifier)?);
     pop_next_match(iter, OnKeyword)?;
     let (keyspace_name, table_name) = parse_object_identifiers(cql, iter)?;
@@ -154,7 +154,7 @@ fn parse_drop_type_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropTypeStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, type_name) = parse_object_identifiers(cql, iter)?;
     Ok(DropTypeStatement {
         type_name,
@@ -167,7 +167,7 @@ fn parse_drop_user_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<DropUserStatement> {
-    let if_exists = advance_peek_match(iter, &[IfKeyword, ExistsKeyword])?;
+    let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let user_name = create_view(cql, pop_next_match(iter, Identifier)?);
     Ok(DropUserStatement {
         user_name,

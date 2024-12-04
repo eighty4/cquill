@@ -1,7 +1,7 @@
 use crate::cql::ast::{
     AuthPassword, CqlStatement, CreateIndexColumn, CreateIndexStatement, CreateRoleStatement,
-    CreateStatement, CreateTypeStatement, CreateUserStatement, CreateUserStatus, Datacenters,
-    RoleConfigAttribute,
+    CreateStatement, CreateTriggerStatement, CreateTypeStatement, CreateUserStatement,
+    CreateUserStatus, Datacenters, RoleConfigAttribute,
 };
 use crate::cql::parse_cql;
 use crate::cql::parser::token::testing::{find_string_literal, find_token, rfind_token};
@@ -336,6 +336,74 @@ fn test_parsing_create_role_with_multiple_attributes() {
                     ))),
                     RoleConfigAttribute::Login(true)
                 )),
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_create_trigger_in_default_keyspace() {
+    let cql = CREATE_TRIGGER_DEFAULT_KEYSPACE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Trigger(
+            CreateTriggerStatement {
+                trigger_name: find_token(cql, "big_data_trigger"),
+                table_name: find_token(cql, "big_data_table"),
+                keyspace_name: None,
+                if_not_exists: false,
+                index_classpath: find_string_literal(cql, "'trigger name'"),
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_create_trigger_in_default_keyspace_if_not_exists() {
+    let cql = CREATE_TRIGGER_IF_NOT_EXISTS_DEFAULT_KEYSPACE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Trigger(
+            CreateTriggerStatement {
+                trigger_name: find_token(cql, "big_data_trigger"),
+                table_name: find_token(cql, "big_data_table"),
+                keyspace_name: None,
+                if_not_exists: true,
+                index_classpath: find_string_literal(cql, "'trigger name'"),
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_create_trigger_in_explicit_keyspace() {
+    let cql = CREATE_TRIGGER_EXPLICIT_KEYSPACE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Trigger(
+            CreateTriggerStatement {
+                trigger_name: find_token(cql, "big_data_trigger"),
+                table_name: find_token(cql, "big_data_table"),
+                keyspace_name: Some(find_token(cql, "big_data_keyspace")),
+                if_not_exists: false,
+                index_classpath: find_string_literal(cql, "'trigger name'"),
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_parsing_create_trigger_in_explicit_keyspace_if_not_exists() {
+    let cql = CREATE_TRIGGER_IF_NOT_EXISTS_EXPLICIT_KEYSPACE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Trigger(
+            CreateTriggerStatement {
+                trigger_name: find_token(cql, "big_data_trigger"),
+                table_name: find_token(cql, "big_data_table"),
+                keyspace_name: Some(find_token(cql, "big_data_keyspace")),
+                if_not_exists: true,
+                index_classpath: find_string_literal(cql, "'trigger name'"),
             }
         )))
     );

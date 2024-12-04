@@ -185,7 +185,13 @@ pub struct TablePrimaryKeyDefinition {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct CreateTriggerStatement {}
+pub struct CreateTriggerStatement {
+    pub if_not_exists: bool,
+    pub trigger_name: TokenView,
+    pub table_name: TokenView,
+    pub keyspace_name: Option<TokenView>,
+    pub index_classpath: StringView,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct CreateTypeStatement {
