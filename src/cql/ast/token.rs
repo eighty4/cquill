@@ -7,6 +7,7 @@ pub enum CqlDataType {
     CollectionType(CqlCollectionType),
     /// A custom type implemented in Java.
     CustomType(StringView),
+    Frozen(Box<CqlDataType>),
     /// Composite of native type and user defined types.
     ValueType(CqlValueType),
     Tuple(Box<CqlDataType>, Box<CqlDataType>),
@@ -15,14 +16,7 @@ pub enum CqlDataType {
 #[derive(Debug, PartialEq)]
 pub enum CqlValueType {
     NativeType(CqlNativeType),
-    UserDefinedType(CqlUserDefinedType),
-}
-
-// todo handle Frozen<T> at CqlDataType level
-#[derive(Debug, PartialEq)]
-pub enum CqlUserDefinedType {
-    Frozen(TokenView),
-    Unfrozen(TokenView),
+    UserDefinedType(TokenView),
 }
 
 #[derive(Debug, PartialEq)]

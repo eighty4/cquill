@@ -1,4 +1,3 @@
-use crate::cql::ast::CqlUserDefinedType::Unfrozen;
 use crate::cql::ast::{
     CqlDataType, CqlDataType::*, CqlNativeType::*, CqlValueType::*, StringView, TokenView,
 };
@@ -101,6 +100,7 @@ pub fn pop_boolean_literal(iter: &mut Peekable<Iter<Token>>) -> Result<bool, any
     }
 }
 
+// todo collections, custom types and tuples
 pub fn pop_cql_data_type(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
@@ -129,7 +129,13 @@ pub fn pop_cql_data_type(
             UuidKeyword => ValueType(NativeType(Uuid)),
             VarCharKeyword => ValueType(NativeType(VarChar)),
             VarIntKeyword => ValueType(NativeType(VarInt)),
-            Identifier => ValueType(UserDefinedType(Unfrozen(popped.to_token_view(cql)))),
+            FrozenKeyword => Frozen({
+                pop_next_match(iter, LessThan)?;
+                let generic_type = Box::new(pop_cql_data_type(cql, iter)?);
+                pop_next_match(iter, GreaterThan)?;
+                generic_type
+            }),
+            Identifier => ValueType(UserDefinedType(popped.to_token_view(cql))),
             _ => todo!("parse error"),
         },
     })

@@ -1,8 +1,8 @@
 use crate::cql::ast::{
-    AuthPassword, CqlDataType, CqlNativeType, CqlStatement, CqlUserDefinedType, CqlValueType,
-    CreateFunctionStatement, CreateIfExistsBehavior, CreateIndexColumn, CreateIndexStatement,
-    CreateRoleStatement, CreateStatement, CreateTriggerStatement, CreateTypeStatement,
-    CreateUserStatement, CreateUserStatus, Datacenters, OnNullInput, RoleConfigAttribute,
+    AuthPassword, CqlDataType, CqlNativeType, CqlStatement, CqlValueType, CreateFunctionStatement,
+    CreateIfExistsBehavior, CreateIndexColumn, CreateIndexStatement, CreateRoleStatement,
+    CreateStatement, CreateTriggerStatement, CreateTypeStatement, CreateUserStatement,
+    CreateUserStatus, Datacenters, OnNullInput, RoleConfigAttribute,
 };
 use crate::cql::parse_cql;
 use crate::cql::parser::testing::{find_string_literal, find_token};
@@ -163,6 +163,33 @@ fn test_create_function_with_multiple_args() {
 }
 
 #[test]
+fn test_create_function_with_frozen_udt_arg() {
+    let cql = CREATE_FUNCTION_WITH_FROZEN_UDT_ARG;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Function(
+            CreateFunctionStatement {
+                if_exists: CreateIfExistsBehavior::Error,
+                function_name: find_token(cql, "big_data_fn"),
+                function_args: vec!((
+                    find_token(cql, "fn_arg"),
+                    CqlDataType::Frozen(Box::new(CqlDataType::ValueType(
+                        CqlValueType::UserDefinedType(find_token(cql, "some_udt"))
+                    ))),
+                )),
+                on_null_input: OnNullInput::Called,
+                returns: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
+                language: find_token(cql, "java"),
+                function_body: find_string_literal(
+                    cql,
+                    "$$\n        return fn_arg.toString();\n    $$"
+                ),
+            }
+        )))
+    );
+}
+
+#[test]
 fn test_create_function_returns_udt() {
     let cql = CREATE_FUNCTION_RETURNS_USER_DEFINED_TYPE;
     assert_eq!(
@@ -176,9 +203,9 @@ fn test_create_function_returns_udt() {
                     CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
                 )),
                 on_null_input: OnNullInput::Called,
-                returns: CqlDataType::ValueType(CqlValueType::UserDefinedType(
-                    CqlUserDefinedType::Unfrozen(find_token(cql, "some_udt"))
-                )),
+                returns: CqlDataType::ValueType(CqlValueType::UserDefinedType(find_token(
+                    cql, "some_udt"
+                ))),
                 language: find_token(cql, "java"),
                 function_body: find_string_literal(
                     cql,

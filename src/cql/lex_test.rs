@@ -2658,14 +2658,14 @@ mod user_defined_functions {
         #[test]
         fn test_create_function_with_frozen_arg() {
             tokenize_expect(
-                CREATE_FUNCTION_WITH_FROZEN_ARG,
+                CREATE_FUNCTION_WITH_FROZEN_UDT_ARG,
                 vec![
                     (CreateKeyword, "create"),
                     (FunctionKeyword, "function"),
                     (Identifier, "big_data_fn"),
                     (LeftParenthesis, "("),
                     (Identifier, "fn_arg"),
-                    (Identifier, "frozen"),
+                    (FrozenKeyword, "frozen"),
                     (LessThan, "<"),
                     (Identifier, "some_udt"),
                     (GreaterThan, ">"),

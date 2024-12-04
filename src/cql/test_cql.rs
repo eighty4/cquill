@@ -587,7 +587,7 @@ create function big_data_fn (fn_arg1 int, fn_arg2 text)
     $$;
 ";
 
-pub const CREATE_FUNCTION_WITH_FROZEN_ARG: &str = "\
+pub const CREATE_FUNCTION_WITH_FROZEN_UDT_ARG: &str = "\
 create function big_data_fn (fn_arg frozen<some_udt>)
     called on null input
     returns text
