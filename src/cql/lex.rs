@@ -176,6 +176,7 @@ pub(crate) enum TokenName {
 }
 
 impl TokenName {
+    // todo determine if any gotchas with reserved vs not reserved keywords
     pub fn match_keyword(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "access" => AccessKeyword,
