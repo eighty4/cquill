@@ -12,9 +12,7 @@ pub enum CreateStatement {
     // todo
     MaterializedView(CreateMaterializedViewStatement),
     Role(CreateRoleStatement),
-    // todo
     Table(CreateTableStatement),
-    // todo
     Trigger(CreateTriggerStatement),
     Type(CreateTypeStatement),
     User(CreateUserStatement),
@@ -136,24 +134,27 @@ pub enum Datacenters {
 pub struct CreateTableStatement {
     pub keyspace_name: Option<TokenView>,
     pub table_name: TokenView,
-    pub column_definitions: ColumnDefinitions,
+    pub column_definitions: Vec<ColumnDefinition>,
     pub if_not_exists: bool,
     pub table_alias: Option<TableAlias>,
-    pub attributes: Vec<CreateTableAttribute>,
+    pub attributes: Option<Vec<TableDefinitionAttribute>>,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct CreateTableAttribute {
-    view: TokenView,
-    kind: CreateTableAttributeKind,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum CreateTableAttributeKind {
-    TableOptions(TableOptions),
-    ClusteringOrderBy(ClusteringOrderByColumn),
-    Id(String),
+pub enum TableDefinitionAttribute {
+    ClusteringOrderBy(Vec<ClusteringOrderDefinition>),
+    Comment(StringView),
+    // todo proper map literal type
+    Compaction(HashMap<StringView, TokenView>),
     CompactStorage,
+    Id(String),
+    TableOptions(TableOptions),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ClusteringOrderDefinition {
+    pub column_name: TokenView,
+    pub order: Option<ClusteringOrder>,
 }
 
 // todo impl for
@@ -165,40 +166,43 @@ pub enum CreateTableAttributeKind {
 pub struct TableOptions {}
 
 #[derive(Debug, PartialEq)]
-pub struct ClusteringOrderByColumn {
-    column_name: TokenView,
-    order: Option<ClusteringOrder>,
-}
-
-#[derive(Debug, PartialEq)]
 pub enum ClusteringOrder {
     Asc,
     Desc,
 }
 
+/// Represents columns within a table definition.
 #[derive(Debug, PartialEq)]
-pub struct ColumnDefinitions {
-    pub view: TokenView,
-    pub definitions: Vec<ColumnDefinition>,
-    pub primary_key: Option<Vec<TokenView>>,
+pub enum ColumnDefinition {
+    /// Represents a column.
+    Column {
+        column_name: TokenView,
+        data_type: CqlDataType,
+        attribute: Option<ColumnDefinitionAttribute>,
+    },
+    /// Represents a standalone `PRIMARY KEY (column_name)` definition.
+    // todo composite/clustering key
+    PrimaryKey(PrimaryKeyDefinition),
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ColumnDefinition {
-    pub view: TokenView,
-    pub column_name: TokenView,
-    pub type_definition: TokenView,
-    pub attribute: Option<ColumnDefinitionAttribute>,
+pub enum PrimaryKeyDefinition {
+    /// `PRIMARY KEY (partition_k)`
+    Single(TokenView),
+    /// `PRIMARY KEY (partition_k, clustering_k1, clustering_k2, ...)`
+    Compound {
+        partition: TokenView,
+        clustering: Vec<TokenView>,
+    },
+    /// `PRIMARY KEY ((partition_k1, partition_k2), clustering_k1, clustering_k2, ...)`
+    CompositePartition {
+        partition: Vec<TokenView>,
+        clustering: Vec<TokenView>,
+    },
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ColumnDefinitionAttribute {
-    pub view: TokenView,
-    pub kind: ColumnDefinitionAttributeKind,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ColumnDefinitionAttributeKind {
+pub enum ColumnDefinitionAttribute {
     Static,
     PrimaryKey,
 }

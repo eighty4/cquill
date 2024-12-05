@@ -23,6 +23,7 @@ Lexer, parser and AST for [CQL 3.0](https://cassandra.apache.org/doc/stable/cass
     - ValuesKeyword and values fn
     - TtlKeyword and ttl fn
   - error reporting
+    - miette?
 - parser
 - ast
 - https://issues.apache.org/jira/browse/CASSANDRA-18504

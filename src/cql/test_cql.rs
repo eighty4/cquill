@@ -52,31 +52,37 @@ drop keyspace if exists big_data_keyspace;
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/ddl.html#create-table-statement
 
-pub const CREATE_TABLE_WITH_ALL_DATA_TYPES: &str = "\
+pub const CREATE_TABLE_WITH_ALL_NATIVE_DATA_TYPES: &str = "\
 create table big_data_table
 (
+    uuid_column      uuid,
+    int_column       int,
     ascii_column     ascii,
     bigint_column    bigint,
     blob_column      blob,
     boolean_column   boolean,
-    counter_column   counter,
     date_column      date,
     decimal_column   decimal,
     double_column    double,
     duration_column  duration,
     float_column     float,
     inet_column      inet,
-    int_column       int,
     smallint_column  smallint,
-    text_column      text,
+    text_column      text primary key,
     time_column      time,
     timestamp_column timestamp,
     timeuuid_column  timeuuid,
     tinyint_column   tinyint,
-    uuid_column      uuid,
     varchar_column   varchar,
-    varint_column    varint,
-    primary key (text_column)
+    varint_column    varint
+);
+";
+
+pub const CREATE_TABLE_WITH_COUNTER_DATA_TYPE: &str = "\
+create table big_data_table
+(
+    text_column text primary key,
+    counter_column counter
 );
 ";
 
@@ -88,11 +94,29 @@ pub const CREATE_TABLE_WITH_EXPLICIT_KEYSPACE: &str = "\
 create table big_data_keyspace.big_data_table (uuid_column uuid primary key);
 ";
 
-pub const CREATE_TABLE_WITH_COMPOSITE_PRIMARY_KEY: &str = "\
+pub const CREATE_TABLE_WITH_COMPOUND_PRIMARY_KEY: &str = "\
 create table big_data_table (
+    text_column text,
     uuid_column uuid,
-    timeuuid_column timeuuid,
-    primary key (timeuuid_column, uuid_column)
+    primary key (text_column, uuid_column)
+);
+";
+
+pub const CREATE_TABLE_WITH_COMPOSITE_PARTITION_PRIMARY_KEY: &str = "\
+create table big_data_table (
+    text_column text,
+    uuid_column uuid,
+    timestamp_column timestamp,
+    primary key ((text_column, uuid_column), timestamp_column)
+);
+";
+
+pub const CREATE_TABLE_WITH_COMPOSITE_PARTITION_PRIMARY_KEY_MISSING_CLUSTERING_KEYS: &str = "\
+create table big_data_table (
+    text_column text,
+    uuid_column uuid,
+    timestamp_column timestamp,
+    primary key ((text_column, uuid_column))
 );
 ";
 
@@ -118,7 +142,7 @@ pub const CREATE_TABLE_WITH_ASC_CLUSTERING_ORDER: &str = "\
 create table big_data_table (
     text_column text,
     uuid_column uuid,
-    time_column timeuuid,
+    time_column timestamp,
     primary key (text_column, time_column)
 )  with clustering order by (time_column asc);
 ";
@@ -127,18 +151,28 @@ pub const CREATE_TABLE_WITH_DESC_CLUSTERING_ORDER: &str = "\
 create table big_data_table (
     text_column text,
     uuid_column uuid,
-    time_column timeuuid,
+    time_column timestamp,
     primary key (text_column, time_column)
 )  with clustering order by (time_column desc);
 ";
 
-pub const CREATE_TABLE_WITH_IMPLICIT_DESC_CLUSTERING_ORDER: &str = "\
+pub const CREATE_TABLE_WITH_MULTIPLE_CLUSTERING_ORDERS: &str = "\
+create table big_data_table (
+    text_column text,
+    uuid_column uuid,
+    time_column timestamp,
+    primary key (text_column, time_column, uuid_column)
+)  with clustering order by (time_column desc, uuid_column asc);
+";
+
+// todo parser test clustering order by uuid_column errors because it is not a clustering key
+pub const BAD_CREATE_TABLE_WITH_CLUSTERING_ORDER_ON_NON_CLUSTERING_KEY: &str = "\
 create table big_data_table (
     text_column text,
     uuid_column uuid,
     time_column timeuuid,
     primary key (text_column, time_column)
-)  with clustering order by ();
+)  with clustering order by (time_column desc, uuid_column asc);
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/ddl.html#alter-table-statement

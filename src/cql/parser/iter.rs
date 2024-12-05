@@ -1,7 +1,7 @@
 use crate::cql::ast::CqlCollectionType::List;
 use crate::cql::ast::{
-    CqlDataType, CqlDataType::*, CqlNativeType, CqlNativeType::*,
-    CqlValueType::*, StringView, TokenView,
+    CqlDataType, CqlDataType::*, CqlNativeType, CqlNativeType::*, CqlValueType::*, StringView,
+    TokenView,
 };
 use crate::cql::lex::TokenName::*;
 use crate::cql::lex::{Token, TokenName};
@@ -52,7 +52,7 @@ pub fn pop_next_match<'a>(
             if popped.name == next {
                 Ok(popped)
             } else {
-                todo!("parse error expected={:?} actual={:?}", next, popped.name)
+                todo!("parse error")
             }
         }
     }
@@ -234,4 +234,18 @@ pub fn pop_aggregate_signature(
     let data_type = pop_cql_data_type(cql, iter)?;
     pop_next_match(iter, RightParenthesis)?;
     Ok(data_type)
+}
+
+pub fn pop_comma_separated_identifiers(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<Vec<TokenView>> {
+    let mut identifiers = Vec::new();
+    loop {
+        identifiers.push(pop_identifier(cql, iter)?);
+        if pop_next_if(iter, Comma).is_none() {
+            break;
+        }
+    }
+    Ok(identifiers)
 }
