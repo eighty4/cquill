@@ -205,7 +205,7 @@ mod data_definition {
         #[test]
         fn test_create_keyspace_with_durable_writes_option_statement() {
             tokenize_expect(
-                CREATE_KEYSPACE_WITH_DURABLE_WRITES_OPTION_EXISTS,
+                CREATE_KEYSPACE_WITH_DURABLE_WRITES_FALSE,
                 vec![
                     (CreateKeyword, "create"),
                     (KeyspaceKeyword, "keyspace"),

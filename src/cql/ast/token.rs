@@ -7,7 +7,7 @@ use std::sync::Arc;
 // todo frozen can be around a collection such as `frozen<map<text, someUDT>>`
 // todo frozen can be around a UDT such as frozen<someUDT>
 // todo frozen can be in a collection such as `map<text, frozen<someUDT>>`
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum CqlDataType {
     CollectionType(CqlCollectionType),
     /// A custom type implemented in Java.
@@ -18,13 +18,13 @@ pub enum CqlDataType {
     Tuple(Box<CqlDataType>, Box<CqlDataType>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum CqlValueType {
     NativeType(CqlNativeType),
     UserDefinedType(TokenView),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum CqlNativeType {
     Ascii,
     BigInt,
@@ -51,7 +51,7 @@ pub enum CqlNativeType {
 
 // todo should CqlValueType for collection generics be CqlDataType
 // todo are collection generics optional
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum CqlCollectionType {
     List(CqlValueType),
     Map(CqlValueType, CqlValueType),
@@ -79,6 +79,19 @@ pub struct TokenRange(usize, usize);
 pub struct TokenView {
     pub cql: Arc<String>,
     pub range: TokenRange,
+}
+
+impl StringView {
+    pub fn value(&self) -> String {
+        let offset = match self.style {
+            StringStyle::DollarSign => 2,
+            StringStyle::SingleQuote => 1,
+            StringStyle::TripleQuote => 3,
+        };
+        let b = self.range.begin() + offset;
+        let e = self.range.end() - offset;
+        String::from(&self.cql[b..=e])
+    }
 }
 
 impl TokenView {

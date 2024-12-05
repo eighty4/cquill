@@ -1,15 +1,23 @@
 // https://cassandra.apache.org/doc/stable/cassandra/cql/ddl.html#create-keyspace-statement
 
-pub const CREATE_KEYSPACE: &str = "\
+pub const CREATE_KEYSPACE_WITH_SIMPLE_REPLICATION: &str = "\
 create keyspace big_data_keyspace with replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+";
+
+pub const CREATE_KEYSPACE_WITH_NETWORK_REPLICATION: &str = "\
+create keyspace big_data_keyspace with replication = {'class': 'NetworkTopologyStrategy', 'dc1': 2, 'dc2': 2};
 ";
 
 pub const CREATE_KEYSPACE_IF_NOT_EXISTS: &str = "\
 create keyspace if not exists big_data_keyspace with replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 ";
 
-pub const CREATE_KEYSPACE_WITH_DURABLE_WRITES_OPTION_EXISTS: &str = "\
+pub const CREATE_KEYSPACE_WITH_DURABLE_WRITES_FALSE: &str = "\
 create keyspace big_data_keyspace with replication = {'class': 'SimpleStrategy', 'replication_factor': 1} and durable_writes = false;
+";
+
+pub const CREATE_KEYSPACE_WITH_DURABLE_WRITES_TRUE: &str = "\
+create keyspace big_data_keyspace with durable_writes = true and replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/ddl.html#use-statement

@@ -1,9 +1,14 @@
 use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
-use crate::cql::parser::iter::{advance_until, peek_next_match, pop_aggregate_signature, pop_boolean_literal, pop_cql_data_type, pop_identifier, pop_keyspace_object_name, pop_next, pop_next_if, pop_next_match, pop_sequence, pop_string_literal};
+use crate::cql::parser::iter::{
+    advance_until, peek_next_match, pop_aggregate_signature, pop_boolean_literal,
+    pop_cql_data_type, pop_identifier, pop_keyspace_object_name, pop_next, pop_next_if,
+    pop_next_match, pop_sequence, pop_string_literal,
+};
 use crate::cql::parser::ParseResult;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::iter::Peekable;
 use std::slice::Iter;
 use std::sync::Arc;
@@ -191,7 +196,119 @@ fn parse_create_keyspace_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<CreateKeyspaceStatement> {
-    unimplemented!()
+    let if_not_exists = pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?;
+    let keyspace_name = pop_identifier(cql, iter)?;
+    pop_next_match(iter, WithKeyword)?;
+    let mut replication = None;
+    let mut durable_writes = None;
+    loop {
+        let popped = pop_next(iter)?;
+        match popped.name {
+            ReplicationKeyword => {
+                pop_next_match(iter, Equal)?;
+                let mut replication_config = pop_map_config(cql, iter)?;
+                replication = Some(match replication_config.remove("class") {
+                    None => todo!("parse error"),
+                    Some(replication_class) => match replication_class {
+                        MapConfigLiteral::String(replication_class) => {
+                            match replication_class.as_str() {
+                                "SimpleStrategy" => {
+                                    match replication_config.get("replication_factor") {
+                                        Some(MapConfigLiteral::Integer(factor)) => {
+                                            KeyspaceReplication::Simple(*factor)
+                                        }
+                                        _ => todo!("parse error"),
+                                    }
+                                }
+                                "NetworkTopologyStrategy" => {
+                                    let mut factors = HashMap::new();
+                                    for (dc, factor) in replication_config {
+                                        factors.insert(
+                                            dc,
+                                            match factor {
+                                                MapConfigLiteral::Integer(factor) => factor,
+                                                _ => todo!("parse error"),
+                                            },
+                                        );
+                                    }
+                                    KeyspaceReplication::NetworkTopology(factors)
+                                }
+                                _ => todo!("parse error"),
+                            }
+                        }
+                        _ => todo!("parse error"),
+                    },
+                })
+            }
+            Identifier => {
+                // todo &str without to_token_view allocations
+                //  maybe `Token::to_str(&self, cql: &Arc<String>)`
+                if popped.to_token_view(cql).value() == *"durable_writes" {
+                    pop_next_match(iter, Equal)?;
+                    durable_writes = Some(pop_boolean_literal(iter)?);
+                } else {
+                    todo!("parse error");
+                }
+            }
+            _ => todo!("parse error"),
+        }
+        if pop_next_if(iter, AndKeyword).is_none() {
+            break;
+        }
+    }
+    let replication = match replication {
+        None => todo!("parse error"),
+        Some(replication) => replication,
+    };
+    Ok(CreateKeyspaceStatement {
+        if_not_exists,
+        keyspace_name,
+        durable_writes,
+        replication,
+    })
+}
+
+fn pop_map_config(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<HashMap<String, MapConfigLiteral>> {
+    pop_next_match(iter, LeftCurvedBracket)?;
+    let mut map_config = HashMap::new();
+    loop {
+        let key = pop_string_literal(cql, iter)?.value();
+        pop_next_match(iter, Colon)?;
+        let value = {
+            let popped = pop_next(iter)?;
+            match &popped.name {
+                StringLiteral(style) => MapConfigLiteral::String(
+                    StringView {
+                        cql: cql.clone(),
+                        range: popped.range.clone(),
+                        style: style.clone(),
+                    }
+                    .value(),
+                ),
+                NumberLiteral => MapConfigLiteral::Integer(
+                    popped.to_token_view(cql).value().parse().expect("integer"),
+                ),
+                TrueKeyword => MapConfigLiteral::Boolean(true),
+                FalseKeyword => MapConfigLiteral::Boolean(false),
+                _ => todo!("parse error"),
+            }
+        };
+        map_config.insert(key, value);
+        if pop_next_if(iter, Comma).is_none() {
+            break;
+        }
+    }
+    pop_next_match(iter, RightCurvedBracket)?;
+    Ok(map_config)
+}
+
+enum MapConfigLiteral {
+    Boolean(bool),
+    Integer(i8),
+    String(String),
 }
 
 fn parse_create_materialized_view_statement(

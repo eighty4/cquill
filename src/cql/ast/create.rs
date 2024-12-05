@@ -8,7 +8,6 @@ pub enum CreateStatement {
     Aggregate(CreateAggregateStatement),
     Function(CreateFunctionStatement),
     Index(CreateIndexStatement),
-    // todo
     Keyspace(CreateKeyspaceStatement),
     // todo
     MaterializedView(CreateMaterializedViewStatement),
@@ -85,20 +84,14 @@ pub enum CreateIndexColumn {
 
 #[derive(Debug, PartialEq)]
 pub struct CreateKeyspaceStatement {
-    keyspace_name: TokenView,
-    if_not_exists: bool,
-    replication: KeyspaceReplication,
-    durable_writes: Option<bool>,
+    pub if_not_exists: bool,
+    pub keyspace_name: TokenView,
+    pub replication: KeyspaceReplication,
+    pub durable_writes: Option<bool>,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct KeyspaceReplication {
-    map_view: TokenView,
-    strategy: KeyspaceReplicationStrategy,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum KeyspaceReplicationStrategy {
+pub enum KeyspaceReplication {
     NetworkTopology(HashMap<String, i8>),
     Simple(i8),
 }
