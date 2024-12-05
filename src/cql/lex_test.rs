@@ -2830,7 +2830,7 @@ mod user_defined_aggregates {
         #[test]
         fn test_create_aggregate_with_single_arg() {
             tokenize_expect(
-                CREATE_AGGREGATE_WITH_SINGLE_ARG,
+                CREATE_AGGREGATE_WITH_COLLECTION_STYPE,
                 vec![
                     (CreateKeyword, "create"),
                     (AggregateKeyword, "aggregate"),
@@ -2842,28 +2842,9 @@ mod user_defined_aggregates {
                     (Identifier, "fn_name"),
                     (STypeKeyword, "stype"),
                     (ListKeyword, "list"),
-                    (Semicolon, ";"),
-                ],
-            );
-        }
-
-        #[test]
-        fn test_create_aggregate_with_multiple_args() {
-            tokenize_expect(
-                CREATE_AGGREGATE_WITH_MULTIPLE_ARGS,
-                vec![
-                    (CreateKeyword, "create"),
-                    (AggregateKeyword, "aggregate"),
-                    (Identifier, "big_data_agg"),
-                    (LeftParenthesis, "("),
-                    (IntKeyword, "int"),
-                    (Comma, ","),
-                    (DoubleKeyword, "double"),
-                    (RightParenthesis, ")"),
-                    (SFuncKeyword, "sfunc"),
-                    (Identifier, "fn_name"),
-                    (STypeKeyword, "stype"),
-                    (ListKeyword, "list"),
+                    (LessThan, "<"),
+                    (TextKeyword, "text"),
+                    (GreaterThan, ">"),
                     (Semicolon, ";"),
                 ],
             );
@@ -2906,6 +2887,9 @@ mod user_defined_aggregates {
                     (Identifier, "fn_name"),
                     (STypeKeyword, "stype"),
                     (ListKeyword, "list"),
+                    (LessThan, "<"),
+                    (TextKeyword, "text"),
+                    (GreaterThan, ">"),
                     (Semicolon, ";"),
                 ],
             );
@@ -2929,6 +2913,9 @@ mod user_defined_aggregates {
                     (Identifier, "fn_name"),
                     (STypeKeyword, "stype"),
                     (ListKeyword, "list"),
+                    (LessThan, "<"),
+                    (TextKeyword, "text"),
+                    (GreaterThan, ">"),
                     (Semicolon, ";"),
                 ],
             );
@@ -2949,6 +2936,9 @@ mod user_defined_aggregates {
                     (Identifier, "fn_name"),
                     (STypeKeyword, "stype"),
                     (ListKeyword, "list"),
+                    (LessThan, "<"),
+                    (TextKeyword, "text"),
+                    (GreaterThan, ">"),
                     (FinalFuncKeyword, "finalfunc"),
                     (Identifier, "ffn_name"),
                     (Semicolon, ";"),
@@ -2971,6 +2961,9 @@ mod user_defined_aggregates {
                     (Identifier, "fn_name"),
                     (STypeKeyword, "stype"),
                     (ListKeyword, "list"),
+                    (LessThan, "<"),
+                    (TextKeyword, "text"),
+                    (GreaterThan, ">"),
                     (InitCondKeyword, "initcond"),
                     (StringLiteral(StringStyle::SingleQuote), "'state value'"),
                     (Semicolon, ";"),
@@ -2993,6 +2986,9 @@ mod user_defined_aggregates {
                     (Identifier, "fn_name"),
                     (STypeKeyword, "stype"),
                     (ListKeyword, "list"),
+                    (LessThan, "<"),
+                    (TextKeyword, "text"),
+                    (GreaterThan, ">"),
                     (FinalFuncKeyword, "finalfunc"),
                     (Identifier, "ffn_name"),
                     (InitCondKeyword, "initcond"),

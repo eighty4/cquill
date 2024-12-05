@@ -1,5 +1,7 @@
+use crate::cql::ast::CqlCollectionType::List;
 use crate::cql::ast::{
-    CqlDataType, CqlDataType::*, CqlNativeType::*, CqlValueType::*, StringView, TokenView,
+    CqlDataType, CqlDataType::*, CqlNativeType, CqlNativeType::*,
+    CqlValueType::*, StringView, TokenView,
 };
 use crate::cql::lex::TokenName::*;
 use crate::cql::lex::{Token, TokenName};
@@ -8,11 +10,21 @@ use std::iter::Peekable;
 use std::slice::Iter;
 use std::sync::Arc;
 
+pub fn advance_until(iter: &mut Peekable<Iter<Token>>, until: TokenName) {
+    loop {
+        match iter.next() {
+            None => break,
+            Some(popped) => {
+                if popped.name == until {
+                    break;
+                }
+            }
+        }
+    }
+}
+
 /// Returns true/false whether peeked token matches and Err if peek returns None.
-pub fn peek_next_match(
-    iter: &mut Peekable<Iter<Token>>,
-    next: TokenName,
-) -> Result<bool, anyhow::Error> {
+pub fn peek_next_match(iter: &mut Peekable<Iter<Token>>, next: TokenName) -> ParseResult<bool> {
     match iter.peek() {
         None => todo!("parse error"),
         Some(peeked) => Ok(peeked.name == next),
@@ -20,11 +32,11 @@ pub fn peek_next_match(
 }
 
 /// Returns next Token or Err if next returns None.
-pub fn pop_next<'a>(iter: &'a mut Peekable<Iter<Token>>) -> Result<&'a Token, anyhow::Error> {
+pub fn pop_next<'a>(iter: &'a mut Peekable<Iter<Token>>) -> ParseResult<&'a Token> {
     iter.next().ok_or_else(|| todo!("parse error"))
 }
 
-/// Returns next Token if it matches TokenName or Err if next returns None.
+/// Returns next Some(Token) if it matches TokenName or None if next returns None.
 pub fn pop_next_if<'a>(iter: &'a mut Peekable<Iter<Token>>, next: TokenName) -> Option<&'a Token> {
     iter.next_if(|t| t.name == next)
 }
@@ -33,7 +45,7 @@ pub fn pop_next_if<'a>(iter: &'a mut Peekable<Iter<Token>>, next: TokenName) -> 
 pub fn pop_next_match<'a>(
     iter: &'a mut Peekable<Iter<Token>>,
     next: TokenName,
-) -> Result<&'a Token, anyhow::Error> {
+) -> ParseResult<&'a Token> {
     match iter.next() {
         None => todo!("parse error"),
         Some(popped) => {
@@ -53,10 +65,7 @@ pub fn pop_next_match<'a>(
 /// Returns true and advances iterator `nexts.len()` number of times if all tokens match.
 /// Returns false if first token peeked does not match `nexts.first()`.
 /// Returns error if first token peeked matches and subsequent peeks return None or do not match.
-pub fn pop_sequence(
-    iter: &mut Peekable<Iter<Token>>,
-    nexts: &[TokenName],
-) -> Result<bool, anyhow::Error> {
+pub fn pop_sequence(iter: &mut Peekable<Iter<Token>>, nexts: &[TokenName]) -> ParseResult<bool> {
     let mut advanced = false;
     for maybe_next in nexts {
         match iter.peek() {
@@ -89,7 +98,7 @@ pub fn pop_identifier(
 
 /// Pops and returns bool or Err if next returns None or does not return TrueKeyword or
 /// FalseKeyword.
-pub fn pop_boolean_literal(iter: &mut Peekable<Iter<Token>>) -> Result<bool, anyhow::Error> {
+pub fn pop_boolean_literal(iter: &mut Peekable<Iter<Token>>) -> ParseResult<bool> {
     match iter.next() {
         None => todo!("parse error"),
         Some(popped) => match &popped.name {
@@ -104,47 +113,65 @@ pub fn pop_boolean_literal(iter: &mut Peekable<Iter<Token>>) -> Result<bool, any
 pub fn pop_cql_data_type(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
-) -> Result<CqlDataType, anyhow::Error> {
+) -> ParseResult<CqlDataType> {
     Ok(match iter.next() {
         None => todo!("parse error"),
-        Some(popped) => match popped.name {
-            AsciiKeyword => ValueType(NativeType(Ascii)),
-            BigIntKeyword => ValueType(NativeType(BigInt)),
-            BlobKeyword => ValueType(NativeType(Blob)),
-            BooleanKeyword => ValueType(NativeType(Boolean)),
-            CounterKeyword => ValueType(NativeType(Counter)),
-            DateKeyword => ValueType(NativeType(Date)),
-            DecimalKeyword => ValueType(NativeType(Decimal)),
-            DoubleKeyword => ValueType(NativeType(Double)),
-            DurationKeyword => ValueType(NativeType(Duration)),
-            FloatKeyword => ValueType(NativeType(Float)),
-            InetKeyword => ValueType(NativeType(INet)),
-            IntKeyword => ValueType(NativeType(Int)),
-            SmallIntKeyword => ValueType(NativeType(SmallInt)),
-            TextKeyword => ValueType(NativeType(Text)),
-            TimeKeyword => ValueType(NativeType(Time)),
-            TimestampKeyword => ValueType(NativeType(Timestamp)),
-            TimeUuidKeyword => ValueType(NativeType(TimeUuid)),
-            TinyIntKeyword => ValueType(NativeType(TinyInt)),
-            UuidKeyword => ValueType(NativeType(Uuid)),
-            VarCharKeyword => ValueType(NativeType(VarChar)),
-            VarIntKeyword => ValueType(NativeType(VarInt)),
-            FrozenKeyword => Frozen({
-                pop_next_match(iter, LessThan)?;
-                let generic_type = Box::new(pop_cql_data_type(cql, iter)?);
-                pop_next_match(iter, GreaterThan)?;
-                generic_type
-            }),
-            Identifier => ValueType(UserDefinedType(popped.to_token_view(cql))),
-            _ => todo!("parse error"),
+        Some(popped) => match maybe_cql_native_type(popped) {
+            Some(native_type) => ValueType(NativeType(native_type)),
+            None => match popped.name {
+                ListKeyword => {
+                    pop_next_match(iter, LessThan)?;
+                    let list_of = match maybe_cql_native_type(pop_next(iter)?) {
+                        None => todo!("frozen<> and udt"),
+                        Some(native_type) => NativeType(native_type),
+                    };
+                    pop_next_match(iter, GreaterThan)?;
+                    CollectionType(List(list_of))
+                }
+                FrozenKeyword => Frozen({
+                    pop_next_match(iter, LessThan)?;
+                    let generic_type = Box::new(pop_cql_data_type(cql, iter)?);
+                    pop_next_match(iter, GreaterThan)?;
+                    generic_type
+                }),
+                Identifier => ValueType(UserDefinedType(popped.to_token_view(cql))),
+                _ => todo!("parse error"),
+            },
         },
+    })
+}
+
+fn maybe_cql_native_type(token: &Token) -> Option<CqlNativeType> {
+    Some(match token.name {
+        AsciiKeyword => Ascii,
+        BigIntKeyword => BigInt,
+        BlobKeyword => Blob,
+        BooleanKeyword => Boolean,
+        CounterKeyword => Counter,
+        DateKeyword => Date,
+        DecimalKeyword => Decimal,
+        DoubleKeyword => Double,
+        DurationKeyword => Duration,
+        FloatKeyword => Float,
+        InetKeyword => INet,
+        IntKeyword => Int,
+        SmallIntKeyword => SmallInt,
+        TextKeyword => Text,
+        TimeKeyword => Time,
+        TimestampKeyword => Timestamp,
+        TimeUuidKeyword => TimeUuid,
+        TinyIntKeyword => TinyInt,
+        UuidKeyword => Uuid,
+        VarCharKeyword => VarChar,
+        VarIntKeyword => VarInt,
+        _ => return None,
     })
 }
 
 pub fn pop_keyspace_object_name(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
-) -> Result<(Option<TokenView>, TokenView), anyhow::Error> {
+) -> ParseResult<(Option<TokenView>, TokenView)> {
     let object_or_keyspace = pop_identifier(cql, iter)?;
     Ok(match pop_next_if(iter, Dot) {
         Some(_) => (Some(object_or_keyspace), pop_identifier(cql, iter)?),
@@ -156,7 +183,7 @@ pub fn pop_keyspace_object_name(
 pub fn pop_string_literal(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
-) -> Result<StringView, anyhow::Error> {
+) -> ParseResult<StringView> {
     match iter.next() {
         None => todo!("parse error"),
         Some(popped) => match &popped.name {
@@ -168,4 +195,43 @@ pub fn pop_string_literal(
             _ => todo!("parse error"),
         },
     }
+}
+
+/// For function type signatures of `DROP AGGREGATE` and `DROP FUNCTION` statements.
+/// Pops a parentheses-enclosed and comma-seperated list of CqlDataType such as
+/// `(text, int, frozen<someUDT>)`.
+// todo determine if `DROP AGGREGATE agg()` with empty parentheses is valid
+pub fn pop_if_function_signature(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<Option<Vec<CqlDataType>>> {
+    Ok(match pop_next_if(iter, LeftParenthesis) {
+        None => None,
+        Some(_) => {
+            let mut result = Vec::new();
+            loop {
+                result.push(pop_cql_data_type(cql, iter)?);
+                if pop_next_if(iter, Comma).is_none() {
+                    break;
+                }
+            }
+            pop_next_match(iter, RightParenthesis)?;
+            if result.is_empty() {
+                todo!("parse error");
+            }
+            Some(result)
+        }
+    })
+}
+
+/// For aggregate type signature of `CREATE AGGREGATE agg(int)`.
+// todo verify `CREATE AGGREGATE` only supports a single argument
+pub fn pop_aggregate_signature(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<CqlDataType> {
+    pop_next_match(iter, LeftParenthesis)?;
+    let data_type = pop_cql_data_type(cql, iter)?;
+    pop_next_match(iter, RightParenthesis)?;
+    Ok(data_type)
 }

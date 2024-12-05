@@ -1,13 +1,155 @@
-use crate::cql::ast::{
-    AuthPassword, CqlDataType, CqlNativeType, CqlStatement, CqlValueType, CreateFunctionStatement,
-    CreateIfExistsBehavior, CreateIndexColumn, CreateIndexStatement, CreateRoleStatement,
-    CreateStatement, CreateTriggerStatement, CreateTypeStatement, CreateUserStatement,
-    CreateUserStatus, Datacenters, OnNullInput, RoleConfigAttribute,
-};
+use crate::cql::ast::*;
 use crate::cql::parse_cql;
 use crate::cql::parser::testing::{find_string_literal, find_token};
 use crate::cql::test_cql::*;
 use std::collections::HashMap;
+
+#[test]
+fn test_create_aggregate_with_collection_stype() {
+    let cql = CREATE_AGGREGATE_WITH_COLLECTION_STYPE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Aggregate(
+            CreateAggregateStatement {
+                if_exists_behavior: CreateIfExistsBehavior::Error,
+                function_name: find_token(cql, "big_data_agg"),
+                function_arg: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                state_function: find_token(cql, "fn_name"),
+                state_type: CqlDataType::CollectionType(CqlCollectionType::List(
+                    CqlValueType::NativeType(CqlNativeType::Text)
+                )),
+                final_function: None,
+                init_condition: false,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_create_aggregate_with_udt_stype() {
+    let cql = CREATE_AGGREGATE_WITH_UDT_STYPE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Aggregate(
+            CreateAggregateStatement {
+                if_exists_behavior: CreateIfExistsBehavior::Error,
+                function_name: find_token(cql, "big_data_agg"),
+                function_arg: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                state_function: find_token(cql, "fn_name"),
+                state_type: CqlDataType::ValueType(CqlValueType::UserDefinedType(find_token(
+                    cql, "some_udt"
+                ))),
+                final_function: None,
+                init_condition: false,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_create_aggregate_or_replace() {
+    let cql = CREATE_OR_REPLACE_AGGREGATE;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Aggregate(
+            CreateAggregateStatement {
+                if_exists_behavior: CreateIfExistsBehavior::Replace,
+                function_name: find_token(cql, "big_data_agg"),
+                function_arg: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                state_function: find_token(cql, "fn_name"),
+                state_type: CqlDataType::CollectionType(CqlCollectionType::List(
+                    CqlValueType::NativeType(CqlNativeType::Text)
+                )),
+                final_function: None,
+                init_condition: false,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_create_aggregate_if_not_exists() {
+    let cql = CREATE_AGGREGATE_IF_NOT_EXISTS;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Aggregate(
+            CreateAggregateStatement {
+                if_exists_behavior: CreateIfExistsBehavior::DoNotError,
+                function_name: find_token(cql, "big_data_agg"),
+                function_arg: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                state_function: find_token(cql, "fn_name"),
+                state_type: CqlDataType::CollectionType(CqlCollectionType::List(
+                    CqlValueType::NativeType(CqlNativeType::Text)
+                )),
+                final_function: None,
+                init_condition: false,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_create_aggregate_with_final_function() {
+    let cql = CREATE_AGGREGATE_WITH_FINALFUNC;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Aggregate(
+            CreateAggregateStatement {
+                if_exists_behavior: CreateIfExistsBehavior::Error,
+                function_name: find_token(cql, "big_data_agg"),
+                function_arg: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                state_function: find_token(cql, "fn_name"),
+                state_type: CqlDataType::CollectionType(CqlCollectionType::List(
+                    CqlValueType::NativeType(CqlNativeType::Text)
+                )),
+                final_function: Some(find_token(cql, "ffn_name")),
+                init_condition: false,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_create_aggregate_with_init_condition() {
+    let cql = CREATE_AGGREGATE_WITH_INITCOND;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Aggregate(
+            CreateAggregateStatement {
+                if_exists_behavior: CreateIfExistsBehavior::Error,
+                function_name: find_token(cql, "big_data_agg"),
+                function_arg: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                state_function: find_token(cql, "fn_name"),
+                state_type: CqlDataType::CollectionType(CqlCollectionType::List(
+                    CqlValueType::NativeType(CqlNativeType::Text)
+                )),
+                final_function: None,
+                init_condition: true,
+            }
+        )))
+    );
+}
+
+#[test]
+fn test_create_aggregate_with_final_function_and_init_condition() {
+    let cql = CREATE_AGGREGATE_WITH_FINALFUNC_AND_INITCOND;
+    assert_eq!(
+        parse_cql(cql.to_string()).unwrap(),
+        vec!(CqlStatement::Create(CreateStatement::Aggregate(
+            CreateAggregateStatement {
+                if_exists_behavior: CreateIfExistsBehavior::Error,
+                function_name: find_token(cql, "big_data_agg"),
+                function_arg: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Int)),
+                state_function: find_token(cql, "fn_name"),
+                state_type: CqlDataType::CollectionType(CqlCollectionType::List(
+                    CqlValueType::NativeType(CqlNativeType::Text)
+                )),
+                final_function: Some(find_token(cql, "ffn_name")),
+                init_condition: true,
+            }
+        )))
+    );
+}
 
 #[test]
 fn test_create_function_called_on_null_as_single_quote_string() {
@@ -19,7 +161,7 @@ fn test_create_function_called_on_null_as_single_quote_string() {
                 function_body: find_string_literal(cql, "'return fn_arg.toString();'"),
                 returns: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
                 function_name: find_token(cql, "big_data_fn"),
-                if_exists: CreateIfExistsBehavior::Error,
+                if_exists_behavior: CreateIfExistsBehavior::Error,
                 language: find_token(cql, "java"),
                 on_null_input: OnNullInput::Called,
                 function_args: vec!((
@@ -44,7 +186,7 @@ fn test_create_function_called_on_null_as_dollar_dollar() {
                 ),
                 returns: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
                 function_name: find_token(cql, "big_data_fn"),
-                if_exists: CreateIfExistsBehavior::Error,
+                if_exists_behavior: CreateIfExistsBehavior::Error,
                 language: find_token(cql, "java"),
                 on_null_input: OnNullInput::Called,
                 function_args: vec![(
@@ -69,7 +211,7 @@ fn test_create_function_returns_null_on_null() {
                 ),
                 returns: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
                 function_name: find_token(cql, "big_data_fn"),
-                if_exists: CreateIfExistsBehavior::Error,
+                if_exists_behavior: CreateIfExistsBehavior::Error,
                 language: find_token(cql, "java"),
                 on_null_input: OnNullInput::ReturnsNull,
                 function_args: vec![(
@@ -94,7 +236,7 @@ fn test_create_function_or_replace() {
                 ),
                 returns: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
                 function_name: find_token(cql, "big_data_fn"),
-                if_exists: CreateIfExistsBehavior::Replace,
+                if_exists_behavior: CreateIfExistsBehavior::Replace,
                 language: find_token(cql, "java"),
                 on_null_input: OnNullInput::Called,
                 function_args: vec![(
@@ -119,7 +261,7 @@ fn test_create_function_if_not_exists() {
                 ),
                 returns: CqlDataType::ValueType(CqlValueType::NativeType(CqlNativeType::Text)),
                 function_name: find_token(cql, "big_data_fn"),
-                if_exists: CreateIfExistsBehavior::DoNotError,
+                if_exists_behavior: CreateIfExistsBehavior::DoNotError,
                 language: find_token(cql, "java"),
                 on_null_input: OnNullInput::Called,
                 function_args: vec![(
@@ -138,7 +280,7 @@ fn test_create_function_with_multiple_args() {
         parse_cql(cql.to_string()).unwrap(),
         vec!(CqlStatement::Create(CreateStatement::Function(
             CreateFunctionStatement {
-                if_exists: CreateIfExistsBehavior::Error,
+                if_exists_behavior: CreateIfExistsBehavior::Error,
                 function_name: find_token(cql, "big_data_fn"),
                 function_args: vec!(
                     (
@@ -169,7 +311,7 @@ fn test_create_function_with_frozen_udt_arg() {
         parse_cql(cql.to_string()).unwrap(),
         vec!(CqlStatement::Create(CreateStatement::Function(
             CreateFunctionStatement {
-                if_exists: CreateIfExistsBehavior::Error,
+                if_exists_behavior: CreateIfExistsBehavior::Error,
                 function_name: find_token(cql, "big_data_fn"),
                 function_args: vec!((
                     find_token(cql, "fn_arg"),
@@ -196,7 +338,7 @@ fn test_create_function_returns_udt() {
         parse_cql(cql.to_string()).unwrap(),
         vec!(CqlStatement::Create(CreateStatement::Function(
             CreateFunctionStatement {
-                if_exists: CreateIfExistsBehavior::Error,
+                if_exists_behavior: CreateIfExistsBehavior::Error,
                 function_name: find_token(cql, "big_data_fn"),
                 function_args: vec!((
                     find_token(cql, "fn_arg"),

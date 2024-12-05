@@ -2,8 +2,8 @@ use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
 use crate::cql::parser::iter::{
-    pop_cql_data_type, pop_identifier, pop_keyspace_object_name, pop_next_if, pop_next_match,
-    pop_sequence,
+    pop_if_function_signature, pop_identifier, pop_keyspace_object_name
+    , pop_next_match, pop_sequence,
 };
 use crate::cql::parser::ParseResult;
 use std::iter::Peekable;
@@ -48,7 +48,7 @@ fn parse_drop_aggregate_statement(
 ) -> ParseResult<DropAggregateStatement> {
     let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, aggregate_name) = pop_keyspace_object_name(cql, iter)?;
-    let signature = pop_function_type_signature(cql, iter)?;
+    let signature = pop_if_function_signature(cql, iter)?;
     Ok(DropAggregateStatement {
         aggregate_name,
         if_exists,
@@ -63,7 +63,7 @@ fn parse_drop_function_statement(
 ) -> ParseResult<DropFunctionStatement> {
     let if_exists = pop_sequence(iter, &[IfKeyword, ExistsKeyword])?;
     let (keyspace_name, function_name) = pop_keyspace_object_name(cql, iter)?;
-    let signature = pop_function_type_signature(cql, iter)?;
+    let signature = pop_if_function_signature(cql, iter)?;
     Ok(DropFunctionStatement {
         function_name,
         if_exists,
@@ -174,31 +174,5 @@ fn parse_drop_user_statement(
     Ok(DropUserStatement {
         user_name,
         if_exists,
-    })
-}
-
-/// For function type signatures of `DROP AGGREGATE` and `DROP FUNCTION` statements.
-/// Pops a parentheses-enclosed and comma-seperated list of CqlDataType such as
-/// `(text, int, frozen<someUDT>)`.
-fn pop_function_type_signature(
-    cql: &Arc<String>,
-    iter: &mut Peekable<Iter<Token>>,
-) -> ParseResult<Option<Vec<CqlDataType>>> {
-    Ok(match pop_next_if(iter, LeftParenthesis) {
-        None => None,
-        Some(_) => {
-            let mut result = Vec::new();
-            loop {
-                result.push(pop_cql_data_type(cql, iter)?);
-                if pop_next_if(iter, Comma).is_none() {
-                    break;
-                }
-            }
-            pop_next_match(iter, RightParenthesis)?;
-            if result.is_empty() {
-                todo!("parse error");
-            }
-            Some(result)
-        }
     })
 }

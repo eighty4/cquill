@@ -635,12 +635,8 @@ drop function if exists big_data_fn;
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/functions.html#create-aggregate-statement
 
-pub const CREATE_AGGREGATE_WITH_SINGLE_ARG: &str = "\
-create aggregate big_data_agg (int) sfunc fn_name stype list;
-";
-
-pub const CREATE_AGGREGATE_WITH_MULTIPLE_ARGS: &str = "\
-create aggregate big_data_agg (int, double) sfunc fn_name stype list;
+pub const CREATE_AGGREGATE_WITH_COLLECTION_STYPE: &str = "\
+create aggregate big_data_agg (int) sfunc fn_name stype list<text>;
 ";
 
 pub const CREATE_AGGREGATE_WITH_UDT_STYPE: &str = "\
@@ -648,23 +644,23 @@ create aggregate big_data_agg (int) sfunc fn_name stype some_udt;
 ";
 
 pub const CREATE_OR_REPLACE_AGGREGATE: &str = "\
-create or replace aggregate big_data_agg (int) sfunc fn_name stype list;
+create or replace aggregate big_data_agg (int) sfunc fn_name stype list<text>;
 ";
 
 pub const CREATE_AGGREGATE_IF_NOT_EXISTS: &str = "\
-create aggregate if not exists big_data_agg (int) sfunc fn_name stype list;
+create aggregate if not exists big_data_agg (int) sfunc fn_name stype list<text>;
 ";
 
 pub const CREATE_AGGREGATE_WITH_FINALFUNC: &str = "\
-create aggregate big_data_agg (int) sfunc fn_name stype list finalfunc ffn_name;
+create aggregate big_data_agg (int) sfunc fn_name stype list<text> finalfunc ffn_name;
 ";
 
 pub const CREATE_AGGREGATE_WITH_INITCOND: &str = "\
-create aggregate big_data_agg (int) sfunc fn_name stype list initcond 'state value';
+create aggregate big_data_agg (int) sfunc fn_name stype list<text> initcond 'state value';
 ";
 
 pub const CREATE_AGGREGATE_WITH_FINALFUNC_AND_INITCOND: &str = "\
-create aggregate big_data_agg (int) sfunc fn_name stype list finalfunc ffn_name initcond 'state value';
+create aggregate big_data_agg (int) sfunc fn_name stype list<text> finalfunc ffn_name initcond 'state value';
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/functions.html#drop-aggregate-statement

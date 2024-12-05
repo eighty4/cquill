@@ -5,7 +5,6 @@ use std::collections::HashMap;
 // todo create custom index
 #[derive(Debug, PartialEq)]
 pub enum CreateStatement {
-    // todo
     Aggregate(CreateAggregateStatement),
     Function(CreateFunctionStatement),
     Index(CreateIndexStatement),
@@ -22,14 +21,23 @@ pub enum CreateStatement {
     User(CreateUserStatement),
 }
 
+// todo represent init_condition with an AST node
 #[derive(Debug, PartialEq)]
-pub struct CreateAggregateStatement {}
+pub struct CreateAggregateStatement {
+    pub if_exists_behavior: CreateIfExistsBehavior,
+    pub function_name: TokenView,
+    pub function_arg: CqlDataType,
+    pub state_function: TokenView,
+    pub state_type: CqlDataType,
+    pub final_function: Option<TokenView>,
+    pub init_condition: bool,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct CreateFunctionStatement {
+    pub if_exists_behavior: CreateIfExistsBehavior,
     pub function_name: TokenView,
     pub function_args: Vec<(TokenView, CqlDataType)>,
-    pub if_exists: CreateIfExistsBehavior,
     pub on_null_input: OnNullInput,
     pub returns: CqlDataType,
     pub language: TokenView,

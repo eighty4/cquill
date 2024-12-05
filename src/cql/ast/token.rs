@@ -2,6 +2,11 @@ use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
 // todo support vector
+// todo collections cannot be nested
+//  can a tuple be nested in a collection such as `map<text, tuple<int, text>>`?
+// todo frozen can be around a collection such as `frozen<map<text, someUDT>>`
+// todo frozen can be around a UDT such as frozen<someUDT>
+// todo frozen can be in a collection such as `map<text, frozen<someUDT>>`
 #[derive(Debug, PartialEq)]
 pub enum CqlDataType {
     CollectionType(CqlCollectionType),

@@ -1,11 +1,7 @@
 use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
-use crate::cql::parser::iter::{
-    peek_next_match, pop_boolean_literal, pop_cql_data_type, pop_identifier,
-    pop_keyspace_object_name, pop_next, pop_next_if, pop_next_match, pop_sequence,
-    pop_string_literal,
-};
+use crate::cql::parser::iter::{advance_until, peek_next_match, pop_aggregate_signature, pop_boolean_literal, pop_cql_data_type, pop_identifier, pop_keyspace_object_name, pop_next, pop_next_if, pop_next_match, pop_sequence, pop_string_literal};
 use crate::cql::parser::ParseResult;
 use std::collections::HashMap;
 use std::iter::Peekable;
@@ -56,16 +52,44 @@ pub fn parse_create_statement(
     }
 }
 
+// todo can an aggregate stype be frozen?
+// todo parse init condition
 fn parse_create_aggregate_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
     create_or_replace: bool,
 ) -> ParseResult<CreateAggregateStatement> {
-    let exists_behavior = CreateIfExistsBehavior::new(
+    let if_exists_behavior = CreateIfExistsBehavior::new(
         create_or_replace,
         pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?,
     )?;
-    unimplemented!()
+    let function_name = pop_identifier(cql, iter)?;
+    let function_arg = pop_aggregate_signature(cql, iter)?;
+    pop_next_match(iter, SFuncKeyword)?;
+    let state_function = pop_identifier(cql, iter)?;
+    pop_next_match(iter, STypeKeyword)?;
+    let state_type = pop_cql_data_type(cql, iter)?;
+    let final_function = if peek_next_match(iter, FinalFuncKeyword)? {
+        iter.next();
+        Some(pop_identifier(cql, iter)?)
+    } else {
+        None
+    };
+    let init_condition = if peek_next_match(iter, InitCondKeyword)? {
+        advance_until(iter, Semicolon);
+        true
+    } else {
+        false
+    };
+    Ok(CreateAggregateStatement {
+        if_exists_behavior,
+        function_name,
+        function_arg,
+        state_function,
+        state_type,
+        final_function,
+        init_condition,
+    })
 }
 
 fn parse_create_function_statement(
@@ -73,7 +97,7 @@ fn parse_create_function_statement(
     iter: &mut Peekable<Iter<Token>>,
     create_or_replace: bool,
 ) -> ParseResult<CreateFunctionStatement> {
-    let if_exists = CreateIfExistsBehavior::new(
+    let if_exists_behavior = CreateIfExistsBehavior::new(
         create_or_replace,
         pop_sequence(iter, &[IfKeyword, NotKeyword, ExistsKeyword])?,
     )?;
@@ -97,7 +121,7 @@ fn parse_create_function_statement(
     pop_next_match(iter, AsKeyword)?;
     let function_body = pop_string_literal(cql, iter)?;
     Ok(CreateFunctionStatement {
-        if_exists,
+        if_exists_behavior,
         function_name,
         function_args,
         on_null_input,
@@ -108,10 +132,7 @@ fn parse_create_function_statement(
 }
 
 impl CreateIfExistsBehavior {
-    fn new(
-        create_or_replace: bool,
-        if_not_exists: bool,
-    ) -> Result<CreateIfExistsBehavior, anyhow::Error> {
+    fn new(create_or_replace: bool, if_not_exists: bool) -> ParseResult<CreateIfExistsBehavior> {
         if create_or_replace && if_not_exists {
             todo!("parse error")
         } else if create_or_replace {
