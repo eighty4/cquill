@@ -12,10 +12,11 @@ jobs:
   verified:
     runs-on: ubuntu-latest
     needs:
-      - build
+      - build-os-compat
       - fmt
       - lint
-      - test
+      - test-cql-compat
+      - test-os-compat
     steps:
       - run: echo "¡Verdes como tomatillos!"
 
@@ -23,43 +24,69 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup install stable
       - uses: swatinem/rust-cache@v2
-      - run: |
-          cargo fmt -v
-          git diff --exit-code
+      - run: cargo fmt -v
+      - run: git diff --exit-code
 
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup install stable
       - uses: swatinem/rust-cache@v2
       - run: cargo clippy -- -D warnings
 
-  build:
+  build-os-compat:
+    name: "build ${{ matrix.target }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: ubuntu-24.04
+            target: aarch64-unknown-linux-gnu
+            apt_package_linker: gcc-aarch64-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            apt_package_linker: gcc-aarch64-linux-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - if: ${{ matrix.apt_package_linker }}
+        run: |
+          sudo apt update && sudo apt install ${{ matrix.apt_package_linker }}
+          mkdir -p $HOME/.cargo
+          mv ./.github/workflows/linkers.toml $HOME/.cargo/config.toml
+      - run: rustup install stable
+      - uses: swatinem/rust-cache@v2
+      - run: rustup target add ${{ matrix.target}}
+      - run: cargo build --release --all-features --target ${{ matrix.target }}
+
+  test-cql-compat:
+    name: "test cql ${{ matrix.image_name }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          # https://doc.rust-lang.org/nightly/rustc/platform-support.html
-          - target: aarch64-unknown-linux-gnu
-          - target: i686-unknown-linux-gnu
-          - target: x86_64-unknown-linux-gnu
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          target: ${{ matrix.target }}
-      - uses: swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@cross
-      - run: cross build --release --all-features
-
-  test:
-    runs-on: ubuntu-latest
+          - image_name: cassandra:5.0
+          - image_name: cassandra:4.1
+          - image_name: cassandra:4.0
+          - image_name: cassandra:3.11
+          - image_name: scylladb/scylla:6.2
+          - image_name: scylladb/scylla:6.1
+          - image_name: scylladb/scylla:5.4
     services:
       scylladb:
-        image: scylladb/scylla:5.4
+        image: ${{ matrix.image_name }}
         ports:
           - 9042:9042
         options: >-
@@ -68,20 +95,31 @@ jobs:
           --health-interval 2s
           --health-timeout 5s
           --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup install stable
+      - uses: swatinem/rust-cache@v2
+      - run: cargo test
+
+  test-os-compat:
+    name: "test os ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
     strategy:
       matrix:
         include:
-          # https://doc.rust-lang.org/nightly/rustc/platform-support.html
-          - target: aarch64-unknown-linux-gnu
-          - target: i686-unknown-linux-gnu
-          - target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+          - os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          target: ${{ matrix.target }}
+      - if: matrix.os != 'macos-latest'
+        run: docker compose up cassandra_5_0 -d --wait
+      - if: matrix.os == 'macos-latest'
+        uses: homebrew/actions/setup-homebrew@master
+      - if: matrix.os == 'macos-latest'
+        run: |
+          brew install cassandra@5.0
+          /opt/homebrew/opt/cassandra/bin/cassandra -Djava.security.manager=allow
+      - run: rustup install stable
       - uses: swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@cross
-      - run: cross test --target ${{ matrix.target }}
-        env:
-          CROSS_CONTAINER_OPTS: --network host
+      - run: cargo test

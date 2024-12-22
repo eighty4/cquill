@@ -7,7 +7,59 @@
 # docs https://hub.docker.com/r/scylladb/scylla
 
 services:
-  scylladb:
+
+  cassandra_3:
+    container_name: cquill-cassandra
+    image: cassandra:3
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
+      start_period: 30s
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "9042:9042"   # CQL protocol
+
+  cassandra_4_1:
+    container_name: cquill-cassandra
+    image: cassandra:4.1
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
+      start_period: 30s
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "9042:9042"   # CQL protocol
+
+  cassandra_5_0:
+    container_name: cquill-cassandra
+    image: cassandra:5.0
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
+      start_period: 30s
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "9042:9042"   # CQL protocol
+
+  scylladb_6_2:
+    container_name: cquill-scylladb
+    image: scylladb/scylla:6.2
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
+      start_period: 30s
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "7001:7001"   # inter-node gossip
+      - "9042:9042"   # CQL protocol
+      - "9180:9180"   # Prometheus metrics
+      - "10000:10000" # ScyllaDB API
+
+  scylladb_5_4:
     container_name: cquill-scylladb
     image: scylladb/scylla:5.4
     healthcheck:

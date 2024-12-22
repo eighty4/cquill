@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -21,11 +20,6 @@ pub(crate) fn make_file(path: PathBuf, content: &str) {
         .expect("create file");
     f.write_all(content.as_bytes())
         .expect("write bytes to file");
-}
-
-pub(crate) fn error_panic(err: &dyn Display) -> ! {
-    println!("{err}");
-    panic!();
 }
 
 pub(crate) async fn cql_session() -> Session {

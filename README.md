@@ -25,6 +25,8 @@ The migration history table's keyspace, name and replication can be configured w
 
 ## Getting started
 
+Cquill can be used as a local binary built with Cargo/Rust, a Docker image, or as a Rust library.
+
 ### Install locally with Cargo
 
 Cargo will build the latest published version of Cquill with install:
@@ -47,8 +49,8 @@ docker run -it --rm -v $(pwd)/cql:/cquill/cql:ro -e CASSANDRA_NODE=cassandra --n
 
 ### Create a Docker image of versioned CQL sources
 
-In a containerized environment using CI/CD automation, versioning an artifact is ideal for workflow automation.
-Copy the release's CQL sources `./cql` relative to the `WORKDIR`:
+In a containerized environment using CI/CD automation, versioning CQL to distribute with  release is ideal for workflow
+automation. Copy the release's CQL sources `./cql` relative to the `WORKDIR`:
 
 ```dockerfile
 FROM 84tech/cquill
@@ -62,11 +64,25 @@ Given a `./cql` directory and a `cql.Dockerfile` build manifest, Docker build a 
 docker build -t my-api-cql:0.0.1 -f cql.Dockerfile .
 ```
 
+### Using Cquill as a library
+
+Rust projects can embed the Cquill crate into their project to keep an environment's CQL up-to-date as new versions of a
+project is deployed or run Cquill from unit tests.
+
+The examples show the [cquill::migrate_cql](/src/lib.rs) API that can be used directly from your Rust project. Check it
+out at [./examples/migrate.rs](/examples/migrate.rs) and run with `cargo run --example migrate`
+
 ## Contributing
 
 [Rust](https://rustup.rs/) and [Docker](https://www.docker.com/get-started/) are Cquill's only development dependencies.
 
-Use `docker compose up -d --wait` to launch a ScyllaDB instance for running `cargo test`.
+Use `docker compose` to launch a Cassandra or ScyllaDB instance for running `cargo test`. Each supported database
+version is configured in `docker-compose.yml` and the compose service name must be included in the `docker compose up`
+command:
+
+```shell
+docker compose up cassandra_4_1 -d --wait
+```
 
 CI checks on pull requests are detailed in the [verify.yml](.github/workflows/verify.yml) workflow. This workflow runs:
 
@@ -76,6 +92,8 @@ cargo clippy -- -D warnings
 cargo test
 cargo build --release
 ```
+
+The script `ci_verify.sh` will run all of these CI checks.
 
 ## Roadmap
 

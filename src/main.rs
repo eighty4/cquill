@@ -96,7 +96,7 @@ fn error_prefix() -> String {
     //        0 -> reset
     //       31 -> red foreground
     //        1 -> bold
-    "\x1b[0;31;1merror\x1b[0m".to_string()
+    "\x1b[0;31;1merror:\x1b[0m".to_string()
 }
 
 fn history_update_failed_exit(

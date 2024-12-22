@@ -138,7 +138,7 @@ mod tests {
         let migrate_result =
             perform(&harness.session, &harness.cql_files, harness.migrate_args()).await;
         match migrate_result {
-            Err(err) => test_utils::error_panic(&err),
+            Err(err) => panic!("{err}"),
             Ok(migrated_files) => {
                 assert_eq!(migrated_files.len(), 3);
             }
@@ -167,7 +167,7 @@ mod tests {
         let migrate_result =
             perform(&harness.session, &harness.cql_files, harness.migrate_args()).await;
         match migrate_result {
-            Err(err) => test_utils::error_panic(&err),
+            Err(err) => panic!("{err}"),
             Ok(migrated_files) => {
                 assert_eq!(migrated_files.len(), 2);
                 let migrated_file_names: Vec<&str> =
@@ -241,14 +241,11 @@ mod tests {
             Err(err) => match err {
                 MigrateError::PartialMigration { error_state } => {
                     assert_eq!(error_state.migrated.len(), 1);
-                    assert_eq!(error_state.migrated.get(0).unwrap().filename, "v001.cql");
+                    assert_eq!(error_state.migrated.first().unwrap().filename, "v001.cql");
                     assert!(error_state.failed_cql.is_some());
                     assert_eq!(error_state.failed_cql.unwrap().cql, "CREATE TABLE");
                     assert_eq!(error_state.failed_file.filename, "v002.cql");
-                    assert_eq!(
-                        error_state.error,
-                        "cql query error: Database returned an error: The submitted query has a syntax error, Error message: line 1:0 no viable alternative at input '<EOF>'"
-                    );
+                    assert!(error_state.error.starts_with("cql query error: Database returned an error: The submitted query has a syntax error, Error message:"));
                 }
                 _ => panic!("error was not a MigrateError::PartialMigration"),
             },
