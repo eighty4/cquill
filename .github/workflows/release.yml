@@ -13,7 +13,7 @@ on:
           - minor
           - patch
 
-concurrency: publish
+concurrency: release
 
 jobs:
 
@@ -25,35 +25,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Cargo semver bump
-        id: semver
-        env:
-          SEMVER_BUMP: ${{github.event.inputs.semver-bump}}
-        run: |
-          cargo install cargo-release
-          cargo release version $SEMVER_BUMP --no-confirm --execute
-          VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/[\"]/, "", $2); printf("%s",$2) }' Cargo.toml)
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Cargo publish
+      - run: rustup install stable
+      - uses: swatinem/rust-cache@v2
+      - run: cargo install cargo-release
+      - run: cargo release --no-confirm --execute $SEMVER_BUMP
         env:
           CARGO_REGISTRY_TOKEN: ${{secrets.CRATES_IO_API_TOKEN}}
-        run: cargo publish --allow-dirty
-      - name: Bump ver > git
-        env:
-          GH_TOKEN: ${{secrets.GH_TOKEN}}
+          SEMVER_BUMP: ${{github.event.inputs.semver-bump}}
+      - id: semver
         run: |
-          git config --global user.name "Adam McKee"
-          git config --global user.email "adam.be.g84d@gmail.com"
-          VERSION=${{steps.semver.outputs.version}}
-          BRANCH_NAME=bump-semver-$VERSION
-          git checkout -b $BRANCH_NAME
-          git commit -am "increment Cargo.toml version to $VERSION"
-          git push origin $BRANCH_NAME
-          gh pr create --base main --title "cargo publish $VERSION" --body "cargo publish $VERSION"
-          gh pr merge $BRANCH_NAME --auto --rebase
+          VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/[\"]/, "", $2); printf("%s",$2) }' Cargo.toml)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag_name=v$VERSION" >> "$GITHUB_OUTPUT"
     outputs:
       version: ${{steps.semver.outputs.version}}
+      tag_name: ${{steps.semver.outputs.tag_name}}
 
   push-docker-image:
     needs: publish-cargo-crate
@@ -65,196 +51,58 @@ jobs:
           username: 84tech
           password: ${{secrets.DOCKERHUB_TOKEN}}
       - name: docker
-        env:
-          VERSION: ${{needs.publish-cargo-crate.outputs.version}}
         run: |
           docker build -t 84tech/cquill --build-arg CQUILL_VERSION=$VERSION -f cquill.install.Dockerfile .
           docker tag 84tech/cquill 84tech/cquill:$VERSION
           docker push -a 84tech/cquill
+        env:
+          VERSION: ${{needs.publish-cargo-crate.outputs.version}}
 
-  create-release:
+  create-gh-release:
     runs-on: ubuntu-22.04
     needs: publish-cargo-crate
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.publish-cargo-crate.outputs.version }}
       - name: Create release
         id: create
         env:
-          GH_TOKEN: ${{secrets.GH_TOKEN}}
-          VERSION: ${{needs.publish-cargo-crate.outputs.version}}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.publish-cargo-crate.outputs.version }}
+          VERSION: ${{ needs.publish-cargo-crate.outputs.version }}
         run: |
+          NOTES=$(cat l3_cli/CHANGELOG.md | awk -v p="## $VERSION" -F":" '$0 ~ p{f=1;next} /## /{f=0} f')
           CREATED_RELEASE=$(gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            /repos/eighty4/cquill/releases \
-            -f tag_name="$VERSION" \
-            -f name="$VERSION" \
-            -f body="$VERSION release" \
+            /repos/eighty4/l3/releases \
+            -f tag_name="$TAG_NAME" \
+            -f name="CLI v$VERSION" \
+            -F body="# Release notes\r\n\r\n$NOTES" \
             -F draft=false \
             -F prerelease=false \
             -F generate_release_notes=false)
           echo "release_id=$(echo $CREATED_RELEASE | jq '.id')" >> "$GITHUB_OUTPUT"
           echo "upload_hostname=$(echo $CREATED_RELEASE | jq '.upload_url' | cut -d'/' -f3)" >> "$GITHUB_OUTPUT"
     outputs:
-      release_id: ${{steps.create.outputs.release_id}}
-      upload_hostname: ${{steps.create.outputs.upload_hostname}}
+      release_id: ${{ steps.create.outputs.release_id }}
+      tag_name: ${{ needs.publish-cargo-crate.outputs.tag_name }}
+      upload_hostname: ${{ steps.create.outputs.upload_hostname }}
 
-  publish-artifact-linux-arm64:
-    runs-on: ubuntu-22.04
-    needs:
-      - publish-cargo-crate
-      - create-release
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - name: install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
-      - name: build
-        env:
-          TAG: ${{needs.publish-cargo-crate.outputs.version}}
-          GH_TOKEN: ${{secrets.GH_TOKEN}}
-          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
-          UPLOAD_HOSTNAME: ${{needs.create-release.outputs.upload_hostname}}
-        run: |
-          FILENAME=cquill-linux-aarch64
-          TARGET=aarch64-unknown-linux-gnu
-          rustup target add $TARGET
-          cross build --release --target $TARGET
-          mv target/$TARGET/release/cquill $FILENAME
-          curl --fail --silent -L -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN"\
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: $(file $FILENAME -b --mime-type)" \
-            https://$UPLOAD_HOSTNAME/repos/eighty4/cquill/releases/$RELEASE_ID/assets?name=$FILENAME \
-            --data-binary "@$FILENAME"
+  publish-linux-and-mac:
+    needs: create-gh-release
+    uses: ./.github/workflows/publish.yml
+    with:
+      release_id: ${{ needs.create-gh-release.outputs.release_id }}
+      tag_name: ${{ needs.create-gh-release.outputs.tag_name }}
+      upload_hostname: ${{ needs.create-gh-release.outputs.upload_hostname }}
 
-#gh release upload $TAG $FILENAME
-
-  publish-artifact-linux-amd64:
-    runs-on: ubuntu-22.04
-    needs:
-      - publish-cargo-crate
-      - create-release
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - name: build
-        env:
-          TAG: ${{needs.publish-cargo-crate.outputs.version}}
-          GH_TOKEN: ${{secrets.GH_TOKEN}}
-          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
-          UPLOAD_HOSTNAME: ${{needs.create-release.outputs.upload_hostname}}
-        run: |
-          FILENAME=cquill-linux-x86_64
-          TARGET=x86_64-unknown-linux-gnu
-          rustup target add $TARGET
-          cargo build --release --target $TARGET
-          mv target/$TARGET/release/cquill $FILENAME
-          curl --fail --silent -L -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN"\
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: $(file $FILENAME -b --mime-type)" \
-            https://$UPLOAD_HOSTNAME/repos/eighty4/cquill/releases/$RELEASE_ID/assets?name=$FILENAME \
-            --data-binary "@$FILENAME"
-
-#gh release upload $TAG $FILENAME
-
-  publish-artifacts-macos:
-    runs-on: macos-14
-    needs:
-      - publish-cargo-crate
-      - create-release
-    strategy:
-      matrix:
-        include:
-          - cpu: aarch64
-          - cpu: x86_64
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - name: build
-        env:
-          TAG: ${{needs.publish-cargo-crate.outputs.version}}
-          GH_TOKEN: ${{secrets.GH_TOKEN}}
-          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
-          UPLOAD_HOSTNAME: ${{needs.create-release.outputs.upload_hostname}}
-        run: |
-          FILENAME=cquill-darwin-${{matrix.cpu}}
-          TARGET=${{matrix.cpu}}-apple-darwin
-          rustup target add $TARGET
-          cargo build --release --target $TARGET
-          mv target/$TARGET/release/cquill $FILENAME
-          curl --fail --silent -L -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN"\
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: $(file $FILENAME -b --mime-type)" \
-            https://$UPLOAD_HOSTNAME/repos/eighty4/cquill/releases/$RELEASE_ID/assets?name=$FILENAME \
-            --data-binary "@$FILENAME"
-
-#gh release upload $TAG $FILENAME
-
-  publish-artifacts-windows:
-    runs-on: windows-2022
-    needs:
-      - publish-cargo-crate
-      - create-release
-    strategy:
-      matrix:
-        include:
-          - cpu: aarch64
-          - cpu: x86_64
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: build
-        shell: powershell
-        env:
-          TAG: ${{needs.publish-cargo-crate.outputs.version}}
-          GH_TOKEN: ${{secrets.GH_TOKEN}}
-          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
-          UPLOAD_HOSTNAME: ${{needs.create-release.outputs.upload_hostname}}
-        run: |
-          $Filename = "cquill-windows-${{matrix.cpu}}.exe"
-          $Target = "${{matrix.cpu}}-pc-windows-msvc"
-          rustup target add $Target
-          cargo build --release --target $Target
-          Move-Item -Path target\$Target\release\cquill.exe -Destination $Filename
-          Move-Item -Path .github/workflows/upload_asset.mjs -Destination upload_asset.mjs
-          npm i @octokit/core
-          node upload_asset.mjs eighty4 cquill $env:RELEASE_ID $Filename application/x-dosexec $env:UPLOAD_HOSTNAME
-
-#gh release upload $env:TAG $Filename
-
-  cleanup-release-failure:
-    runs-on: ubuntu-22.04
-    needs:
-      - publish-cargo-crate
-      - create-release
-      - publish-artifact-linux-amd64
-      - publish-artifact-linux-arm64
-      - publish-artifacts-macos
-      - publish-artifacts-windows
-    if: ${{always() && (contains(needs.publish-artifact-linux-amd64.result, 'failure') || contains(needs.publish-artifact-linux-arm64.result, 'failure') || contains(needs.publish-artifacts-macos.result, 'failure') || contains(needs.publish-artifacts-windows.result, 'failure'))}}
-    steps:
-      - name: delete release
-        env:
-          RELEASE_ID: ${{needs.create-release.outputs.release_id}}
-          GH_TOKEN: ${{secrets.GH_TOKEN}}
-          TAG: ${{needs.publish-cargo-crate.outputs.version}}
-        run: |
-          gh api \
-            --method DELETE \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            /repos/eighty4/cquill/releases/$RELEASE_ID
-          git push --delete origin $TAG
+  publish-windows:
+    needs: create-gh-release
+    uses: ./.github/workflows/publish_windows.yml
+    with:
+      release_id: ${{ needs.create-gh-release.outputs.release_id }}
+      tag_name: ${{ needs.create-gh-release.outputs.tag_name }}
+      upload_hostname: ${{ needs.create-gh-release.outputs.upload_hostname }}

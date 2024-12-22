@@ -1,0 +1,49 @@
+name: Publish Windows
+run-name: "publish windows ${{ inputs.tag_name }}"
+
+on:
+  workflow_call:
+    inputs:
+      release_id:
+        required: true
+        type: string
+      tag_name:
+        required: true
+        type: string
+      upload_hostname:
+        required: true
+        type: string
+
+jobs:
+
+  publish-asset:
+    name: "publish ${{ matrix.filename}}"
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        include:
+          - filename: cquill-windows-aarch64.exe
+            target: aarch64-pc-windows-msvc
+          - filename: cquill-windows-x86_64.exe
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag_name }}
+      - run: rustup install stable
+      - uses: swatinem/rust-cache@v2
+      - run: rustup target add  ${{ matrix.target }}
+      - name: build
+        shell: powershell
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: upload
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          UPLOAD_HOSTNAME: ${{ inputs.upload_hostname }}
+        run: |
+          Move-Item -Path target\${{ matrix.target }}\release\cquill.exe -Destination ${{ matrix.filename }}
+          Move-Item -Path .github/workflows/windows_upload_asset.mjs -Destination upload_asset.mjs
+          npm i @octokit/core
+          node upload_asset.mjs eighty4 cquill $env:RELEASE_ID ${{ matrix.filename }} application/x-dosexec $env:UPLOAD_HOSTNAME
