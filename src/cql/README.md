@@ -9,22 +9,24 @@ Lexer, parser and AST for [CQL 3.0](https://cassandra.apache.org/doc/stable/cass
 
 ## todos
 
-- lexer
-  - maths
-  - types
-    - collections
-      - table column definitions
-      - insert collection constants
-      - update set, +, -, etc. operations
-    - datetime operations
-    - strings
-      - double-quoted case-sensitive identifiers
-  - lex <=> parse gotchas
-    - ValuesKeyword and values fn
-    - TtlKeyword and ttl fn
-  - error reporting
-    - miette?
-- parser
+- error reporting
+  - miette?
 - ast
-- https://issues.apache.org/jira/browse/CASSANDRA-18504
-- https://docs.datastax.com/en/cql-oss/3.3/cql/cql_reference/valid_literal_r.html
+  - expressions as ast nodes
+    - maths
+    - function calls
+    - literals
+      - strings
+      - maps
+      - booleans
+      - lists/sets
+- visitor and transform apis
+- lex <=> parse gotchas
+  - ValuesKeyword and values fn
+  - TtlKeyword and ttl fn
+- todo
+  - https://issues.apache.org/jira/browse/CASSANDRA-18504
+  - https://docs.datastax.com/en/cql-oss/3.3/cql/cql_reference/valid_literal_r.html
+  - https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#frozen
+  - https://cassandra.apache.org/doc/stable/cassandra/cql/types.html#dates
+  - https://cassandra.apache.org/doc/latest/cassandra/developing/cql/functions.html

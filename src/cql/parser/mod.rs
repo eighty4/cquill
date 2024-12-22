@@ -15,11 +15,11 @@ use crate::cql::ast::*;
 use crate::cql::lex::*;
 use crate::cql::parser::create::parse_create_statement;
 use crate::cql::parser::drop::parse_drop_statement;
+use crate::cql::parser::iter::pop_next_if;
 use std::iter::Peekable;
 use std::slice::Iter;
 use std::sync::Arc;
 use TokenName::*;
-use crate::cql::parser::iter::pop_next_if;
 
 pub type ParseResult<T> = Result<T, anyhow::Error>;
 

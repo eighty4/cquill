@@ -2,8 +2,8 @@ use crate::cql::ast::*;
 use crate::cql::lex::Token;
 use crate::cql::lex::TokenName::*;
 use crate::cql::parser::iter::{
-    pop_if_function_signature, pop_identifier, pop_keyspace_object_name
-    , pop_next_match, pop_sequence,
+    pop_identifier, pop_if_function_signature, pop_keyspace_object_name, pop_next_match,
+    pop_sequence,
 };
 use crate::cql::parser::ParseResult;
 use std::iter::Peekable;

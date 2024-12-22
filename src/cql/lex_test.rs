@@ -1,7 +1,7 @@
 use super::lex::*;
+use crate::cql::ast::StringStyle;
 use crate::cql::test_cql::*;
 use TokenName::*;
-use crate::cql::ast::StringStyle;
 
 fn tokenize_expect(cql: &'static str, expected: Vec<(TokenName, &str)>) {
     let result = Tokenizer::new(cql).tokenize().unwrap();
@@ -92,8 +92,8 @@ mod comments {
 }
 
 mod data_types {
-    use crate::cql::ast::StringStyle;
     use super::*;
+    use crate::cql::ast::StringStyle;
 
     #[test]
     fn test_digit() {
