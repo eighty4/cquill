@@ -110,8 +110,11 @@ jobs:
         include:
           - os: macos-latest
           - os: ubuntu-latest
+          - os: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - if: matrix.os == 'windows-latest'
+        run: wsl.exe -d Ubuntu -- bash "curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh ./get-docker.sh"
       - if: matrix.os != 'macos-latest'
         run: docker compose up cassandra_5_0 -d --wait
       - if: matrix.os == 'macos-latest'
