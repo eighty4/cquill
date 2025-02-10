@@ -5,9 +5,9 @@ use clap::{Parser, Subcommand};
 
 use cquill::MigrateError::HistoryUpdateFailed;
 use cquill::{
-    keyspace::*, migrate_cql, CassandraOpts, CqlFile, MigrateError, MigrateError::PartialMigration,
-    MigrateErrorState, MigrateOpts,
+    keyspace::*, CqlFile, MigrateError, MigrateError::PartialMigration, MigrateErrorState, Migrator,
 };
+use scylla::SessionBuilder;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -23,31 +23,37 @@ enum CquillCommand {
 
 #[derive(Parser, Debug)]
 struct MigrateCliArgs {
-    #[clap(short = 'd', long, value_name = "CQL_DIR", default_value = "./cql")]
+    #[arg(short = 'd', long, env = "CQL_DIR", default_value = "./cql")]
     cql_dir: PathBuf,
-    #[clap(long, value_name = "HISTORY_KEYSPACE", default_value = cquill::KEYSPACE)]
+    #[arg(long, env = "HISTORY_KEYSPACE", default_value = cquill::KEYSPACE)]
     history_keyspace: String,
-    #[clap(long, value_name = "HISTORY_REPLICATION", default_value = cquill::keyspace::REPLICATION)]
+    #[arg(long, env = "HISTORY_REPLICATION", default_value = cquill::keyspace::REPLICATION)]
     history_replication: String,
-    #[clap(long, value_name = "HISTORY_TABLE", default_value = cquill::TABLE)]
+    #[arg(long, env = "HISTORY_TABLE", default_value = cquill::TABLE)]
     history_table: String,
+    #[arg(long, env = "CQL_HOST")]
+    cql_host: String,
 }
 
 impl MigrateCliArgs {
-    fn to_opts(&self) -> MigrateOpts {
+    async fn into_migrator(self) -> Migrator {
         let replication_factor = match self.history_replication.parse::<ReplicationFactor>() {
             Ok(replication_factor) => replication_factor,
             Err(err) => error_exit(MigrateError::from(err)),
         };
-        MigrateOpts {
-            cassandra_opts: Some(CassandraOpts::default()),
-            cql_dir: self.cql_dir.clone(),
-            history_keyspace: Some(KeyspaceOpts {
-                name: self.history_keyspace.clone(),
+
+        let session = SessionBuilder::new()
+            .known_node(self.cql_host)
+            .build()
+            .await
+            .expect("Unable to create Scylla session");
+
+        Migrator::new(session.into(), self.cql_dir)
+            .with_keyspace(KeyspaceOpts {
+                name: self.history_keyspace,
                 replication: Some(replication_factor),
-            }),
-            history_table: Some(self.history_table.clone()),
-        }
+            })
+            .with_table_name(self.history_table)
     }
 }
 
@@ -60,11 +66,11 @@ async fn main() {
 }
 
 async fn migrate(args: MigrateCliArgs) {
-    let opts = args.to_opts();
+    let migrator = args.into_migrator().await;
     let version = env!("CARGO_PKG_VERSION");
-    let cql_dir = opts.cql_dir.to_string_lossy();
+    let cql_dir = migrator.migrations_dir.to_string_lossy();
     println!("CQuill {version}\nMigrating CQL files from {cql_dir}");
-    match migrate_cql(opts).await {
+    match migrator.run_pending().await {
         Ok(migrated_cql) => print_migrated_cql(&migrated_cql),
         Err(err) => match err {
             HistoryUpdateFailed {

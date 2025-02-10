@@ -1,17 +1,16 @@
+use std::env;
 use std::path::PathBuf;
 use std::process::exit;
 
 use cquill::*;
+use scylla::SessionBuilder;
 
 #[tokio::main]
 async fn main() {
-    let opts = MigrateOpts {
-        cassandra_opts: None,
-        cql_dir: PathBuf::from("examples/cql"),
-        history_keyspace: None,
-        history_table: None,
-    };
-    match migrate_cql(opts).await {
+    let host = env::var("CASSANDRA_HOST").unwrap();
+    let session = SessionBuilder::new().known_node(host).build().await.unwrap();
+    let migrator = Migrator::new(session.into(), PathBuf::from("examples/cql"));
+    match migrator.run_pending().await {
         Err(err) => {
             println!("EXAMPLE ERRORED: {}", err);
             exit(1);

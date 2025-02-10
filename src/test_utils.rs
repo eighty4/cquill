@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+use std::{env, fs};
 
 use rand::Rng;
 use scylla::Session;
@@ -10,7 +10,7 @@ use temp_dir::TempDir;
 use crate::cql_file::CqlFile;
 use crate::keyspace::KeyspaceOpts;
 use crate::migrate::MigrateArgs;
-use crate::{cql_file, queries, CassandraOpts, TABLE};
+use crate::{cql_file, queries, TABLE};
 
 pub(crate) fn make_file(path: PathBuf, content: &str) {
     let mut f = fs::OpenOptions::new()
@@ -23,7 +23,7 @@ pub(crate) fn make_file(path: PathBuf, content: &str) {
 }
 
 pub(crate) async fn cql_session() -> Session {
-    let node_address = CassandraOpts::default().node_address();
+    let node_address = env::var("CASSANDRA_NODE").expect("CASSANDRA_NODE must be set for tests");
     scylla::SessionBuilder::new()
         .known_node(node_address)
         .build()
