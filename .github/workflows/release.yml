@@ -78,15 +78,17 @@ jobs:
           TAG_NAME: ${{ needs.publish-cargo-crate.outputs.version }}
           VERSION: ${{ needs.publish-cargo-crate.outputs.version }}
         run: |
-          NOTES=$(cat l3_cli/CHANGELOG.md | awk -v p="## $VERSION" -F":" '$0 ~ p{f=1;next} /## /{f=0} f')
-          CREATED_RELEASE=$(gh api \
+          CHANGELOG=$(./.github/workflows/changelog_get.sh CHANGELOG.md $VERSION)
+          CRATES_URL="https://crates.io/crates/cquill/$VERSION"
+          RELEASE_NOTES="[Published on crates.io]($CRATES_URL)\r\n\r\n### Release notes\r\n\r\n$CHANGELOG"
+          CREATED_RELEASE=$(echo "$RELEASE_NOTES" | gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             /repos/eighty4/l3/releases \
             -f tag_name="$TAG_NAME" \
             -f name="CLI v$VERSION" \
-            -F body="# Release notes\r\n\r\n$NOTES" \
+            -F body=@- \
             -F draft=false \
             -F prerelease=false \
             -F generate_release_notes=false)
