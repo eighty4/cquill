@@ -20,8 +20,14 @@ jobs:
   verified:
     uses: ./.github/workflows/verify.yml
 
+  check-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./.github/workflows/changelog_check.sh CHANGELOG.md
+
   publish-cargo-crate:
-    needs: verified
+    needs: [ verified, check-changelog ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
