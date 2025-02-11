@@ -6,7 +6,7 @@ pub(crate) async fn create(
     table_name: &String,
 ) -> Result<(), QueryError> {
     let cql = format!("create table {keyspace_name}.{table_name} (id timeuuid primary key, ver smallint, name varchar, hash varchar)");
-    session.query(cql, ()).await?;
+    session.query_unpaged(cql, ()).await?;
     Ok(())
 }
 
@@ -17,7 +17,7 @@ pub(crate) async fn drop(
     table_name: &String,
 ) -> Result<(), QueryError> {
     session
-        .query(format!("drop table {keyspace_name}.{table_name}"), ())
+        .query_unpaged(format!("drop table {keyspace_name}.{table_name}"), ())
         .await?;
     Ok(())
 }

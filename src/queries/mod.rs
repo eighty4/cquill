@@ -1,4 +1,6 @@
+use scylla::deserialize::DeserializationError;
 use scylla::transport::errors::QueryError as ScyllaQueryError;
+use scylla::transport::query_result::{IntoRowsResultError, RowsError};
 use scylla::Session;
 
 use crate::keyspace::KeyspaceOpts;
@@ -13,6 +15,21 @@ pub enum QueryError {
         #[from]
         source: ScyllaQueryError,
     },
+    #[error("cql result row metadata deserialize error: {source}")]
+    RowsDeserializeError {
+        #[from]
+        source: RowsError,
+    },
+    #[error("cql result fetch error: {source}")]
+    QueryIntoRowsError {
+        #[from]
+        source: IntoRowsResultError,
+    },
+    #[error("cql result deserialize error: {source}")]
+    ResultDeserializeError {
+        #[from]
+        source: DeserializationError,
+    },
     #[error("{source}")]
     Other {
         #[from]
@@ -21,6 +38,6 @@ pub enum QueryError {
 }
 
 pub(crate) async fn exec(session: &Session, query: String) -> Result<(), QueryError> {
-    session.query(query, ()).await?;
+    session.query_unpaged(query, ()).await?;
     Ok(())
 }

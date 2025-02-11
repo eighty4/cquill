@@ -45,7 +45,7 @@ pub(crate) async fn create_keyspace_from_opts(session: &Session, keyspace_opts: 
 
 pub(crate) async fn drop_table(session: &Session, keyspace_name: &String, table_name: &String) {
     session
-        .query(format!("drop table {keyspace_name}.{table_name}"), ())
+        .query_unpaged(format!("drop table {keyspace_name}.{table_name}"), ())
         .await
         .expect("drop table");
 }

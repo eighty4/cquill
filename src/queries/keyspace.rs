@@ -11,14 +11,14 @@ pub(crate) async fn create(
     keyspace_opts: &KeyspaceOpts,
 ) -> Result<(), QueryError> {
     let cql = create_keyspace_cql(keyspace_opts)?;
-    session.query(cql, ()).await?;
+    session.query_unpaged(cql, ()).await?;
     Ok(())
 }
 
 #[allow(dead_code)]
 pub(crate) async fn drop(session: &Session, keyspace_name: &String) -> Result<(), QueryError> {
     let cql = format!("drop keyspace {keyspace_name}");
-    session.query(cql, ()).await?;
+    session.query_unpaged(cql, ()).await?;
     Ok(())
 }
 
@@ -98,7 +98,7 @@ mod tests {
             panic!();
         }
         session
-            .query(format!("drop keyspace {keyspace_name}"), ())
+            .query_unpaged(format!("drop keyspace {keyspace_name}"), ())
             .await
             .unwrap_or_else(|_| panic!("failed dropping keyspace {keyspace_name}"));
     }
@@ -112,7 +112,7 @@ mod tests {
             panic!();
         }
         session
-            .query(format!("drop keyspace {}", keyspace_opts.name), ())
+            .query_unpaged(format!("drop keyspace {}", keyspace_opts.name), ())
             .await
             .unwrap_or_else(|_| panic!("failed dropping keyspace {}", keyspace_opts.name));
     }
