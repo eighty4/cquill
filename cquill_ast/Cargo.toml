@@ -1,0 +1,19 @@
+[package]
+name = "cquill_ast"
+version = "0.0.1"
+edition = "2024"
+
+# description = ""
+# authors = { workspace = true }
+# edition = { workspace = true }
+# homepage = { workspace = true }
+# license = { workspace = true }
+# repository = { workspace = true }
+
+[dependencies]
+anyhow = "1.0.81"
+thiserror = "2.0.12"
+uuid = "1.19.0"
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"
