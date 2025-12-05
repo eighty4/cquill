@@ -1,4 +1,4 @@
-![CI](https://img.shields.io/github/actions/workflow/status/eighty4/cquill/verify.yml)
+![CI](https://img.shields.io/github/actions/workflow/status/eighty4/cquill/ci_verify.yml)
 
 # Versioned CQL migrations for Cassandra and ScyllaDB
 

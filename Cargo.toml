@@ -1,5 +1,5 @@
 [workspace]
-members = ["cquill"]
+members = ["cquill", "cquill_ast"]
 resolver = "2"
 
 [workspace.package]
@@ -12,6 +12,7 @@ homepage = "https://github.com/eighty4/cquill"
 [workspace.dependencies]
 anyhow = "1.0.81"
 thiserror = "2.0.17"
+uuid = "1.19.0"
 
 [profile.release]
 lto = "fat"
