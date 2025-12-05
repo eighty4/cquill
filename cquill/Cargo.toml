@@ -1,0 +1,33 @@
+[package]
+name = "cquill"
+version = "0.0.9"
+description = "Versioned CQL migrations for Cassandra and ScyllaDB"
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+# exclude = [".*", "Dockerfile", "docker-compose.yml"]
+# build = false
+
+[lib]
+name = "cquill"
+
+[[bin]]
+name = "cquill"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { version = "4.5.3", features = ["derive"] }
+lazy_static = "1.4.0"
+md5 = "0.7.0"
+regex = "1.10.3"
+scylla = "0.12.0"
+thiserror = { workspace = true }
+tokio = { version = "1.36.0", features = ["full"] }
+uuid = "1.7.0"
+
+[dev-dependencies]
+rand = "0.8.5"
+temp-dir = "0.1.12"

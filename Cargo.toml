@@ -1,39 +1,19 @@
-[package]
-name = "cquill"
-version = "0.0.9"
+[workspace]
+members = ["cquill"]
+resolver = "2"
+
+[workspace.package]
+authors = ["Adam McKee <adam.be.g84d@gmail.com>"]
 edition = "2024"
-license = "MIT"
-description = "Versioned CQL migrations for Cassandra and ScyllaDB"
-keywords = ["cicd", "cql", "migration", "Cassandra", "ScyllaDB"]
-authors = ["Adam McKee Bennett <adam.be.g84d@gmail.com>"]
-homepage = "https://github.com/eighty4/cquill"
+license = "BSD-2-Clause"
 repository = "https://github.com/eighty4/cquill"
-exclude = [".*", "Dockerfile", "docker-compose.yml"]
-build = false
+homepage = "https://github.com/eighty4/cquill"
+
+[workspace.dependencies]
+anyhow = "1.0.81"
+thiserror = "1.0.58"
 
 [profile.release]
 lto = "fat"
 opt-level = 3
 strip = "symbols"
-
-[lib]
-name = "cquill"
-
-[[bin]]
-name = "cquill"
-path = "src/main.rs"
-
-[dependencies]
-anyhow = "1.0.81"
-clap = { version = "4.5.3", features = ["derive"] }
-lazy_static = "1.4.0"
-md5 = "0.7.0"
-regex = "1.10.3"
-scylla = "0.12.0"
-thiserror = "1.0.58"
-tokio = { version = "1.36.0", features = ["full"] }
-uuid = "1.7.0"
-
-[dev-dependencies]
-rand = "0.8.5"
-temp-dir = "0.1.12"
