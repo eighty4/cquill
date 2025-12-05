@@ -1,5 +1,4 @@
-use scylla::Session;
-use scylla::transport::errors::QueryError as ScyllaQueryError;
+use scylla::client::session::Session;
 
 use crate::keyspace::KeyspaceOpts;
 
@@ -8,19 +7,16 @@ pub(crate) mod migrated;
 
 #[derive(thiserror::Error, Debug)]
 pub enum QueryError {
-    #[error("cql query error: {source}")]
-    TransportError {
-        #[from]
-        source: ScyllaQueryError,
-    },
-    #[error("{source}")]
-    Other {
-        #[from]
-        source: anyhow::Error,
-    },
+    #[error("{0}")]
+    Deserialize(String),
+    #[error("{0}")]
+    Execution(String),
 }
 
 pub(crate) async fn exec(session: &Session, query: String) -> Result<(), QueryError> {
-    session.query(query, ()).await?;
+    session
+        .query_unpaged(query, ())
+        .await
+        .map_err(|err| QueryError::Execution(err.to_string()))?;
     Ok(())
 }

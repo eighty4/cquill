@@ -4,7 +4,7 @@ use std::str::{FromStr, Split};
 use anyhow::{Result, anyhow};
 use lazy_static::lazy_static;
 use regex::Regex;
-use scylla::Session;
+use scylla::client::session::Session;
 
 use crate::keyspace::ReplicationFactor::*;
 
@@ -132,15 +132,12 @@ impl FromStr for ReplicationFactor {
     }
 }
 
-pub(crate) fn table_names_from_session_metadata(
+pub(crate) fn get_keyspace_table_names(
     session: &Session,
     keyspace_name: &String,
 ) -> Result<Vec<String>> {
-    let cluster_data = session.get_cluster_data();
-    match cluster_data
-        .get_keyspace_info()
-        .get(keyspace_name.to_lowercase().as_str())
-    {
+    let cluster_state = session.get_cluster_state();
+    match cluster_state.get_keyspace(keyspace_name.to_lowercase().as_str()) {
         None => Err(anyhow!("keyspace {keyspace_name} does not exist")),
         Some(keyspace) => Ok(keyspace.tables.keys().cloned().collect()),
     }
@@ -280,7 +277,7 @@ mod tests {
 
         assert_table_names(
             &harness.cquill_table,
-            table_names_from_session_metadata(&harness.session, &harness.cquill_keyspace),
+            get_keyspace_table_names(&harness.session, &harness.cquill_keyspace),
         );
 
         harness.drop_keyspace().await;
@@ -292,7 +289,7 @@ mod tests {
 
         assert_table_names(
             &harness.cquill_table,
-            table_names_from_session_metadata(
+            get_keyspace_table_names(
                 &harness.session,
                 &harness.cquill_keyspace.to_ascii_uppercase(),
             ),
@@ -316,7 +313,7 @@ mod tests {
         let session = test_utils::cql_session().await;
         let keyspace_name = test_utils::keyspace_name();
 
-        if table_names_from_session_metadata(&session, &keyspace_name).is_ok() {
+        if get_keyspace_table_names(&session, &keyspace_name).is_ok() {
             panic!()
         }
     }
@@ -326,7 +323,7 @@ mod tests {
         let session = test_utils::cql_session().await;
         let keyspace_opts = test_utils::create_keyspace(&session).await;
 
-        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+        match get_keyspace_table_names(&session, &keyspace_opts.name) {
             Ok(table_names) => assert!(table_names.is_empty()),
             Err(_) => panic!(),
         }
@@ -346,7 +343,7 @@ mod tests {
         )
         .await;
 
-        match table_names_from_session_metadata(&harness.session, &harness.cquill_keyspace) {
+        match get_keyspace_table_names(&harness.session, &harness.cquill_keyspace) {
             Ok(table_names) => assert!(table_names.is_empty()),
             Err(_) => panic!(),
         }
@@ -361,7 +358,7 @@ mod tests {
             .await
             .expect("drop keyspace");
 
-        if table_names_from_session_metadata(&harness.session, &harness.cquill_keyspace).is_ok() {
+        if get_keyspace_table_names(&harness.session, &harness.cquill_keyspace).is_ok() {
             panic!()
         }
     }

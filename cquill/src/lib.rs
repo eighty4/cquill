@@ -1,12 +1,13 @@
 use std::{path::PathBuf, str};
 
 use anyhow::{Result, anyhow};
-use scylla::Session;
+use scylla::client::session::Session;
+use scylla::client::session_builder::SessionBuilder;
 
 pub use crate::cql_file::CqlFile;
-use crate::keyspace::*;
 pub use crate::migrate::{MigrateError, MigrateErrorState};
 use crate::queries::*;
+use crate::{keyspace::*, queries::keyspace::CreateKeyspaceError};
 
 mod cql_file;
 pub mod keyspace;
@@ -79,8 +80,8 @@ async fn prepare_cquill_keyspace(
     session: &Session,
     keyspace: &KeyspaceOpts,
     table_name: &String,
-) -> Result<()> {
-    let create_table: bool = match table_names_from_session_metadata(session, &keyspace.name) {
+) -> Result<(), CreateKeyspaceError> {
+    let create_table: bool = match get_keyspace_table_names(session, &keyspace.name) {
         Ok(table_names) => !table_names.contains(table_name),
         Err(_) => {
             queries::keyspace::create(session, keyspace).await?;
@@ -94,7 +95,7 @@ async fn prepare_cquill_keyspace(
 }
 
 async fn cql_session(node_address: String) -> Result<Session> {
-    let connecting = scylla::SessionBuilder::new()
+    let connecting = SessionBuilder::new()
         .known_node(&node_address)
         .build()
         .await;
@@ -137,7 +138,7 @@ mod tests {
             println!("{err}");
             panic!();
         }
-        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+        match get_keyspace_table_names(&session, &keyspace_opts.name) {
             Ok(table_names) => assert!(table_names.contains(&table_name)),
             Err(_) => panic!(),
         }
@@ -156,7 +157,7 @@ mod tests {
         prepare_cquill_keyspace(&session, &keyspace_opts, &table_name)
             .await
             .expect("prepare keyspace");
-        match table_names_from_session_metadata(&session, &keyspace_opts.name) {
+        match get_keyspace_table_names(&session, &keyspace_opts.name) {
             Ok(table_names) => assert!(table_names.contains(&table_name)),
             Err(_) => panic!(),
         }
@@ -177,7 +178,7 @@ mod tests {
         )
         .await
         .expect("prepare keyspace");
-        match table_names_from_session_metadata(&harness.session, &harness.cquill_keyspace) {
+        match get_keyspace_table_names(&harness.session, &harness.cquill_keyspace) {
             Ok(table_names) => assert!(table_names.contains(&harness.cquill_table)),
             Err(_) => panic!(),
         }

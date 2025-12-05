@@ -4,7 +4,8 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use rand::Rng;
-use scylla::Session;
+use scylla::client::session::Session;
+use scylla::client::session_builder::SessionBuilder;
 use temp_dir::TempDir;
 
 use crate::cql_file::CqlFile;
@@ -25,7 +26,7 @@ pub(crate) fn make_file(path: PathBuf, content: &str) {
 
 pub(crate) async fn cql_session() -> Session {
     let node_address = CassandraOpts::default().node_address();
-    scylla::SessionBuilder::new()
+    SessionBuilder::new()
         .known_node(node_address)
         .build()
         .await
@@ -46,15 +47,15 @@ pub(crate) async fn create_keyspace_from_opts(session: &Session, keyspace_opts: 
 
 pub(crate) async fn drop_table(session: &Session, keyspace_name: &String, table_name: &String) {
     session
-        .query(format!("drop table {keyspace_name}.{table_name}"), ())
+        .query_unpaged(format!("drop table {keyspace_name}.{table_name}"), ())
         .await
         .expect("drop table");
 }
 
 fn alphanumeric_str(len: u8) -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     (0..len)
-        .map(|_| rng.sample(rand::distributions::Alphanumeric) as char)
+        .map(|_| rng.sample(rand::distr::Alphanumeric) as char)
         .map(|c| c.to_ascii_lowercase())
         .collect()
 }

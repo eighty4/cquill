@@ -11,7 +11,7 @@ homepage = "https://github.com/eighty4/cquill"
 
 [workspace.dependencies]
 anyhow = "1.0.81"
-thiserror = "1.0.58"
+thiserror = "2.0.17"
 
 [profile.release]
 lto = "fat"

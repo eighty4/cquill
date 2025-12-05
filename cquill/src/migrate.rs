@@ -2,11 +2,12 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use scylla::Session;
+use scylla::client::session::Session;
 
 use crate::cql_file::{CqlFile, CqlStatement};
 use crate::queries;
 use crate::queries::QueryError;
+use crate::queries::keyspace::CreateKeyspaceError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MigrateError {
@@ -33,6 +34,8 @@ pub enum MigrateError {
     },
     #[error("errored during migrate of '{0}': {1}", error_state.failed_file.filename, error_state.error)]
     PartialMigration { error_state: Box<MigrateErrorState> },
+    #[error(transparent)]
+    PrepareKeyspaceError(#[from] CreateKeyspaceError),
     #[error("{source}")]
     Other {
         #[from]
@@ -249,7 +252,7 @@ mod tests {
                     assert!(error_state.failed_cql.is_some());
                     assert_eq!(error_state.failed_cql.unwrap().cql, "CREATE TABLE");
                     assert_eq!(error_state.failed_file.filename, "v002.cql");
-                    assert!(error_state.error.starts_with("cql query error: Database returned an error: The submitted query has a syntax error, Error message:"));
+                    assert!(error_state.error.starts_with("Database returned an error: The submitted query has a syntax error, Error message:"));
                 }
                 _ => panic!("error was not a MigrateError::PartialMigration"),
             },

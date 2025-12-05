@@ -6,25 +6,39 @@ use crate::keyspace::ReplicationFactor::*;
 
 use super::*;
 
+#[derive(Debug, thiserror::Error)]
+pub enum CreateKeyspaceError {
+    #[error(transparent)]
+    CqlQueryError(#[from] QueryError),
+    #[error(transparent)]
+    InvalidKeyspace(#[from] anyhow::Error),
+}
+
 pub(crate) async fn create(
     session: &Session,
     keyspace_opts: &KeyspaceOpts,
-) -> Result<(), QueryError> {
+) -> Result<(), CreateKeyspaceError> {
     let cql = create_keyspace_cql(keyspace_opts)?;
-    session.query(cql, ()).await?;
+    session
+        .query_unpaged(cql, ())
+        .await
+        .map_err(|err| QueryError::Execution(err.to_string()))?;
     Ok(())
 }
 
 #[allow(dead_code)]
 pub(crate) async fn drop(session: &Session, keyspace_name: &String) -> Result<(), QueryError> {
     let cql = format!("drop keyspace {keyspace_name}");
-    session.query(cql, ()).await?;
+    session
+        .query_unpaged(cql, ())
+        .await
+        .map_err(|err| QueryError::Execution(err.to_string()))?;
     Ok(())
 }
 
-fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String, QueryError> {
+fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String, anyhow::Error> {
     if keyspace_opts.name.is_empty() {
-        return Err(QueryError::from(anyhow!("keyspace has empty name")));
+        return Err(anyhow!("keyspace has empty name"));
     }
     let replication = match &keyspace_opts.replication {
         Some(r) => match r {
@@ -42,11 +56,7 @@ fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String, QueryErro
             "create keyspace {} with replication = {}",
             keyspace_opts.name, r
         )),
-        Err(e) => Err(QueryError::from(anyhow!(
-            "keyspace {} {}",
-            keyspace_opts.name,
-            e,
-        ))),
+        Err(e) => Err(anyhow!("keyspace {} {}", keyspace_opts.name, e,)),
     }
 }
 
@@ -98,7 +108,7 @@ mod tests {
             panic!();
         }
         session
-            .query(format!("drop keyspace {keyspace_name}"), ())
+            .query_unpaged(format!("drop keyspace {keyspace_name}"), ())
             .await
             .unwrap_or_else(|_| panic!("failed dropping keyspace {keyspace_name}"));
     }
@@ -112,7 +122,7 @@ mod tests {
             panic!();
         }
         session
-            .query(format!("drop keyspace {}", keyspace_opts.name), ())
+            .query_unpaged(format!("drop keyspace {}", keyspace_opts.name), ())
             .await
             .unwrap_or_else(|_| panic!("failed dropping keyspace {}", keyspace_opts.name));
     }

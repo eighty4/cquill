@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use scylla::frame::value::CqlTimeuuid;
-use scylla::{IntoTypedRows, Session};
+use scylla::client::session::Session;
+use scylla::value::CqlTimeuuid;
 
 use crate::cql_file::CqlFile;
 use crate::queries::QueryError;
@@ -15,7 +15,10 @@ pub(crate) async fn insert(
     let cql =
         format!("insert into {keyspace}.{table} (id, ver, name, hash) values (now(), ?, ?, ?)");
     let values = (&cql_file.version, &cql_file.filename, &cql_file.hash);
-    session.query(cql, values).await?;
+    session
+        .query_unpaged(cql, values)
+        .await
+        .map_err(|err| QueryError::Execution(err.to_string()))?;
     Ok(())
 }
 
@@ -26,22 +29,29 @@ pub(crate) async fn select_all(
     cql_dir: &Path,
 ) -> Result<Vec<CqlFile>, QueryError> {
     let cql = format!("select id, name, hash, ver from {keyspace}.{table}");
-    let query_result = session.query(cql, ()).await?;
+    let query_result = session
+        .query_unpaged(cql, ())
+        .await
+        .map_err(|err| QueryError::Execution(err.to_string()))?;
     let mut result = Vec::new();
-    if let Some(rows) = query_result.rows {
-        for row_result in rows.into_typed::<(CqlTimeuuid, String, String, i16)>() {
-            let row_values = row_result.unwrap();
-            let filename = row_values.1;
-            let hash = row_values.2;
-            let path = cql_dir.join(&filename);
-            let version = row_values.3;
-            result.push(CqlFile {
-                filename,
-                hash,
-                path,
-                version,
-            })
-        }
+    let rows_result = query_result
+        .into_rows_result()
+        .map_err(|err| QueryError::Deserialize(err.to_string()))?;
+    for row_result in rows_result
+        .rows::<(CqlTimeuuid, String, String, i16)>()
+        .map_err(|err| QueryError::Deserialize(err.to_string()))?
+    {
+        let row_values = row_result.unwrap();
+        let filename = row_values.1;
+        let hash = row_values.2;
+        let path = cql_dir.join(&filename);
+        let version = row_values.3;
+        result.push(CqlFile {
+            filename,
+            hash,
+            path,
+            version,
+        })
     }
     result.sort_by(|a, b| a.version.cmp(&b.version));
     Ok(result)
@@ -77,15 +87,18 @@ mod tests {
             "select id, ver, name, hash from {}.{}",
             harness.cquill_keyspace, harness.cquill_table
         );
-        match harness.session.query(select_cql, ()).await {
+        match harness.session.query_unpaged(select_cql, ()).await {
             Err(err) => {
                 println!("{err}");
                 panic!();
             }
             Ok(query_result) => {
-                let rows = query_result.rows.unwrap();
-                assert_eq!(rows.len(), 1);
-                for row_result in rows.into_typed::<(CqlTimeuuid, i16, String, String)>() {
+                let rows_result = query_result.into_rows_result().unwrap();
+                assert_eq!(rows_result.rows_num(), 1);
+                for row_result in rows_result
+                    .rows::<(CqlTimeuuid, i16, String, String)>()
+                    .unwrap()
+                {
                     match row_result {
                         Err(err) => {
                             println!("{err}");
