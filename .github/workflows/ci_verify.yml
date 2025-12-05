@@ -15,6 +15,7 @@ jobs:
       - build-os-compat
       - fmt
       - lint
+      - examples
       - test-cql-compat
       - test-os-compat
     steps:
@@ -73,6 +74,15 @@ jobs:
       - uses: swatinem/rust-cache@v2
       - run: rustup target add ${{ matrix.target}}
       - run: cargo build -p cquill --release --all-features --target ${{ matrix.target }}
+
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose up cassandra_5_0 -d --wait
+      - run: rustup install stable
+      - uses: swatinem/rust-cache@v2
+      - run: cargo run -p cquill --example migrate
 
   test-cql-compat:
     name: "test cql ${{ matrix.image_name }}"
