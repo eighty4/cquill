@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::str::{FromStr, Split};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use lazy_static::lazy_static;
 use regex::Regex;
 use scylla::Session;
@@ -87,7 +87,9 @@ impl FromStr for ReplicationFactor {
             Some(replication_class) => match replication_class.as_str() {
                 "NetworkTopologyStrategy" => {
                     if fields.is_empty() {
-                        return Err(anyhow!("network replication must specify at least one datacenter's replication factor"));
+                        return Err(anyhow!(
+                            "network replication must specify at least one datacenter's replication factor"
+                        ));
                     }
                     let mut datacenter_factors: HashMap<String, u8> = HashMap::new();
                     lazy_static! {
@@ -102,7 +104,11 @@ impl FromStr for ReplicationFactor {
                             Ok(factor) => {
                                 datacenter_factors.insert(datacenter.clone(), factor);
                             }
-                            Err(_) => return Err(anyhow!("replication factor {datacenter} for datacenter {factor_string} must be a number"))
+                            Err(_) => {
+                                return Err(anyhow!(
+                                    "replication factor {datacenter} for datacenter {factor_string} must be a number"
+                                ));
+                            }
                         }
                     }
                     Ok(NetworkTopologyStrategy { datacenter_factors })

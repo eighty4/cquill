@@ -17,7 +17,9 @@ pub enum MigrateError {
         #[from]
         source: QueryError,
     },
-    #[error("previously migrated file '{filename}' has been modified (its current contents do not match the migrated cql file's content hash recorded in {cquill_keyspace}.{cquill_table})")]
+    #[error(
+        "previously migrated file '{filename}' has been modified (its current contents do not match the migrated cql file's content hash recorded in {cquill_keyspace}.{cquill_table})"
+    )]
     HashConflict {
         filename: String,
         cquill_keyspace: String,
@@ -208,8 +210,10 @@ mod tests {
             Err(err) => {
                 assert_eq!(
                     err.to_string(),
-                    format!("previously migrated file 'v001.cql' has been modified (its current contents do not match the migrated cql file's content hash recorded in {}.{})",
-                            harness.cquill_keyspace, harness.cquill_table)
+                    format!(
+                        "previously migrated file 'v001.cql' has been modified (its current contents do not match the migrated cql file's content hash recorded in {}.{})",
+                        harness.cquill_keyspace, harness.cquill_table
+                    )
                 );
             }
         }

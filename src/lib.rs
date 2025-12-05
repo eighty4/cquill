@@ -1,6 +1,6 @@
 use std::{path::PathBuf, str};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use scylla::Session;
 
 pub use crate::cql_file::CqlFile;

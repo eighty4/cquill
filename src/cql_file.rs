@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -82,7 +82,7 @@ impl CqlFile {
         let mut statement_begin_index: usize = 0;
         let mut statement_begin_line: usize = 0;
         let mut statements: Vec<CqlStatement> = Vec::new();
-        for (char_index, c) in cql.chars().enumerate() {
+        for (char_index, c) in cql.char_indices() {
             if c == '/' && prev_c == '*' {
                 if let Some(i) = block_comment_begin {
                     comments.push((i, char_index + 1));
@@ -216,14 +216,13 @@ fn read_cql_file_paths(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
 }
 
 fn is_inclusive_cql_filename(path: &Path) -> bool {
-    if path.is_file() {
-        if let Some(file_name) = path.file_name() {
-            if let Some(extension) = path.extension() {
-                if extension == "cql" && !file_name.to_string_lossy().starts_with('_') {
-                    return true;
-                }
-            }
-        }
+    if path.is_file()
+        && let Some(file_name) = path.file_name()
+        && let Some(extension) = path.extension()
+        && extension == "cql"
+        && !file_name.to_string_lossy().starts_with('_')
+    {
+        return true;
     }
     false
 }
@@ -389,11 +388,10 @@ mod tests {
     fn test_cql_file_read_statements_line_comment_out_statement_ending() {
         read_statements_test(
             "create table big_business_data (--id timeuuid primary key);\nanother_id uuid primary key);",
-            vec!(
-                CqlStatement {
-                    cql: "create table big_business_data ( another_id uuid primary key)".to_string(),
-                    lines: (1, 2),
-                })
+            vec![CqlStatement {
+                cql: "create table big_business_data ( another_id uuid primary key)".to_string(),
+                lines: (1, 2),
+            }],
         );
     }
 

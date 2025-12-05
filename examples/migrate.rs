@@ -17,15 +17,19 @@ async fn main() {
             exit(1);
         }
         Ok(migrated_cql_files) => {
-            println!(
-                "✔ {} cql file(s) migrated: {}",
-                migrated_cql_files.len(),
-                migrated_cql_files
-                    .iter()
-                    .map(|f| f.filename.clone())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
+            if migrated_cql_files.is_empty() {
+                println!("already up-to-date!");
+            } else {
+                println!(
+                    "✔ {} cql file(s) migrated: {}",
+                    migrated_cql_files.len(),
+                    migrated_cql_files
+                        .iter()
+                        .map(|f| f.filename.clone())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+            }
         }
     };
 }

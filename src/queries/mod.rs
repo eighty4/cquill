@@ -1,5 +1,5 @@
-use scylla::transport::errors::QueryError as ScyllaQueryError;
 use scylla::Session;
+use scylla::transport::errors::QueryError as ScyllaQueryError;
 
 use crate::keyspace::KeyspaceOpts;
 

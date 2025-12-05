@@ -5,7 +5,9 @@ pub(crate) async fn create(
     keyspace_name: &String,
     table_name: &String,
 ) -> Result<(), QueryError> {
-    let cql = format!("create table {keyspace_name}.{table_name} (id timeuuid primary key, ver smallint, name varchar, hash varchar)");
+    let cql = format!(
+        "create table {keyspace_name}.{table_name} (id timeuuid primary key, ver smallint, name varchar, hash varchar)"
+    );
     session.query(cql, ()).await?;
     Ok(())
 }

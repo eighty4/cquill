@@ -5,8 +5,8 @@ use clap::{Parser, Subcommand};
 
 use cquill::MigrateError::HistoryUpdateFailed;
 use cquill::{
-    keyspace::*, migrate_cql, CassandraOpts, CqlFile, MigrateError, MigrateError::PartialMigration,
-    MigrateErrorState, MigrateOpts,
+    CassandraOpts, CqlFile, MigrateError, MigrateError::PartialMigration, MigrateErrorState,
+    MigrateOpts, keyspace::*, migrate_cql,
 };
 
 #[derive(Parser)]
@@ -147,7 +147,10 @@ fn partial_migrate_error_exit(error_state: &MigrateErrorState) {
         "CQL statements before this statement in {} were successfully executed.",
         error_state.failed_file
     );
-    println!("The remaining statements will need to be manually executed and {} must be added to CQuill's history table with the CQL file's content hash.", error_state.failed_file);
+    println!(
+        "The remaining statements will need to be manually executed and {} must be added to CQuill's history table with the CQL file's content hash.",
+        error_state.failed_file
+    );
     println!("===============");
     std::process::exit(1);
 }

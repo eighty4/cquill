@@ -10,7 +10,7 @@ use temp_dir::TempDir;
 use crate::cql_file::CqlFile;
 use crate::keyspace::KeyspaceOpts;
 use crate::migrate::MigrateArgs;
-use crate::{cql_file, queries, CassandraOpts, TABLE};
+use crate::{CassandraOpts, TABLE, cql_file, queries};
 
 pub(crate) fn make_file(path: PathBuf, content: &str) {
     let mut f = fs::OpenOptions::new()

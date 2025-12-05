@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use crate::keyspace::ReplicationFactor::*;
 
@@ -45,7 +45,7 @@ fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String, QueryErro
         Err(e) => Err(QueryError::from(anyhow!(
             "keyspace {} {}",
             keyspace_opts.name,
-            e.to_string()
+            e,
         ))),
     }
 }
@@ -213,7 +213,10 @@ mod tests {
         };
         let result = create_keyspace_cql(&opts);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "keyspace cquill_migration network topology replication has no datacenter replication factors");
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "keyspace cquill_migration network topology replication has no datacenter replication factors"
+        );
     }
 
     #[test]
@@ -226,7 +229,10 @@ mod tests {
         };
         let result = create_keyspace_cql(&opts);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "keyspace cquill_migration network topology replication factor has empty datacenter name");
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "keyspace cquill_migration network topology replication factor has empty datacenter name"
+        );
     }
 
     #[test]
@@ -239,6 +245,9 @@ mod tests {
         };
         let result = create_keyspace_cql(&opts);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "keyspace cquill_migration network topology replication factor for datacenter dc1 is not a positive number");
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "keyspace cquill_migration network topology replication factor for datacenter dc1 is not a positive number"
+        );
     }
 }
