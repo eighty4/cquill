@@ -16,6 +16,7 @@ pub(crate) fn make_file(path: PathBuf, content: &str) {
     let mut f = fs::OpenOptions::new()
         .write(true)
         .create(true)
+        .truncate(true)
         .open(path)
         .expect("create file");
     f.write_all(content.as_bytes())

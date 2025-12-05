@@ -151,7 +151,7 @@ mod tests {
         .await
         .expect("select all migrated cql files");
         assert_eq!(migrated_cql_files.len(), 3);
-        let first = migrated_cql_files.get(0).unwrap();
+        let first = migrated_cql_files.first().unwrap();
         assert_eq!(first.filename, "v001-more_cql.cql");
         assert_eq!(first.version, 1);
         assert_eq!(first.hash, "900150983cd24fb0d6963f7d28e17f72");

@@ -263,7 +263,7 @@ mod tests {
                 let statements = statements_result.unwrap();
                 assert_eq!(statements.len(), 1);
                 assert_eq!(
-                    statements.get(0).unwrap().cql,
+                    statements.first().unwrap().cql,
                     "create table big_business_data (id timeuuid primary key)"
                 );
             }
@@ -506,7 +506,7 @@ mod tests {
             Ok(cql_files) => {
                 assert_eq!(cql_files.len(), 1);
                 assert_eq!(
-                    cql_files.get(0).unwrap().filename,
+                    cql_files.first().unwrap().filename,
                     "v001-foo.cql".to_string()
                 );
             }
