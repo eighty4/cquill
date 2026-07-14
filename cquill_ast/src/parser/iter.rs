@@ -89,6 +89,16 @@ pub fn pop_identifier(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<TokenView> {
+    match iter.next() {
+        Some(Token {
+            name: Identifier, ..
+        }) => {}
+        Some(Token {
+            name: DoubleKeyword,
+            ..
+        }) => {}
+        _ => {}
+    };
     let popped = pop_next_match(iter, Identifier)?;
     Ok(TokenView {
         cql: cql.clone(),

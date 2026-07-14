@@ -1,26 +1,18 @@
-mod create;
-mod drop;
+mod ddl;
+mod dml;
 mod iter;
-mod update;
-
-#[cfg(test)]
-mod create_test;
-
-#[cfg(test)]
-mod drop_test;
+mod terms;
 
 #[cfg(test)]
 mod testing;
 
-#[cfg(test)]
-mod update_test;
-
 use crate::ast::*;
 use crate::lex::*;
-use crate::parser::create::parse_create_statement;
-use crate::parser::drop::parse_drop_statement;
+use crate::parser::ddl::create::parse_create_statement;
+use crate::parser::ddl::drop::parse_drop_statement;
+use crate::parser::ddl::truncate::parse_truncate_table_statement;
+use crate::parser::dml::update::parse_update_statement;
 use crate::parser::iter::pop_next_if;
-use crate::parser::update::parse_update_statement;
 use TokenName::*;
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -28,8 +20,14 @@ use std::sync::Arc;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
-    #[error("invalid cql encountered")]
-    InvalidCql,
+    #[error("{0}")]
+    InvalidCql(String),
+}
+
+impl Default for ParseError {
+    fn default() -> Self {
+        Self::InvalidCql("parse error".to_string())
+    }
 }
 
 pub type ParseResult<T> = Result<T, ParseError>;
@@ -60,6 +58,7 @@ fn parse_statement(
             CreateKeyword => parse_create_statement(cql, iter).map(CqlStatement::Create),
             DropKeyword => parse_drop_statement(cql, iter).map(CqlStatement::Drop),
             UpdateKeyword => parse_update_statement(cql, iter).map(CqlStatement::Update),
+            TruncateKeyword => parse_truncate_table_statement(cql, iter).map(CqlStatement::Truncate),
             _ => todo!("parse error {:?}", token.name),
         },
     }
