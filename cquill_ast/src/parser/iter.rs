@@ -32,6 +32,7 @@ pub fn peek_next_match(iter: &mut Peekable<Iter<Token>>, next: TokenName) -> Par
 }
 
 /// Returns next Token or Err if next returns None.
+#[deprecated]
 pub fn pop_next<'a>(iter: &'a mut Peekable<Iter<Token>>) -> ParseResult<&'a Token> {
     iter.next().ok_or_else(|| todo!("parse error"))
 }
@@ -89,6 +90,11 @@ pub fn pop_identifier(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<TokenView> {
+    match iter.next() {
+        Some(Token {name: Identifier, .. }) => {},
+        Some(Token {name: DoubleKeyword, .. }) => {},
+        _ => {},
+    };
     let popped = pop_next_match(iter, Identifier)?;
     Ok(TokenView {
         cql: cql.clone(),

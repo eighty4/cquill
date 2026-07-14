@@ -404,12 +404,28 @@ pub const UPDATE_IF_MULTIPLE_CONDITIONS: &str = "\
 update big_data_table set int_column = 1 where text_column = 'big data!' if int_column > 6 and float_column < 3.0;
 ";
 
-pub const UPDATE_USING_TTL: &str = "\
+pub const UPDATE_USING_TTL_INTEGER: &str = "\
 update big_data_table using ttl 86400 set int_column = 1 where text_column = 'big data!';
 ";
 
-pub const UPDATE_USING_TIMESTAMP: &str = "\
+pub const UPDATE_USING_TTL_BIND_MARKER_ANON: &str = "\
+update big_data_table using ttl ? set int_column = 1 where text_column = 'big data!';
+";
+
+pub const UPDATE_USING_TTL_BIND_MARKER_NAMED: &str = "\
+update big_data_table using ttl :marker_name set int_column = 1 where text_column = 'big data!';
+";
+
+pub const UPDATE_USING_TIMESTAMP_STRING: &str = "\
 update big_data_table using timestamp '2023-11-14T04:05+0000' set int_column = 1 where text_column = 'big data!';
+";
+
+pub const UPDATE_USING_TIMESTAMP_BIND_MARKER_ANON: &str = "\
+update big_data_table using timestamp ? set int_column = 1 where text_column = 'big data!';
+";
+
+pub const UPDATE_USING_TIMESTAMP_BIND_MARKER_NAMED: &str = "\
+update big_data_table using timestamp :marker_name set int_column = 1 where text_column = 'big data!';
 ";
 
 // https://cassandra.apache.org/doc/stable/cassandra/cql/dml.html#delete_statement

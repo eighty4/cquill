@@ -1,16 +1,20 @@
+use crate::ParseError;
 use crate::ast::*;
 use crate::lex::Token;
 use crate::lex::TokenName::*;
 use crate::parser::ParseResult;
 use crate::parser::iter::*;
+use crate::parser::terms::parse_bind_marker;
 
 use std::{iter::Peekable, slice::Iter, sync::Arc};
 
+// todo keyspace qualifier on table name
 pub fn parse_update_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<UpdateStatement> {
     let table_name = pop_identifier(cql, iter)?;
+    let using_params = parse_using_params(cql, iter)?;
     pop_next_match(iter, SetKeyword)?;
     let assignments = parse_assignments(cql, iter)?;
     pop_next_match(iter, WhereKeyword)?;
@@ -18,10 +22,55 @@ pub fn parse_update_statement(
     let if_behavior = parse_if_behavior(cql, iter)?;
     Ok(UpdateStatement {
         table_name,
+        using_params,
         assignments,
         where_clause,
         if_behavior,
     })
+}
+
+fn parse_using_params(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<Option<Vec<UpdateParameter>>> {
+    if pop_next_if(iter, UsingKeyword).is_none() {
+        Ok(None)
+    } else {
+        let mut update_params: Vec<UpdateParameter> = Vec::new();
+        loop {
+            update_params.push(match iter.next() {
+                Some(Token { name: TimestampKeyword, .. }) => {
+                    UpdateParameter::Timestamp(match iter.peek().map(|token| &token.name) {
+                        Some(AndKeyword | SetKeyword) => TimestampValue::Unspecified,
+                        // todo validate number is not a float
+                        Some(NumberLiteral) => TimestampValue::Integer(TokenView::new(cql, iter.next().unwrap())),
+                        Some(StringLiteral(_)) => TimestampValue::String(TokenView::new(cql, iter.next().unwrap())),
+                        Some(Colon | QuestionMark) => TimestampValue::BindMarker(parse_bind_marker(cql, iter)?),
+                        _ => return Err(ParseError::default()),
+                    })
+                },
+                Some(Token { name: TtlKeyword, .. }) => {
+                    UpdateParameter::TimeToLive(match iter.peek().map(|token| &token.name) {
+                        Some(NullKeyword) => {
+                            iter.next().unwrap();
+                            TimeToLiveValue::Null
+                        },
+                        // todo validate number is not a float
+                        Some(NumberLiteral) => TimeToLiveValue::Integer(TokenView::new(cql, iter.next().unwrap())),
+                        Some(Colon | QuestionMark) => TimeToLiveValue::BindMarker(parse_bind_marker(cql, iter)?),
+                        _ => return Err(ParseError::default()),
+                    })
+                },
+                _ => {
+                    return Err(ParseError::default());
+                }
+            });
+            if pop_next_if(iter, AndKeyword).is_none() {
+                break;
+            }
+        }
+        Ok(Some(update_params))
+    }
 }
 
 fn parse_assignments(
@@ -49,7 +98,6 @@ fn parse_assignment_selection(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
 ) -> ParseResult<AssignmentSelection> {
-    dbg!(iter.peek());
     let column_name = TokenView::new(cql, pop_next_match(iter, Identifier)?);
     match iter.peek() {
         Some(Token {
@@ -139,7 +187,7 @@ fn parse_if_behavior(
                             selection,
                             expr_term,
                         });
-                        if pop_next_if(iter, Comma).is_none() {
+                        if pop_next_if(iter, AndKeyword).is_none() {
                             break;
                         }
                     }

@@ -9,6 +9,7 @@ Lexer, parser and AST for [CQL](https://cassandra.apache.org/doc/latest/cassandr
 
 ## todos
 
+- [impl term](https://cassandra.apache.org/doc/5.0/cassandra/developing/cql/definitions.html#terms)
 - error reporting
   - miette?
 - ast

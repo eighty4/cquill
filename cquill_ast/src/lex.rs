@@ -15,6 +15,7 @@ pub enum TokenName {
     Comma,
     Semicolon,
     Colon,
+    QuestionMark,
     Dot,
     Star,
     #[allow(unused)]
@@ -181,7 +182,7 @@ pub enum TokenName {
 
 impl TokenName {
     // todo determine if any gotchas with reserved vs not reserved keywords
-    pub fn match_keyword(s: &str) -> Self {
+    fn match_keyword(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "access" => AccessKeyword,
             "add" => AddKeyword,
@@ -423,6 +424,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
                 ":" => Some(Colon),
+                "?" => Some(QuestionMark),
                 "," => Some(Comma),
                 ";" => Some(Semicolon),
                 "*" => Some(Star),
@@ -527,16 +529,18 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn constant_or_identifier_or_keyword(&mut self) -> Result<TokenName, ()> {
-        if self.splice() == "0" {
-            match self.blob() {
+        match self.splice() {
+            "0" => match self.blob() {
                 Ok(maybe_name) => {
                     if let Some(name) = maybe_name {
                         return Ok(name);
                     }
                 }
                 Err(_) => return Err(()),
-            };
-        }
+            },
+            "\"" => return self.quoted_identifier(),
+            _ => {}
+        };
         let mut only_hex = true;
         let mut only_digit = true;
         let mut has_dash = false;
@@ -589,6 +593,10 @@ impl<'a> Tokenizer<'a> {
         } else {
             Err(())
         }
+    }
+
+    fn quoted_identifier(&mut self) -> Result<TokenName, ()> {
+        todo!();
     }
 
     fn blob(&mut self) -> Result<Option<TokenName>, ()> {
