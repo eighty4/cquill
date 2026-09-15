@@ -53,7 +53,7 @@ pub(crate) async fn select_all(
             version,
         })
     }
-    result.sort_by(|a, b| a.version.cmp(&b.version));
+    result.sort_by_key(|a| a.version);
     Ok(result)
 }
 

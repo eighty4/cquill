@@ -19,41 +19,41 @@ jobs:
       - lint
       - test-cquill-ast
       - test-cql-compat
-      - test-os-compat
+      - test-macos-compat
     steps:
       - run: echo "¡Verdes como tomatillos!"
 
   build-cquill-ast:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: rustup install stable
-      - uses: swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup install stable --profile minimal
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo build -p cquill_ast
 
   test-cquill-ast:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: rustup install stable
-      - uses: swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup install stable --profile minimal
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo test -p cquill_ast
 
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: rustup install stable
-      - uses: swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup install stable --profile minimal
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo fmt --all -v
       - run: git diff --exit-code
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: rustup install stable
-      - uses: swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup install stable --profile minimal
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: lint
         run: cargo clippy --workspace -- -D warnings
       - name: lint tests
@@ -82,24 +82,24 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - if: ${{ matrix.apt_package_linker }}
         run: |
           sudo apt update && sudo apt install ${{ matrix.apt_package_linker }}
           mkdir -p $HOME/.cargo
           mv ./.github/workflows/linkers.toml $HOME/.cargo/config.toml
-      - run: rustup install stable
-      - uses: swatinem/rust-cache@v2
+      - run: rustup install stable --profile minimal
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: rustup target add ${{ matrix.target}}
       - run: cargo build -p cquill --release --all-features --target ${{ matrix.target }}
 
   examples:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: docker compose up cassandra_5_0 -d --wait
-      - run: rustup install stable
-      - uses: swatinem/rust-cache@v2
+      - run: rustup install stable --profile minimal
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo run -p cquill --example migrate
 
   test-cql-compat:
@@ -127,31 +127,37 @@ jobs:
           --health-timeout 5s
           --health-retries 30
     steps:
-      - uses: actions/checkout@v4
-      - run: rustup install stable
-      - uses: swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup install stable --profile minimal
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo test -p cquill
 
-  test-os-compat:
-    name: "test os ${{ matrix.os }}"
-    runs-on: ${{ matrix.os }}
-    continue-on-error: true
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-          - os: ubuntu-latest
+  test-macos-compat:
+    name: "test macos"
+    runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - if: matrix.os != 'macos-latest'
-        run: docker compose up cassandra_5_0 -d --wait
-      - if: matrix.os == 'macos-latest'
-        uses: homebrew/actions/setup-homebrew@master
-      - if: matrix.os == 'macos-latest'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: homebrew/actions/setup-homebrew@1e34f2e2acaa766b7efacb8c26352e6abbb023f9 # 2026.09.13.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          java-version: '17'
+          distribution: 'oracle-openjdk'
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - run: brew install cassandra@5.0
+      - run: /opt/homebrew/opt/cassandra/bin/cassandra -Djava.security.manager=allow
+      - name: wait for :9042
         run: |
-          brew install cassandra@5.0
-          /opt/homebrew/opt/cassandra/bin/cassandra -Djava.security.manager=allow
-          /opt/homebrew/opt/cassandra/bin/cqlsh -e 'describe cluster'
-      - run: rustup install stable
-      - uses: swatinem/rust-cache@v2
+          sleep 30
+          for i in {1..30}; do
+            if nc -z localhost 9042; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+      - run: /opt/homebrew/opt/cassandra/bin/cqlsh -e 'describe cluster'
+      - run: rustup install stable --profile minimal
+      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo test -p cquill

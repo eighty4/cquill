@@ -101,7 +101,7 @@ async fn cql_session(node_address: String) -> Result<Session> {
         .await;
     match connecting {
         Ok(session) => Ok(session),
-        Err(_) => Err(anyhow!("could not connect to {}", &node_address)),
+        Err(_) => Err(anyhow!("could not connect to {}", node_address)),
     }
 }
 

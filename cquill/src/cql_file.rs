@@ -161,10 +161,11 @@ impl CqlFile {
 pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
     let cql_file_paths = read_cql_file_paths(cql_dir)?;
     let mut cql_files: Vec<CqlFile> = Vec::with_capacity(cql_file_paths.len());
-    let mut expected_version: i16 = 1;
-    for path in cql_file_paths {
+    for (expected_version, path) in (1_i16..).zip(cql_file_paths) {
         let cql_file = CqlFile::from_path(path)?;
-        if cql_file.version != expected_version {
+        if cql_file.version == expected_version {
+            cql_files.push(cql_file);
+        } else {
             return if cql_file.version == expected_version - 1 {
                 let previous_index = usize::try_from(expected_version - 2)?;
                 let previous_filename = &cql_files.get(previous_index).unwrap().filename;
@@ -182,8 +183,6 @@ pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
                 ))
             };
         }
-        cql_files.push(cql_file);
-        expected_version += 1;
     }
     Ok(cql_files)
 }

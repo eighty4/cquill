@@ -443,10 +443,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
                 "$" => self.dollar_sign_string(),
-                "'" => match self.quote_string() {
-                    Ok(name) => Some(name),
-                    Err(err) => return Err(err),
-                },
+                "'" => Some(self.quote_string()?),
                 &_ => self.constant_or_identifier_or_keyword().ok(),
             };
             if let Some(name) = maybe_name {
