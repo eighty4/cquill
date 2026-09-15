@@ -10,9 +10,9 @@ repository = "https://github.com/eighty4/cquill"
 homepage = "https://github.com/eighty4/cquill"
 
 [workspace.dependencies]
-anyhow = "1.0.81"
-thiserror = "2.0.17"
-uuid = "1.19.0"
+anyhow = "1.0.104"
+thiserror = "2.0.20"
+uuid = "1.26.1"
 
 [profile.release]
 lto = "fat"

@@ -3,7 +3,7 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
-use rand::Rng;
+use rand::distr::{Alphanumeric, SampleString};
 use scylla::client::session::Session;
 use scylla::client::session_builder::SessionBuilder;
 use temp_dir::TempDir;
@@ -52,16 +52,13 @@ pub(crate) async fn drop_table(session: &Session, keyspace_name: &String, table_
         .expect("drop table");
 }
 
-fn alphanumeric_str(len: u8) -> String {
-    let mut rng = rand::rng();
-    (0..len)
-        .map(|_| rng.sample(rand::distr::Alphanumeric) as char)
-        .map(|c| c.to_ascii_lowercase())
-        .collect()
-}
-
 pub(crate) fn keyspace_name() -> String {
-    format!("cquill_test_{}", alphanumeric_str(6))
+    format!(
+        "cquill_test_{}",
+        Alphanumeric
+            .sample_string(&mut rand::rng(), 6)
+            .to_ascii_lowercase()
+    )
 }
 
 pub(crate) struct TestHarness {
