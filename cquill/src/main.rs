@@ -1,11 +1,13 @@
+use std::env;
 use std::ops::Deref;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 
 use cquill::MigrateError::HistoryUpdateFailed;
 use cquill::{
-    CassandraOpts, CqlFile, MigrateError, MigrateError::PartialMigration, MigrateErrorState,
+    ConnectionOpts, CqlFile, MigrateError, MigrateError::PartialMigration, MigrateErrorState,
     MigrateOpts, keyspace::*, migrate_cql,
 };
 
@@ -40,7 +42,15 @@ impl MigrateCliArgs {
             Err(err) => error_exit(MigrateError::from(err)),
         };
         MigrateOpts {
-            cassandra_opts: Some(CassandraOpts::default()),
+            connection_opts: match env::var("CASSANDRA_NODE").map(host_implicit_port) {
+                Ok(host) => Some(ConnectionOpts::Host(host)),
+                Err(err) => match err {
+                    env::VarError::NotPresent => None,
+                    env::VarError::NotUnicode(_) => error_exit(MigrateError::Other {
+                        source: anyhow!("env var CASSANDRA_NODE is not unicode"),
+                    }),
+                },
+            },
             cql_dir: self.cql_dir.clone(),
             history_keyspace: Some(KeyspaceOpts {
                 name: self.history_keyspace.clone(),
@@ -48,6 +58,14 @@ impl MigrateCliArgs {
             }),
             history_table: Some(self.history_table.clone()),
         }
+    }
+}
+
+fn host_implicit_port(host: String) -> String {
+    if host.contains(':') {
+        host
+    } else {
+        format!("{host}:9042")
     }
 }
 

@@ -2,16 +2,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use rand::distr::{Alphanumeric, SampleString};
 use scylla::client::session::Session;
-use scylla::client::session_builder::SessionBuilder;
 use temp_dir::TempDir;
 
 use crate::cql_file::CqlFile;
 use crate::keyspace::KeyspaceOpts;
 use crate::migrate::MigrateArgs;
-use crate::{CassandraOpts, TABLE, cql_file, queries};
+use crate::{ConnectionOpts, TABLE, cql_file, queries};
 
 pub(crate) fn make_file(path: PathBuf, content: &str) {
     let mut f = fs::OpenOptions::new()
@@ -24,11 +24,9 @@ pub(crate) fn make_file(path: PathBuf, content: &str) {
         .expect("write bytes to file");
 }
 
-pub(crate) async fn cql_session() -> Session {
-    let node_address = CassandraOpts::default().node_address();
-    SessionBuilder::new()
-        .known_node(node_address)
-        .build()
+pub(crate) async fn cql_session() -> Arc<Session> {
+    ConnectionOpts::default()
+        .session()
         .await
         .expect("cql session")
 }
@@ -62,7 +60,7 @@ pub(crate) fn keyspace_name() -> String {
 }
 
 pub(crate) struct TestHarness {
-    pub session: Session,
+    pub session: Arc<Session>,
     pub cql_dir: PathBuf,
     _directory: TempDir,
     pub cquill_keyspace: String,

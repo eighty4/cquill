@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::{path::PathBuf, str};
 
 use anyhow::{Result, anyhow};
@@ -23,27 +24,60 @@ pub const KEYSPACE: &str = "cquill";
 pub const TABLE: &str = "migrated_cql";
 
 pub struct MigrateOpts {
-    pub cassandra_opts: Option<CassandraOpts>,
+    pub connection_opts: Option<ConnectionOpts>,
     pub cql_dir: PathBuf,
     pub history_keyspace: Option<KeyspaceOpts>,
     pub history_table: Option<String>,
 }
 
-#[derive(Default)]
-pub struct CassandraOpts {
-    pub cassandra_host: Option<String>,
+pub enum ConnectionOpts {
+    /// Specify a hostname or hostname & port for a simple TCP connection.
+    ///
+    /// ```
+    /// use cquill::ConnectionOpts;
+    /// ConnectionOpts::Host("127.0.0.1".into());
+    /// ConnectionOpts::Host("127.0.0.1:9042".into());
+    /// ```
+    Host(String),
+
+    /// Use a `scylla` crate `SessionBuilder` to specify complex
+    /// auth schemes and mLTS to provide robust and secure connections
+    /// to Amazon Keyframes, Astra DB, Cassandra & ScyllaDB.
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use cquill::ConnectionOpts;
+    /// use scylla::client::session_builder::SessionBuilder;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     ConnectionOpts::Session(Arc::new(SessionBuilder::new()
+    ///         .known_node("127.0.0.1")
+    ///         .build()
+    ///         .await
+    ///         .unwrap()));
+    /// }
+    /// ```
+    Session(Arc<Session>),
 }
 
-impl CassandraOpts {
-    pub fn node_address(&self) -> String {
-        let node_address = match &self.cassandra_host {
-            None => std::env::var("CASSANDRA_NODE").unwrap_or(NODE_ADDRESS.to_string()),
-            Some(cassandra_host) => cassandra_host.clone(),
-        };
-        if node_address.contains(':') {
-            node_address
-        } else {
-            format!("{node_address}:9042")
+impl Default for ConnectionOpts {
+    fn default() -> Self {
+        ConnectionOpts::Host(NODE_ADDRESS.to_string())
+    }
+}
+
+impl ConnectionOpts {
+    async fn session(&self) -> Result<Arc<Session>> {
+        match self {
+            ConnectionOpts::Host(node_address) => {
+                let connecting = SessionBuilder::new().known_node(node_address).build().await;
+                match connecting {
+                    Ok(session) => Ok(Arc::new(session)),
+                    Err(_) => Err(anyhow!("could not connect to {}", node_address)),
+                }
+            }
+            ConnectionOpts::Session(session) => Ok(session.clone()),
         }
     }
 }
@@ -54,8 +88,7 @@ impl CassandraOpts {
 /// method result contains a vec of the cql script paths executed during this invocation.
 pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<CqlFile>, MigrateError> {
     let cql_files = cql_file::files_from_dir(&opts.cql_dir)?;
-    let node_address = opts.cassandra_opts.unwrap_or_default().node_address();
-    let session = cql_session(node_address).await?;
+    let session = opts.connection_opts.unwrap_or_default().session().await?;
 
     let cquill_keyspace = opts
         .history_keyspace
@@ -94,38 +127,16 @@ async fn prepare_cquill_keyspace(
     Ok(())
 }
 
-async fn cql_session(node_address: String) -> Result<Session> {
-    let connecting = SessionBuilder::new()
-        .known_node(&node_address)
-        .build()
-        .await;
-    match connecting {
-        Ok(session) => Ok(session),
-        Err(_) => Err(anyhow!("could not connect to {}", node_address)),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_cassandra_opts_provides_node_address() {
-        let without_host = CassandraOpts {
-            cassandra_host: None,
-        };
-        let with_host = CassandraOpts {
-            cassandra_host: Some("localhost".to_string()),
-        };
-        let with_port = CassandraOpts {
-            cassandra_host: Some("localhost:9043".to_string()),
-        };
-        assert_eq!(
-            without_host.node_address(),
-            std::env::var("CASSANDRA_NODE").unwrap_or(NODE_ADDRESS.to_string())
-        );
-        assert_eq!(with_host.node_address(), "localhost:9042");
-        assert_eq!(with_port.node_address(), "localhost:9043");
+    fn test_connection_opts_defaults_host_name() {
+        match ConnectionOpts::default() {
+            ConnectionOpts::Host(host) => assert_eq!(host, NODE_ADDRESS),
+            _ => panic!(),
+        }
     }
 
     #[tokio::test]
