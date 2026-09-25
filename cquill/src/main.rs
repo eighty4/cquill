@@ -36,7 +36,7 @@ struct MigrateCliArgs {
 }
 
 impl MigrateCliArgs {
-    fn to_opts(&self) -> MigrateOpts {
+    fn into_opts(self) -> MigrateOpts {
         let replication_factor = match self.history_replication.parse::<ReplicationFactor>() {
             Ok(replication_factor) => replication_factor,
             Err(err) => error_exit(MigrateError::from(err)),
@@ -51,12 +51,12 @@ impl MigrateCliArgs {
                     }),
                 },
             },
-            cql_dir: self.cql_dir.clone(),
+            cql_dir: self.cql_dir,
             history_keyspace: Some(KeyspaceOpts {
-                name: self.history_keyspace.clone(),
+                name: self.history_keyspace,
                 replication: Some(replication_factor),
             }),
-            history_table: Some(self.history_table.clone()),
+            history_table: Some(self.history_table),
         }
     }
 }
@@ -78,7 +78,7 @@ async fn main() {
 }
 
 async fn migrate(args: MigrateCliArgs) {
-    let opts = args.to_opts();
+    let opts = args.into_opts();
     let version = env!("CARGO_PKG_VERSION");
     let cql_dir = opts.cql_dir.to_string_lossy();
     println!("CQuill {version}\nMigrating CQL files from {cql_dir}");
