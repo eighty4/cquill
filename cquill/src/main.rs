@@ -2,14 +2,14 @@ use std::env;
 use std::ops::Deref;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 
 use cquill::MigrateError::HistoryUpdateFailed;
 use cquill::{
-    ConnectionOpts, CqlFile, MigrateError, MigrateError::PartialMigration, MigrateErrorState,
-    MigrateOpts, keyspace::*, migrate_cql,
+    ConnectionInit, ConnectionOpts, CqlFile, CqlshrcOpts, MigrateError,
+    MigrateError::PartialMigration, MigrateErrorState, MigrateOpts, keyspace::*, migrate_cql,
 };
+use regex::Regex;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -27,12 +27,31 @@ enum CquillCommand {
 struct MigrateCliArgs {
     #[clap(short = 'd', long, value_name = "CQL_DIR", default_value = "./cql")]
     cql_dir: PathBuf,
+    /// [default: ~/.cassandra/cqlshrc]
+    #[clap(long, num_args(0..=1), value_name = "CQLSHRC_PATH", default_value = None)]
+    cqlshrc: Option<Option<PathBuf>>,
     #[clap(long, value_name = "HISTORY_KEYSPACE", default_value = cquill::KEYSPACE)]
     history_keyspace: String,
     #[clap(long, value_name = "HISTORY_REPLICATION", default_value = cquill::keyspace::REPLICATION)]
     history_replication: String,
     #[clap(long, value_name = "HISTORY_TABLE", default_value = cquill::TABLE)]
     history_table: String,
+    /// [default: 127.0.0.1:9042]
+    #[clap(short = 'n', long, value_name = "ADDRESS", value_parser = validate_address)]
+    address: Option<String>,
+    #[clap(short = 'u', long, value_name = "USERNAME")]
+    username: Option<String>,
+    #[clap(short = 'p', long, value_name = "PASSWORD")]
+    password: Option<String>,
+}
+
+fn validate_address(s: &str) -> Result<String, String> {
+    let pattern = r"^[a-zA-Z-_\.\d]+(:\d{1,5})?$";
+    if Regex::new(pattern).unwrap().is_match(s) {
+        Ok(s.to_string())
+    } else {
+        Err("--address must be a valid ipv4 address or hostname with optional port".into())
+    }
 }
 
 impl MigrateCliArgs {
@@ -41,16 +60,28 @@ impl MigrateCliArgs {
             Ok(replication_factor) => replication_factor,
             Err(err) => error_exit(MigrateError::from(err)),
         };
-        MigrateOpts {
-            connection_opts: match env::var("CASSANDRA_NODE").map(host_implicit_port) {
-                Ok(host) => Some(ConnectionOpts::Host(host)),
-                Err(err) => match err {
-                    env::VarError::NotPresent => None,
-                    env::VarError::NotUnicode(_) => error_exit(MigrateError::Other {
-                        source: anyhow!("env var CASSANDRA_NODE is not unicode"),
-                    }),
-                },
+        let (hostname, port) = match self.address {
+            None => (None, None),
+            Some(address) => match address.split_once(':') {
+                None => (Some(address), None),
+                Some((hostname, port)) => (Some(hostname.into()), Some(port.parse().unwrap())),
             },
+        };
+        let connection_opts = ConnectionOpts {
+            hostname,
+            port,
+            username: self.username,
+            password: self.password,
+        };
+        let connection_init = Some(match self.cqlshrc {
+            None => ConnectionInit::SimpleTcp(Some(connection_opts)),
+            Some(cqlshrc) => ConnectionInit::Cqlshrc(CqlshrcOpts {
+                path: cqlshrc,
+                overrides: connection_opts,
+            }),
+        });
+        MigrateOpts {
+            connection_init,
             cql_dir: self.cql_dir,
             history_keyspace: Some(KeyspaceOpts {
                 name: self.history_keyspace,
@@ -58,14 +89,6 @@ impl MigrateCliArgs {
             }),
             history_table: Some(self.history_table),
         }
-    }
-}
-
-fn host_implicit_port(host: String) -> String {
-    if host.contains(':') {
-        host
-    } else {
-        format!("{host}:9042")
     }
 }
 
@@ -176,4 +199,29 @@ fn partial_migrate_error_exit(error_state: &MigrateErrorState) {
 fn error_exit(err: MigrateError) -> ! {
     println!("{} {err}", error_prefix());
     std::process::exit(1);
+}
+
+#[cfg(test)]
+mod validate_address_tests {
+    use super::validate_address;
+
+    #[test]
+    fn test_returns_valid_value() {
+        assert_eq!(validate_address("127.0.0.1"), Ok("127.0.0.1".into()));
+    }
+
+    #[test]
+    fn test_address_port() {
+        assert!(validate_address("127.0.0.1:90kevinBacon").is_err());
+        assert!(validate_address("127.0.0.1:9042").is_ok());
+        assert!(validate_address("127.0.0.1").is_ok());
+    }
+
+    #[test]
+    fn test_dns_hostname_address() {
+        assert!(validate_address("us-east-1.test.scylla.swissfjord").is_ok());
+        assert!(validate_address("us-east-1.test.scylla.swissfjord:9042").is_ok());
+        assert!(validate_address("swissfjord").is_ok());
+        assert!(validate_address("swissfjord:9042").is_ok());
+    }
 }

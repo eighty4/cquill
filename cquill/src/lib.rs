@@ -6,39 +6,53 @@ use scylla::client::session::Session;
 use scylla::client::session_builder::SessionBuilder;
 
 pub use crate::cql_file::CqlFile;
+use crate::cqlshrc::session_from_cqlshrc;
 pub use crate::migrate::{MigrateError, MigrateErrorState};
 use crate::queries::*;
 use crate::{keyspace::*, queries::keyspace::CreateKeyspaceError};
 
 mod cql_file;
+mod cqlshrc;
 pub mod keyspace;
 mod migrate;
 mod queries;
 #[cfg(test)]
 pub(crate) mod test_utils;
 
-const NODE_ADDRESS: &str = "127.0.0.1:9042";
-
 pub const KEYSPACE: &str = "cquill";
 
 pub const TABLE: &str = "migrated_cql";
 
 pub struct MigrateOpts {
-    pub connection_opts: Option<ConnectionOpts>,
+    pub connection_init: Option<ConnectionInit>,
     pub cql_dir: PathBuf,
     pub history_keyspace: Option<KeyspaceOpts>,
     pub history_table: Option<String>,
 }
 
-pub enum ConnectionOpts {
-    /// Specify a hostname or hostname & port for a simple TCP connection.
+#[derive(Default)]
+pub struct ConnectionOpts {
+    pub hostname: Option<String>,
+    pub port: Option<u16>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+}
+
+#[derive(Default)]
+pub struct CqlshrcOpts {
+    pub path: Option<PathBuf>,
+    pub overrides: ConnectionOpts,
+}
+
+pub enum ConnectionInit {
+    /// Use a cqlshrc ini file to configure a connection.
     ///
-    /// ```
-    /// use cquill::ConnectionOpts;
-    /// ConnectionOpts::Host("127.0.0.1".into());
-    /// ConnectionOpts::Host("127.0.0.1:9042".into());
-    /// ```
-    Host(String),
+    /// [`CqlshrcOpts`] allows overriding `cqlshrc` values
+    /// and specifying the path to the `cqlshrc` ini file.
+    ///
+    /// [`CqlshrcOpts::default`] will use `~/.cassandra/cqlshrc`
+    /// without any connection config overrides.
+    Cqlshrc(CqlshrcOpts),
 
     /// Use a `scylla` crate `SessionBuilder` to specify complex
     /// auth schemes and mLTS to provide robust and secure connections
@@ -46,12 +60,12 @@ pub enum ConnectionOpts {
     ///
     /// ```
     /// use std::sync::Arc;
-    /// use cquill::ConnectionOpts;
+    /// use cquill::ConnectionInit;
     /// use scylla::client::session_builder::SessionBuilder;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     ConnectionOpts::Session(Arc::new(SessionBuilder::new()
+    ///     ConnectionInit::Session(Arc::new(SessionBuilder::new()
     ///         .known_node("127.0.0.1")
     ///         .build()
     ///         .await
@@ -59,26 +73,64 @@ pub enum ConnectionOpts {
     /// }
     /// ```
     Session(Arc<Session>),
+
+    /// Specify a hostname or hostname & port for a simple TCP connection.
+    /// [`ConnectionOpts`] supports PasswordAuthenticator connections with
+    /// [`ConnectionOpts::username`] and [`ConnectionOpts::password`].
+    ///
+    /// [`ConnectionInit`] will default to `127.0.0.1` and `:9042`.
+    ///
+    /// ```
+    /// use cquill::{ConnectionInit, ConnectionOpts};
+    ///
+    /// ConnectionInit::SimpleTcp(Some(ConnectionOpts{
+    ///     hostname: Some("us-east-1.scylla.swissfjord.com".into()),
+    ///     port: None,
+    ///     username: Some("bjarne".into()),
+    ///     password: Some("definedBehavior".into()),
+    /// }));
+    /// ```
+    SimpleTcp(Option<ConnectionOpts>),
 }
 
-impl Default for ConnectionOpts {
+impl Default for ConnectionInit {
     fn default() -> Self {
-        ConnectionOpts::Host(NODE_ADDRESS.to_string())
+        ConnectionInit::SimpleTcp(None)
     }
 }
 
-impl ConnectionOpts {
+impl ConnectionInit {
     async fn session(&self) -> Result<Arc<Session>> {
         match self {
-            ConnectionOpts::Host(node_address) => {
-                let connecting = SessionBuilder::new().known_node(node_address).build().await;
-                match connecting {
-                    Ok(session) => Ok(Arc::new(session)),
-                    Err(_) => Err(anyhow!("could not connect to {}", node_address)),
-                }
-            }
-            ConnectionOpts::Session(session) => Ok(session.clone()),
+            ConnectionInit::Cqlshrc(cqlshrc_opts) => session_from_cqlshrc(cqlshrc_opts).await,
+            ConnectionInit::Session(session) => Ok(session.clone()),
+            ConnectionInit::SimpleTcp(opts) => session_from_opts(opts).await,
         }
+    }
+}
+
+async fn session_from_opts(opts: &Option<ConnectionOpts>) -> Result<Arc<Session>> {
+    let (address, username, password): (String, Option<String>, Option<String>) = match opts {
+        None => ("127.0.0.1:9042".to_string(), None, None),
+        Some(opts) => {
+            let address = format!(
+                "{}:{}",
+                opts.hostname.as_deref().unwrap_or("127.0.0.1"),
+                opts.port.unwrap_or(9042)
+            );
+            (address, None, None)
+        }
+    };
+    let mut building = SessionBuilder::new().known_node(&address);
+    if let Some(username) = username
+        && let Some(password) = password
+    {
+        building = building.user(username, password);
+    }
+    let connecting = building.build().await;
+    match connecting {
+        Ok(session) => Ok(Arc::new(session)),
+        Err(err) => Err(anyhow!("could not connect to {address}: {err}")),
     }
 }
 
@@ -88,7 +140,7 @@ impl ConnectionOpts {
 /// method result contains a vec of the cql script paths executed during this invocation.
 pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<CqlFile>, MigrateError> {
     let cql_files = cql_file::files_from_dir(&opts.cql_dir)?;
-    let session = opts.connection_opts.unwrap_or_default().session().await?;
+    let session = opts.connection_init.unwrap_or_default().session().await?;
 
     let cquill_keyspace = opts
         .history_keyspace
@@ -132,9 +184,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_connection_opts_defaults_host_name() {
-        match ConnectionOpts::default() {
-            ConnectionOpts::Host(host) => assert_eq!(host, NODE_ADDRESS),
+    fn test_connection_init_defaults_simple_tcp_no_opts() {
+        match ConnectionInit::default() {
+            ConnectionInit::SimpleTcp(opts) => assert!(opts.is_none()),
             _ => panic!(),
         }
     }

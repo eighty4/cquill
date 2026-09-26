@@ -9,16 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `MigrateOpts` improved with `ConnectionOpts` that allows using a `Session`
-  from the `scylla` crate. This allows using the `scyalla` crate's
-  `SessionBuilder` to support mTLS and all other supported Amazon Keyspaces,
-  Astra DB, Cassandra & ScyllaDB connection schemes. `MigrateOpts.cassandra_opts`
-  is now `MigrateOpts.connection_opts`.
-- `ConnectionOpts::default()` no longer uses the `CASSANDRA_NODE` env var
-  that `CassandraOpts` used to override the `127.0.0.1:9042` default value.
-  Checking `CASSANDRA_NODE` is left out of the crate api and is now done by
-  the `cquill` binary when resolving a connection config and not providing
-  a connected `Session`.
+- `MigrateOpts` improved with `ConnectionInfo` with `Cqlshrc`, `Session`
+  & `SimpleTcp` variants. `Cqlshrc` inits the connection from a user's
+  `cqlshrc` connection config, `Session` allows providing a custom
+  connection using `SessionBuilder` from the `scylla` crate, and `SimpleTcp`
+  creates a connection with optional node address and password
+  authentication configs. This upgrade provides support for mTLS, password
+  authentication, and compatible serverless platforms like Amazon Keyspaces,
+  Astra DB & ScyllaDB Cloud.
+- The `CASSANDRA_NODE` env var is no longer used to override the `127.0.0.1:9042`
+  default value.
 
 ## 0.0.9 - 2024-04-15
 
