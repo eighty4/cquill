@@ -98,17 +98,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: docker compose up cassandra_5_0 -d --wait
+      - run: docker compose up scylladb_2026 -d --quiet-pull --wait
       - run: rustup install stable --profile minimal
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo run -p cquill --example migrate
       - run: cargo run -p cquill --example session_connection
+      - run: docker compose stop scylladb_2026 && docker wait scylladb_2026
+      - run: docker compose up password_auth -d --quiet-pull --wait
+      - run: cargo run -p cquill --example cqlshrc_password_auth
+      - run: docker compose stop password_auth
 
   test-doc:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: docker compose up cassandra_5_0 -d --wait
+      - run: docker compose up scylladb_2026 -d --wait
       - run: rustup install stable --profile minimal
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo test --doc
@@ -123,8 +127,9 @@ jobs:
           - image_name: cassandra:4.1
           - image_name: cassandra:4.0
           - image_name: cassandra:3.11
+          - image_name: scylladb/scylla:2026.1
+          - image_name: scylladb/scylla:2025.1
           - image_name: scylladb/scylla:6.2
-          - image_name: scylladb/scylla:6.1
           - image_name: scylladb/scylla:5.4
     services:
       scylladb:

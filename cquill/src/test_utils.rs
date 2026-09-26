@@ -11,7 +11,7 @@ use temp_dir::TempDir;
 use crate::cql_file::CqlFile;
 use crate::keyspace::KeyspaceOpts;
 use crate::migrate::MigrateArgs;
-use crate::{ConnectionOpts, TABLE, cql_file, queries};
+use crate::{ConnectionInit, TABLE, cql_file, queries};
 
 pub(crate) fn make_file(path: PathBuf, content: &str) {
     let mut f = fs::OpenOptions::new()
@@ -25,7 +25,7 @@ pub(crate) fn make_file(path: PathBuf, content: &str) {
 }
 
 pub(crate) async fn cql_session() -> Arc<Session> {
-    ConnectionOpts::default()
+    ConnectionInit::default()
         .session()
         .await
         .expect("cql session")
