@@ -1,18 +1,16 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 use anyhow::{Result, anyhow};
-use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::MigrateError;
 
-lazy_static! {
-    static ref FILENAME_REGEX: Regex =
-        regex::Regex::new(r"^[Vv](?P<version>[\d]{3})(?:[-_\da-zA-Z]*)?.cql$")
-            .expect("cql filename regex");
-}
+static FILENAME_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[Vv](?P<version>[\d]{3})(?:[-_\da-zA-Z]*)?.cql$").expect("cql filename regex")
+});
 
 #[derive(Clone, Debug)]
 pub struct CqlFile {

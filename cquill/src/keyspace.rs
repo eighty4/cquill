@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::str::{FromStr, Split};
+use std::sync::LazyLock;
 
 use anyhow::{Result, anyhow};
-use lazy_static::lazy_static;
 use regex::Regex;
 use scylla::client::session::Session;
 
@@ -92,10 +92,8 @@ impl FromStr for ReplicationFactor {
                         ));
                     }
                     let mut datacenter_factors: HashMap<String, u8> = HashMap::new();
-                    lazy_static! {
-                        static ref DATACENTER_REGEX: Regex =
-                            regex::Regex::new(r"^[a-z\d_]{2,}$").unwrap();
-                    }
+                    static DATACENTER_REGEX: LazyLock<Regex> =
+                        LazyLock::new(|| Regex::new(r"^[a-z\d_]{2,}$").expect("datacenter regex"));
                     for (datacenter, factor_string) in fields.iter() {
                         if !DATACENTER_REGEX.is_match(datacenter) {
                             return Err(anyhow!("datacenter {datacenter} is not a valid name"));
