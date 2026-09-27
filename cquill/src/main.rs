@@ -54,13 +54,15 @@ fn validate_address(s: &str) -> Result<String, String> {
     }
 }
 
-impl MigrateCliArgs {
-    fn into_opts(self) -> MigrateOpts {
-        let replication_factor = match self.history_replication.parse::<ReplicationFactor>() {
+impl TryFrom<MigrateCliArgs> for MigrateOpts {
+    type Error = MigrateError;
+
+    fn try_from(cli_args: MigrateCliArgs) -> Result<Self, Self::Error> {
+        let replication_factor = match cli_args.history_replication.parse::<ReplicationFactor>() {
             Ok(replication_factor) => replication_factor,
-            Err(err) => error_exit(MigrateError::from(err)),
+            Err(err) => return Err(MigrateError::from(err)),
         };
-        let (hostname, port) = match self.address {
+        let (hostname, port) = match cli_args.address {
             None => (None, None),
             Some(address) => match address.split_once(':') {
                 None => (Some(address), None),
@@ -71,25 +73,25 @@ impl MigrateCliArgs {
             hostname,
             port,
             connection_timeout: None,
-            username: self.username,
-            password: self.password,
+            username: cli_args.username,
+            password: cli_args.password,
         };
-        let connection_init = Some(match self.cqlshrc {
+        let connection_init = Some(match cli_args.cqlshrc {
             None => ConnectionInit::SimpleTcp(Some(connection_opts)),
             Some(cqlshrc) => ConnectionInit::Cqlshrc(CqlshrcOpts {
                 path: cqlshrc,
                 overrides: connection_opts,
             }),
         });
-        MigrateOpts {
+        Ok(MigrateOpts {
             connection_init,
-            cql_dir: self.cql_dir,
+            cql_dir: cli_args.cql_dir,
             history_keyspace: Some(KeyspaceOpts {
-                name: self.history_keyspace,
+                name: cli_args.history_keyspace,
                 replication: Some(replication_factor),
             }),
-            history_table: Some(self.history_table),
-        }
+            history_table: Some(cli_args.history_table),
+        })
     }
 }
 
@@ -102,7 +104,10 @@ async fn main() {
 }
 
 async fn migrate(args: MigrateCliArgs) {
-    let opts = args.into_opts();
+    let opts = match MigrateOpts::try_from(args) {
+        Ok(opts) => opts,
+        Err(err) => error_exit(err),
+    };
     let version = env!("CARGO_PKG_VERSION");
     let cql_dir = opts.cql_dir.to_string_lossy();
     println!("CQuill {version}\nMigrating CQL files from {cql_dir}");
@@ -204,6 +209,8 @@ fn error_exit(err: MigrateError) -> ! {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
 
     #[test]
@@ -295,6 +302,115 @@ mod tests {
                 .cqlshrc,
             Some(Some("/da/root/cqlshrc".into()))
         );
+    }
+
+    #[test]
+    fn test_cli_args_into_migrate_ops_without_address() {
+        let connection_init =
+            MigrateOpts::try_from(MigrateCliArgs::try_parse_from(["migrate"]).unwrap())
+                .unwrap()
+                .connection_init;
+        match connection_init {
+            Some(ConnectionInit::SimpleTcp(Some(connection_opts))) => {
+                assert!(connection_opts.hostname.is_none());
+                assert!(connection_opts.port.is_none());
+            }
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_cli_args_into_migrate_ops_with_hostname() {
+        let connection_init = MigrateOpts::try_from(
+            MigrateCliArgs::try_parse_from(["migrate", "-a", "swissfjord"]).unwrap(),
+        )
+        .unwrap()
+        .connection_init;
+        match connection_init {
+            Some(ConnectionInit::SimpleTcp(Some(connection_opts))) => {
+                assert_eq!(connection_opts.hostname, Some("swissfjord".into()));
+                assert!(connection_opts.port.is_none());
+            }
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_cli_args_into_migrate_ops_with_hostname_and_port() {
+        let connection_init = MigrateOpts::try_from(
+            MigrateCliArgs::try_parse_from(["migrate", "-a", "swissfjord:31735"]).unwrap(),
+        )
+        .unwrap()
+        .connection_init;
+        match connection_init {
+            Some(ConnectionInit::SimpleTcp(Some(connection_opts))) => {
+                assert_eq!(connection_opts.hostname, Some("swissfjord".into()));
+                assert_eq!(connection_opts.port, Some(31735));
+            }
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_cli_args_into_migrate_ops_invalid_replication_errors() {
+        assert!(
+            MigrateOpts::try_from(
+                MigrateCliArgs::try_parse_from([
+                    "migrate",
+                    "--history-replication",
+                    "baldwinBrothers"
+                ])
+                .unwrap()
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_cli_args_into_migrate_ops_transforms_simple_replication() {
+        match MigrateOpts::try_from(
+            MigrateCliArgs::try_parse_from([
+                "migrate",
+                "--history-replication",
+                cquill::keyspace::REPLICATION,
+            ])
+            .unwrap(),
+        )
+        .unwrap()
+        .history_keyspace
+        .unwrap()
+        .replication
+        .unwrap()
+        {
+            ReplicationFactor::SimpleStrategy { factor: 1 } => (),
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_cli_args_into_migrate_ops_transforms_datacenter_replication() {
+        match MigrateOpts::try_from(
+            MigrateCliArgs::try_parse_from([
+                "migrate",
+                "--history-replication",
+                "{'class': 'NetworkTopologyStrategy', 'dc1': 2, 'dc2': 3}",
+            ])
+            .unwrap(),
+        )
+        .unwrap()
+        .history_keyspace
+        .unwrap()
+        .replication
+        .unwrap()
+        {
+            ReplicationFactor::NetworkTopologyStrategy { datacenter_factors } => {
+                assert_eq!(
+                    datacenter_factors,
+                    HashMap::from([("dc1".into(), 2), ("dc2".into(), 3)])
+                );
+            }
+            _ => panic!(),
+        };
     }
 
     #[test]
