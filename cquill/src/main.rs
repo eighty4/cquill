@@ -30,6 +30,8 @@ struct MigrateCliArgs {
     /// [default: ~/.cassandra/cqlshrc]
     #[clap(long, num_args(0..=1), value_name = "CQLSHRC_PATH", default_value = None)]
     cqlshrc: Option<Option<PathBuf>>,
+    #[clap(long, value_name = "CONNECTION_TIMEOUT")]
+    connection_timeout: Option<u16>,
     #[clap(long, value_name = "HISTORY_KEYSPACE", default_value = cquill::KEYSPACE)]
     history_keyspace: String,
     #[clap(long, value_name = "HISTORY_REPLICATION", default_value = cquill::keyspace::REPLICATION)]
@@ -72,7 +74,7 @@ impl TryFrom<MigrateCliArgs> for MigrateOpts {
         let connection_opts = ConnectionOpts {
             hostname,
             port,
-            connection_timeout: None,
+            connection_timeout: cli_args.connection_timeout,
             username: cli_args.username,
             password: cli_args.password,
         };
@@ -346,6 +348,21 @@ mod tests {
             Some(ConnectionInit::SimpleTcp(Some(connection_opts))) => {
                 assert_eq!(connection_opts.hostname, Some("swissfjord".into()));
                 assert_eq!(connection_opts.port, Some(31735));
+            }
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_cli_args_into_migrate_ops_with_connection_timeout() {
+        let connection_init = MigrateOpts::try_from(
+            MigrateCliArgs::try_parse_from(["migrate", "--connection-timeout", "4"]).unwrap(),
+        )
+        .unwrap()
+        .connection_init;
+        match connection_init {
+            Some(ConnectionInit::SimpleTcp(Some(connection_opts))) => {
+                assert_eq!(connection_opts.connection_timeout, Some(4));
             }
             _ => panic!(),
         };
