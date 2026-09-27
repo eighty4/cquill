@@ -32,16 +32,16 @@ struct MigrateCliArgs {
     cqlshrc: Option<Option<PathBuf>>,
     #[clap(long, value_name = "CONNECTION_TIMEOUT")]
     connection_timeout: Option<u16>,
-    #[clap(long, value_name = "HISTORY_KEYSPACE", default_value = cquill::KEYSPACE)]
+    #[clap(long, value_name = "HISTORY_KEYSPACE", default_value = cquill::KEYSPACE, value_parser = validate_keyspace)]
     history_keyspace: String,
     #[clap(long, value_name = "HISTORY_REPLICATION", default_value = cquill::keyspace::REPLICATION)]
     history_replication: String,
-    #[clap(long, value_name = "HISTORY_TABLE", default_value = cquill::TABLE)]
+    #[clap(long, value_name = "HISTORY_TABLE", default_value = cquill::TABLE, value_parser = validate_table)]
     history_table: String,
     /// [default: 127.0.0.1:9042]
     #[clap(short = 'a', long, value_name = "ADDRESS", value_parser = validate_address)]
     address: Option<String>,
-    #[clap(short = 'u', long, value_name = "USERNAME")]
+    #[clap(short = 'u', long, value_name = "USERNAME", value_parser = validate_username)]
     username: Option<String>,
     #[clap(short = 'p', long, value_name = "PASSWORD")]
     password: Option<String>,
@@ -53,6 +53,47 @@ fn validate_address(s: &str) -> Result<String, String> {
         Ok(s.to_string())
     } else {
         Err("--address must be a valid hostname or ipv4 address with optional port".into())
+    }
+}
+
+fn validate_keyspace(s: &str) -> Result<String, String> {
+    let p = if s.starts_with('"') {
+        r#"^"[a-zA-Z\d][a-zA-Z\d_]{0,47}"$"#
+    } else {
+        r"^[a-z\d][a-z\d_]{0,47}$"
+    };
+    if Regex::new(p).unwrap().is_match(s) {
+        Ok(s.to_string())
+    } else {
+        Err("--history-keyspace must be a valid keyspace identifier".into())
+    }
+}
+
+fn validate_table(s: &str) -> Result<String, String> {
+    let p = if s.starts_with('"') {
+        r#"^"[a-zA-Z\d][a-zA-Z\d_]{0,221}"$"#
+    } else {
+        r"^[a-z\d][a-z\d_]{0,221}$"
+    };
+    if Regex::new(p).unwrap().is_match(s) {
+        Ok(s.to_string())
+    } else {
+        Err("--history-table must be a valid table identifier".into())
+    }
+}
+
+fn validate_username(s: &str) -> Result<String, String> {
+    let p = if s.starts_with('\'') {
+        r"^'.{1,256}'$"
+    } else if s.starts_with('"') {
+        r#"^"[a-zA-Z\d][a-zA-Z\d_]{0,255}"$"#
+    } else {
+        r"^[a-z\d][a-z\d_]{0,255}$"
+    };
+    if Regex::new(p).unwrap().is_match(s) {
+        Ok(s.to_string())
+    } else {
+        Err("--username must be a valid username identifier".into())
     }
 }
 
@@ -212,6 +253,7 @@ fn error_exit(err: MigrateError) -> ! {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::iter::repeat_n;
 
     use super::*;
 
@@ -241,8 +283,62 @@ mod tests {
             MigrateCliArgs::try_parse_from(["migrate", "--history-keyspace", "o"])
                 .unwrap()
                 .history_keyspace,
-            PathBuf::from("o")
+            String::from("o")
         );
+        assert!(
+            MigrateCliArgs::try_parse_from(["migrate", "--history-keyspace", "_emperor_of_mexico"])
+                .is_err()
+        );
+        assert_eq!(
+            MigrateCliArgs::try_parse_from([
+                "migrate",
+                "--history-keyspace",
+                r#""EmperorOfMexico""#
+            ])
+            .unwrap()
+            .history_keyspace,
+            String::from(r#""EmperorOfMexico""#)
+        );
+        assert!(
+            MigrateCliArgs::try_parse_from([
+                "migrate",
+                "--history-keyspace",
+                r#""_EmperorOfMexico""#
+            ])
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_username() {
+        for valid in [
+            "'$'",
+            r#""2_Chainz""#,
+            "2_chainz",
+            &repeat_n('x', 256).collect::<String>(),
+            &format!("\"{}\"", repeat_n('X', 256).collect::<String>()),
+            &format!("'{}'", repeat_n('$', 256).collect::<String>()),
+        ] {
+            assert_eq!(
+                MigrateCliArgs::try_parse_from(["migrate", "-u", valid])
+                    .unwrap()
+                    .username,
+                Some(String::from(valid))
+            );
+        }
+        for error in [
+            "$",
+            "2_Chainz",
+            "_2_chainz",
+            "2_Chain$",
+            r#""_2_chainz""#,
+            r#""_2_chain$""#,
+            &repeat_n('x', 257).collect::<String>(),
+            &format!("\"{}\"", repeat_n('X', 257).collect::<String>()),
+            &format!("'{}'", repeat_n('$', 257).collect::<String>()),
+        ] {
+            assert!(MigrateCliArgs::try_parse_from(["migrate", "-u", error]).is_err());
+        }
     }
 
     #[test]
@@ -253,12 +349,29 @@ mod tests {
                 .history_table,
             String::from("migrated_cql")
         );
-        assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate", "--history-table", "black_mesa"])
-                .unwrap()
-                .history_table,
-            PathBuf::from("black_mesa")
-        );
+        for valid in [
+            "black_mesa",
+            r#""blackMesa""#,
+            &repeat_n('x', 222).collect::<String>(),
+            &format!("\"{}\"", repeat_n('X', 222).collect::<String>()),
+        ] {
+            assert_eq!(
+                MigrateCliArgs::try_parse_from(["migrate", "--history-table", valid])
+                    .unwrap()
+                    .history_table,
+                String::from(valid)
+            );
+        }
+        for error in [
+            "black mesa",
+            "blackMesa",
+            "_black_mesa",
+            r#""black_me$a""#,
+            &repeat_n('x', 223).collect::<String>(),
+            &format!("\"{}\"", repeat_n('X', 223).collect::<String>()),
+        ] {
+            assert!(MigrateCliArgs::try_parse_from(["migrate", "--history-table", error]).is_err());
+        }
     }
 
     #[test]
