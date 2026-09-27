@@ -23,7 +23,7 @@ enum CquillCommand {
     Migrate(MigrateCliArgs),
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 struct MigrateCliArgs {
     #[clap(short = 'd', long, value_name = "CQL_DIR", default_value = "./cql")]
     cql_dir: PathBuf,
@@ -205,6 +205,97 @@ fn error_exit(err: MigrateError) -> ! {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_cli_parse_cql_dir() {
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate"]).unwrap().cql_dir,
+            PathBuf::from("./cql")
+        );
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate", "--cql-dir", "/da/root/cql"])
+                .unwrap()
+                .cql_dir,
+            PathBuf::from("/da/root/cql")
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_history_keyspace() {
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate"])
+                .unwrap()
+                .history_keyspace,
+            String::from("cquill")
+        );
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate", "--history-keyspace", "o"])
+                .unwrap()
+                .history_keyspace,
+            PathBuf::from("o")
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_history_table() {
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate"])
+                .unwrap()
+                .history_table,
+            String::from("migrated_cql")
+        );
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate", "--history-table", "black_mesa"])
+                .unwrap()
+                .history_table,
+            PathBuf::from("black_mesa")
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_history_replication() {
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate"])
+                .unwrap()
+                .history_replication,
+            String::from("{ 'class': 'SimpleStrategy', 'replication_factor': 1 }")
+        );
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate", "--history-replication", "{}"])
+                .unwrap()
+                .history_replication,
+            PathBuf::from("{}")
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_address() {
+        assert!(
+            MigrateCliArgs::try_parse_from(["migrate", "-a", "127.0.0.1:benedictCumberbatch"])
+                .is_err()
+        );
+        assert!(MigrateCliArgs::try_parse_from(["migrate", "-a", "127.0.0.1:9042"]).is_ok());
+    }
+
+    #[test]
+    fn test_cli_parse_cqlshrc_path() {
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate"]).unwrap().cqlshrc,
+            None
+        );
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate", "--cqlshrc"])
+                .unwrap()
+                .cqlshrc,
+            Some(None)
+        );
+        assert_eq!(
+            MigrateCliArgs::try_parse_from(["migrate", "--cqlshrc", "/da/root/cqlshrc"])
+                .unwrap()
+                .cqlshrc,
+            Some(Some("/da/root/cqlshrc".into()))
+        );
+    }
 
     #[test]
     fn test_validate_address_returns_valid() {
