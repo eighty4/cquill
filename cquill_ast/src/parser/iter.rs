@@ -31,17 +31,17 @@ pub fn peek_next_match(iter: &mut Peekable<Iter<Token>>, next: TokenName) -> Par
     }
 }
 
-/// Returns next Token or Err if next returns None.
+/// Returns next [`Token`] or Err if next returns None.
 pub fn pop_next<'a>(iter: &'a mut Peekable<Iter<Token>>) -> ParseResult<&'a Token> {
     iter.next().ok_or_else(|| todo!("parse error"))
 }
 
-/// Returns next Some(Token) if it matches TokenName or None if next returns None.
+/// Returns next [`Token`] if it matches [`TokenName`] or None if next returns None.
 pub fn pop_next_if<'a>(iter: &'a mut Peekable<Iter<Token>>, next: TokenName) -> Option<&'a Token> {
     iter.next_if(|t| t.name == next)
 }
 
-/// Returns Token if it matches TokenName or Err if next returns None or Token does not match.
+/// Returns [`Token`] if it matches [`TokenName`] or Err if next returns None or [`Token`] does not match.
 pub fn pop_next_match<'a>(
     iter: &'a mut Peekable<Iter<Token>>,
     next: TokenName,
@@ -96,8 +96,8 @@ pub fn pop_identifier(
     })
 }
 
-/// Pops and returns bool or Err if next returns None or does not return TrueKeyword or
-/// FalseKeyword.
+/// Pops and returns bool or Err if next returns None or does not return [`TrueKeyword`] or
+/// [`FalseKeyword`].
 pub fn pop_boolean_literal(iter: &mut Peekable<Iter<Token>>) -> ParseResult<bool> {
     match iter.next() {
         None => todo!("parse error"),
@@ -192,7 +192,7 @@ pub fn pop_keyspace_object_name(
     })
 }
 
-/// Pops and returns StringView or Err if next returns None or does not return StringLiteral.
+/// Pops and returns [`StringView`] or Err if next returns None or does not return [`StringLiteral`].
 pub fn pop_string_literal(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,

@@ -10,12 +10,12 @@ use crate::keyspace::ReplicationFactor::*;
 
 pub const REPLICATION: &str = "{ 'class': 'SimpleStrategy', 'replication_factor': 1 }";
 
-/// KeyspaceOpts describes a keyspace managed by cquill with a keyspace name and
-/// [ReplicationFactor].
+/// `KeyspaceOpts` describes a keyspace managed by cquill with a keyspace name and
+/// [`ReplicationFactor`].
 pub struct KeyspaceOpts {
     pub name: String,
-    /// The keyspace [ReplicationFactor] will default to a development environment setting using
-    /// SimpleStrategy with a replication factor of 1.
+    /// The keyspace [`ReplicationFactor`] will default to a development environment setting using
+    /// [`ReplicationFactor::SimpleStrategy`] with a replication factor of 1.
     pub replication: Option<ReplicationFactor>,
 }
 
@@ -28,14 +28,14 @@ impl KeyspaceOpts {
     }
 }
 
-/// ReplicationFactor represents the strategy and data replication factor for a keyspace.
+/// `ReplicationFactor` represents the strategy and data replication factor for a keyspace.
 pub enum ReplicationFactor {
-    /// NetworkTopologyStrategy specifies how many replications will be placed in specific
+    /// `NetworkTopologyStrategy` specifies how many replications will be placed in specific
     /// datacenters within the cluster.
     NetworkTopologyStrategy {
         datacenter_factors: HashMap<String, u8>,
     },
-    /// SimpleStrategy specifies a single number of replications distributed throughout any nodes
+    /// `SimpleStrategy` specifies a single number of replications distributed throughout any nodes
     /// within the cluster. This strategy does not provide sufficient resiliency and fault tolerance
     /// and should not be used with production systems.
     SimpleStrategy { factor: u8 },
@@ -44,9 +44,9 @@ pub enum ReplicationFactor {
 impl FromStr for ReplicationFactor {
     type Err = anyhow::Error;
 
-    /// from_str performs a manual deserialization of a `CREATE KEYSPACE` statement's replication
+    /// `from_str` performs a manual deserialization of a `CREATE KEYSPACE` statement's replication
     /// settings from the CQL key-value hash object. Valid input from the CLI default can be seen
-    /// in [REPLICATION].
+    /// in [`REPLICATION`].
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == REPLICATION {
             return Ok(SimpleStrategy { factor: 1 });

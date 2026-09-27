@@ -46,7 +46,7 @@ pub struct CqlshrcOpts {
 }
 
 pub enum ConnectionInit {
-    /// Use a cqlshrc ini file to configure a connection.
+    /// Use a `cqlshrc` ini file to configure a connection.
     ///
     /// [`CqlshrcOpts`] allows overriding `cqlshrc` values
     /// and specifying the path to the `cqlshrc` ini file.
@@ -55,7 +55,7 @@ pub enum ConnectionInit {
     /// without any connection config overrides.
     Cqlshrc(CqlshrcOpts),
 
-    /// Use a `scylla` crate `SessionBuilder` to specify complex
+    /// Use a `scylla` crate [`SessionBuilder`] to specify complex
     /// auth schemes and mLTS to provide robust and secure connections
     /// to Amazon Keyframes, Astra DB, Cassandra & ScyllaDB.
     ///
@@ -76,7 +76,7 @@ pub enum ConnectionInit {
     Session(Arc<Session>),
 
     /// Specify a hostname or hostname & port for a simple TCP connection.
-    /// using [`ConnectionOpts`]. PasswordAuthenticator connections are
+    /// using [`ConnectionOpts`]. `PasswordAuthenticator` connections are
     /// supported with [`ConnectionOpts::username`] and [`ConnectionOpts::password`].
     ///
     /// [`ConnectionInit::default`] will default to `127.0.0.1` and `:9042`.
@@ -111,9 +111,9 @@ impl ConnectionInit {
     }
 }
 
-/// `migrate_cql` performs a migration of all newly added cql scripts in [MigrateOpts::cql_dir]
+/// `migrate_cql` performs a migration of all newly added cql scripts in [`MigrateOpts::cql_dir`]
 /// since its last invocation. Migrated scripts are tracked in a cquill keyspace and history table
-/// specified with [MigrateOpts::history_keyspace] and [MigrateOpts::history_table]. A successful
+/// specified with [`MigrateOpts::history_keyspace`] and [`MigrateOpts::history_table`]. A successful
 /// method result contains a vec of the cql script paths executed during this invocation.
 pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<CqlFile>, MigrateError> {
     let cql_files = cql_file::files_from_dir(&opts.cql_dir)?;
