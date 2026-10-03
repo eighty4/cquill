@@ -19,6 +19,8 @@ services:
       retries: 30
     ports:
       - "9042:9042"   # CQL protocol
+    environment:
+      - CASSANDRA_BROADCAST_ADDRESS=127.0.0.1
 
   cassandra_4:
     container_name: cassandra_4
@@ -31,6 +33,8 @@ services:
       retries: 30
     ports:
       - "9042:9042"   # CQL protocol
+    environment:
+      - CASSANDRA_BROADCAST_ADDRESS=127.0.0.1
 
   cassandra_5:
     container_name: cassandra_5
@@ -43,10 +47,13 @@ services:
       retries: 30
     ports:
       - "9042:9042"   # CQL protocol
+    environment:
+      - CASSANDRA_BROADCAST_ADDRESS=127.0.0.1
 
   scylladb_2026:
     container_name: scylladb_2026
     image: scylladb/scylla:2026.1
+    command: --broadcast-rpc-address 127.0.0.1
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
@@ -62,6 +69,7 @@ services:
   scylladb_2025:
     container_name: scylladb_2025
     image: scylladb/scylla:2025.1
+    command: --broadcast-rpc-address 127.0.0.1
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
@@ -77,6 +85,7 @@ services:
   scylladb_6:
     container_name: scylladb_6
     image: scylladb/scylla:6.2
+    command: --broadcast-rpc-address 127.0.0.1
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
@@ -92,6 +101,7 @@ services:
   scylladb_5:
     container_name: scylladb_5
     image: scylladb/scylla:5.4
+    command: --broadcast-rpc-address 127.0.0.1
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
@@ -107,7 +117,7 @@ services:
   password_auth:
     container_name: password_auth
     image: scylladb/scylla:6.2
-    command: --authenticator PasswordAuthenticator
+    command: --broadcast-rpc-address 127.0.0.1 --authenticator PasswordAuthenticator
     healthcheck:
       test: [ "CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "describe cluster" ]
       start_period: 30s
