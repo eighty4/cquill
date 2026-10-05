@@ -1,0 +1,12 @@
+[package]
+name = "cquill-dev-gen-certs"
+publish = false
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+rcgen = "0.14.10"
+temp-dir = { workspace = true }

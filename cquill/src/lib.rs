@@ -8,6 +8,7 @@ pub use crate::cql_file::CqlFile;
 use crate::cqlshrc::session_from_cqlshrc;
 pub use crate::migrate::{MigrateError, MigrateErrorState};
 use crate::queries::*;
+use crate::session::CreateSessionError;
 use crate::{keyspace::*, queries::keyspace::CreateKeyspaceError};
 
 mod cql_file;
@@ -23,6 +24,7 @@ pub const KEYSPACE: &str = "cquill";
 
 pub const TABLE: &str = "migrated_cql";
 
+#[derive(Debug)]
 pub struct MigrateOpts {
     pub connection_init: Option<ConnectionInit>,
     pub cql_dir: PathBuf,
@@ -30,21 +32,38 @@ pub struct MigrateOpts {
     pub history_table: Option<String>,
 }
 
-#[derive(Default)]
+impl Default for MigrateOpts {
+    fn default() -> Self {
+        Self {
+            connection_init: Default::default(),
+            cql_dir: PathBuf::from("cql"),
+            history_keyspace: Default::default(),
+            history_table: Default::default(),
+        }
+    }
+}
+
+#[derive(Default, Debug)]
 pub struct ConnectionOpts {
     pub hostname: Option<String>,
     pub port: Option<u32>,
     pub connection_timeout: Option<u16>,
     pub username: Option<String>,
     pub password: Option<String>,
+    pub ssl_certfile: Option<PathBuf>,
+    pub ssl_usercert: Option<PathBuf>,
+    pub ssl_userkey: Option<PathBuf>,
+    pub use_ssl: bool,
+    pub validate_ssl: Option<bool>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct CqlshrcOpts {
     pub path: Option<PathBuf>,
     pub overrides: ConnectionOpts,
 }
 
+#[derive(Debug)]
 pub enum ConnectionInit {
     /// Use a `cqlshrc` ini file to configure a connection.
     ///
@@ -54,6 +73,30 @@ pub enum ConnectionInit {
     /// [`CqlshrcOpts::default`] will use `~/.cassandra/cqlshrc`
     /// without any connection config overrides.
     Cqlshrc(CqlshrcOpts),
+
+    /// Specify a hostname or hostname & port for a simple TCP connection.
+    /// using [`ConnectionOpts`]. `PasswordAuthenticator` connections are
+    /// supported with [`ConnectionOpts::username`] and [`ConnectionOpts::password`].
+    ///
+    /// [`ConnectionInit::default`] will default to `127.0.0.1` and `:9042`.
+    ///
+    /// ```
+    /// use cquill::{ConnectionInit, ConnectionOpts};
+    ///
+    /// ConnectionInit::NewSession(Some(ConnectionOpts{
+    ///     hostname: Some("us-east-1.scylla.swissfjord.com".into()),
+    ///     port: None,
+    ///     connection_timeout: None,
+    ///     username: Some("bjarne".into()),
+    ///     password: Some("definedBehavior".into()),
+    ///     ssl_certfile: None,
+    ///     ssl_usercert: None,
+    ///     ssl_userkey: None,
+    ///     use_ssl: false,
+    ///     validate_ssl: None,
+    /// }));
+    /// ```
+    NewSession(Option<ConnectionOpts>),
 
     /// Use a `scylla` crate [`SessionBuilder`] to specify complex
     /// auth schemes and mLTS to provide robust and secure connections
@@ -74,39 +117,20 @@ pub enum ConnectionInit {
     /// }
     /// ```
     Session(Arc<Session>),
-
-    /// Specify a hostname or hostname & port for a simple TCP connection.
-    /// using [`ConnectionOpts`]. `PasswordAuthenticator` connections are
-    /// supported with [`ConnectionOpts::username`] and [`ConnectionOpts::password`].
-    ///
-    /// [`ConnectionInit::default`] will default to `127.0.0.1` and `:9042`.
-    ///
-    /// ```
-    /// use cquill::{ConnectionInit, ConnectionOpts};
-    ///
-    /// ConnectionInit::SimpleTcp(Some(ConnectionOpts{
-    ///     hostname: Some("us-east-1.scylla.swissfjord.com".into()),
-    ///     port: None,
-    ///     connection_timeout: None,
-    ///     username: Some("bjarne".into()),
-    ///     password: Some("definedBehavior".into()),
-    /// }));
-    /// ```
-    SimpleTcp(Option<ConnectionOpts>),
 }
 
 impl Default for ConnectionInit {
     fn default() -> Self {
-        ConnectionInit::SimpleTcp(None)
+        ConnectionInit::NewSession(None)
     }
 }
 
 impl ConnectionInit {
-    async fn session(&self) -> Result<Arc<Session>> {
+    async fn session(&self) -> Result<Arc<Session>, CreateSessionError> {
         match self {
             ConnectionInit::Cqlshrc(cqlshrc_opts) => session_from_cqlshrc(cqlshrc_opts).await,
             ConnectionInit::Session(session) => Ok(session.clone()),
-            ConnectionInit::SimpleTcp(opts) => session::create(opts.into()).await,
+            ConnectionInit::NewSession(opts) => session::create(opts.into()).await,
         }
     }
 }
@@ -163,7 +187,7 @@ mod tests {
     #[test]
     fn test_connection_init_defaults_simple_tcp_no_opts() {
         match ConnectionInit::default() {
-            ConnectionInit::SimpleTcp(opts) => assert!(opts.is_none()),
+            ConnectionInit::NewSession(opts) => assert!(opts.is_none()),
             _ => panic!(),
         }
     }

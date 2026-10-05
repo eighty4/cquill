@@ -41,15 +41,12 @@ fn create_keyspace_cql(keyspace_opts: &KeyspaceOpts) -> Result<String, anyhow::E
         return Err(anyhow!("keyspace has empty name"));
     }
     let replication = match &keyspace_opts.replication {
-        Some(r) => match r {
-            NetworkTopologyStrategy { datacenter_factors } => {
-                create_network_topology_strategy_keyspace_replication_map_str(datacenter_factors)
-            }
-            SimpleStrategy { factor } => {
-                Ok(create_simple_strategy_keyspace_replication_map_str(factor))
-            }
-        },
-        None => Ok(create_simple_strategy_keyspace_replication_map_str(&1)),
+        NetworkTopologyStrategy { datacenter_factors } => {
+            create_network_topology_strategy_keyspace_replication_map_str(datacenter_factors)
+        }
+        SimpleStrategy { factor } => {
+            Ok(create_simple_strategy_keyspace_replication_map_str(factor))
+        }
     };
     match replication {
         Ok(r) => Ok(format!(
@@ -144,7 +141,7 @@ mod tests {
     fn test_create_keyspace_cql_errors_with_empty_keyspace_name() {
         let opts = KeyspaceOpts {
             name: "".to_string(),
-            replication: None,
+            ..Default::default()
         };
         let result = create_keyspace_cql(&opts);
         assert!(result.is_err());
@@ -155,19 +152,8 @@ mod tests {
     }
 
     #[test]
-    fn test_create_keyspace_cql_with_default_replication() {
-        let opts = KeyspaceOpts {
-            name: "cquill_migration".to_string(),
-            replication: None,
-        };
-        let result = create_keyspace_cql(&opts);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "create keyspace cquill_migration with replication = { 'class': 'SimpleStrategy', 'replication_factor': 1 }".to_string());
-    }
-
-    #[test]
     fn test_create_keyspace_cql_with_simple_strategy_replication() {
-        let replication = Some(SimpleStrategy { factor: 3 });
+        let replication = SimpleStrategy { factor: 3 };
         let opts = KeyspaceOpts {
             name: "cquill_migration".to_string(),
             replication,
@@ -180,7 +166,7 @@ mod tests {
     #[test]
     fn test_create_keyspace_cql_with_single_network_topology_replication_factor() {
         let datacenter_factors = HashMap::from([(String::from("dc1"), 7)]);
-        let replication = Some(NetworkTopologyStrategy { datacenter_factors });
+        let replication = NetworkTopologyStrategy { datacenter_factors };
         let opts = KeyspaceOpts {
             name: "cquill_migration".to_string(),
             replication,
@@ -194,7 +180,7 @@ mod tests {
     fn test_create_keyspace_cql_with_multiple_network_topology_replication_factors() {
         let datacenter_factors =
             HashMap::from([(String::from("dc1"), 7), (String::from("dc2"), 2)]);
-        let replication = Some(NetworkTopologyStrategy { datacenter_factors });
+        let replication = NetworkTopologyStrategy { datacenter_factors };
         let opts = KeyspaceOpts {
             name: "cquill_migration".to_string(),
             replication,
@@ -216,7 +202,7 @@ mod tests {
     #[test]
     fn test_create_keyspace_cql_errors_without_datacenter_factors() {
         let datacenter_factors = HashMap::new();
-        let replication = Some(NetworkTopologyStrategy { datacenter_factors });
+        let replication = NetworkTopologyStrategy { datacenter_factors };
         let opts = KeyspaceOpts {
             name: "cquill_migration".to_string(),
             replication,
@@ -232,7 +218,7 @@ mod tests {
     #[test]
     fn test_create_keyspace_cql_errors_without_datacenter_name() {
         let datacenter_factors = HashMap::from([(String::from(""), 7)]);
-        let replication = Some(NetworkTopologyStrategy { datacenter_factors });
+        let replication = NetworkTopologyStrategy { datacenter_factors };
         let opts = KeyspaceOpts {
             name: "cquill_migration".to_string(),
             replication,
@@ -248,7 +234,7 @@ mod tests {
     #[test]
     fn test_create_keyspace_cql_errors_with_zero_replication_factor() {
         let datacenter_factors = HashMap::from([(String::from("dc1"), 0)]);
-        let replication = Some(NetworkTopologyStrategy { datacenter_factors });
+        let replication = NetworkTopologyStrategy { datacenter_factors };
         let opts = KeyspaceOpts {
             name: "cquill_migration".to_string(),
             replication,

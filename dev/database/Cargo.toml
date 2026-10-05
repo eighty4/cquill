@@ -1,0 +1,17 @@
+[package]
+name = "cquill-dev-database"
+publish = false
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+anyhow = { workspace = true }
+bollard = "0.21.1"
+cquill-dev-gen-certs = { path = "../gen_certs" }
+dtor = "1.0.6"
+futures-util = "0.3.34"
+temp-dir = { workspace = true }
+tokio = { workspace = true }

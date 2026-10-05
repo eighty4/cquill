@@ -8,13 +8,10 @@ use util::*;
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    ensure_local_db_running(MigrateExample::PasswordAuth);
+    ensure_local_db_running(MigrateExample::Default);
 
     let opts = MigrateOpts {
-        connection_init: Some(ConnectionInit::Cqlshrc(CqlshrcOpts {
-            path: Some(example_dir_path("cqlshrc_password_auth.ini")),
-            overrides: ConnectionOpts::default(),
-        })),
+        connection_init: None,
         cql_dir: example_cql_dir(),
         history_keyspace: None,
         history_table: None,

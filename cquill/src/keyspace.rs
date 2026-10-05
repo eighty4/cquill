@@ -6,29 +6,39 @@ use anyhow::{Result, anyhow};
 use regex::Regex;
 use scylla::client::session::Session;
 
+use crate::KEYSPACE;
 use crate::keyspace::ReplicationFactor::*;
-
-pub const REPLICATION: &str = "{ 'class': 'SimpleStrategy', 'replication_factor': 1 }";
 
 /// `KeyspaceOpts` describes a keyspace managed by cquill with a keyspace name and
 /// [`ReplicationFactor`].
+#[derive(Debug)]
 pub struct KeyspaceOpts {
     pub name: String,
     /// The keyspace [`ReplicationFactor`] will default to a development environment setting using
     /// [`ReplicationFactor::SimpleStrategy`] with a replication factor of 1.
-    pub replication: Option<ReplicationFactor>,
+    pub replication: ReplicationFactor,
 }
 
 impl KeyspaceOpts {
     pub fn simple(name: String, factor: u8) -> Self {
         KeyspaceOpts {
             name,
-            replication: Some(SimpleStrategy { factor }),
+            replication: SimpleStrategy { factor },
+        }
+    }
+}
+
+impl Default for KeyspaceOpts {
+    fn default() -> Self {
+        Self {
+            name: KEYSPACE.into(),
+            replication: Default::default(),
         }
     }
 }
 
 /// `ReplicationFactor` represents the strategy and data replication factor for a keyspace.
+#[derive(Clone, Debug)]
 pub enum ReplicationFactor {
     /// `NetworkTopologyStrategy` specifies how many replications will be placed in specific
     /// datacenters within the cluster.
@@ -41,6 +51,12 @@ pub enum ReplicationFactor {
     SimpleStrategy { factor: u8 },
 }
 
+impl Default for ReplicationFactor {
+    fn default() -> Self {
+        Self::SimpleStrategy { factor: 1 }
+    }
+}
+
 impl FromStr for ReplicationFactor {
     type Err = anyhow::Error;
 
@@ -48,9 +64,6 @@ impl FromStr for ReplicationFactor {
     /// settings from the CQL key-value hash object. Valid input from the CLI default can be seen
     /// in [`REPLICATION`].
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == REPLICATION {
-            return Ok(SimpleStrategy { factor: 1 });
-        }
         let trimmed = s.trim();
         if !trimmed.starts_with('{') || !trimmed.ends_with('}') {
             return Err(anyhow!("not a valid keyspace replication object"));
@@ -146,17 +159,6 @@ mod tests {
     use crate::{queries, test_utils};
 
     use super::*;
-
-    #[test]
-    fn test_replication_factory_from_str_simple_default() {
-        let result = REPLICATION.parse::<ReplicationFactor>();
-        assert!(result.is_ok());
-        let rep_factor = result.unwrap();
-        match rep_factor {
-            NetworkTopologyStrategy { .. } => panic!(),
-            SimpleStrategy { factor } => assert_eq!(factor, 1),
-        }
-    }
 
     #[test]
     fn test_replication_factory_from_str_simple_custom() {
