@@ -19,15 +19,19 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = { workspace = true }
-clap = { version = "4.5.53", features = ["derive"] }
-configparser = "3.3.0"
-md5 = "0.8.1"
-regex = "1.13.1"
-scylla = "1.8.0"
+clap = { workspace = true }
+configparser = { workspace = true }
+md5 = { workspace = true }
+regex = { workspace = true }
+rustls = { workspace = true }
+rustls-pki-types = { workspace = true }
+scylla = { workspace = true }
 thiserror = { workspace = true }
-tokio = { version = "1.53.1", features = ["full"] }
+tokio = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
-rand = "0.10.2"
-temp-dir = "0.2.0"
+cquill-dev-database = { path = "../dev/database" }
+cquill-dev-gen-certs = { path = "../dev/gen_certs" }
+rand = { workspace = true }
+temp-dir = { workspace = true }

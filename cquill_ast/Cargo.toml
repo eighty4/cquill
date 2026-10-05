@@ -14,4 +14,4 @@ thiserror = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
-pretty_assertions = "1.4.1"
+pretty_assertions = { workspace = true }

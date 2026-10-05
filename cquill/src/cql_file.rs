@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use regex::Regex;
 
 use crate::MigrateError;
@@ -35,29 +35,30 @@ impl Display for CqlFile {
 impl CqlFile {
     pub fn from_path(path: PathBuf) -> Result<CqlFile> {
         let filename = path.file_name().unwrap().to_string_lossy().to_string();
-        if !FILENAME_REGEX.is_match(filename.as_str()) {
-            // todo use MigrateError for main.rs to handle error with
-            //  info about _ for .cql files to be omitted from migrate
-            return Err(anyhow!("{filename} is not a valid cql file name"));
+        match FILENAME_REGEX.captures(filename.as_str()) {
+            None => {
+                // todo use MigrateError for main.rs to handle error with
+                //  info about _ for .cql files to be omitted from migrate
+                Err(anyhow!("`{filename}` is not a valid cql file name"))
+            }
+            Some(captures) => {
+                let file_content = fs::read(&path)
+                    .with_context(|| format!("failed reading file `{}`", filename))?;
+                let hash = format!("{:x}", md5::compute(file_content));
+                let version = captures
+                    .name("version")
+                    .unwrap()
+                    .as_str()
+                    .parse::<i16>()
+                    .unwrap();
+                Ok(CqlFile {
+                    filename,
+                    hash,
+                    path,
+                    version,
+                })
+            }
         }
-        let hash = match fs::read(&path) {
-            Err(err) => return Err(anyhow!("failed reading file {}: {err}", filename)),
-            Ok(file_content) => format!("{:x}", md5::compute(file_content)),
-        };
-        let version = FILENAME_REGEX
-            .captures(filename.as_str())
-            .unwrap()
-            .name("version")
-            .unwrap()
-            .as_str()
-            .parse::<i16>()
-            .unwrap();
-        Ok(CqlFile {
-            filename,
-            hash,
-            path,
-            version,
-        })
     }
 
     pub(crate) fn read_statements(&self) -> Result<Vec<CqlStatement>, MigrateError> {
@@ -165,17 +166,17 @@ pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
             cql_files.push(cql_file);
         } else {
             return if cql_file.version == expected_version - 1 {
-                let previous_index = usize::try_from(expected_version - 2)?;
+                let previous_index = usize::try_from(expected_version - 2).unwrap();
                 let previous_filename = &cql_files.get(previous_index).unwrap().filename;
                 Err(anyhow!(
-                    "{} and {} repeat versions instead of incrementing to v{:0>3}",
+                    "`{}` and `{}` repeat versions instead of incrementing to v{:0>3}",
                     previous_filename,
                     cql_file.filename,
                     expected_version
                 ))
             } else {
                 Err(anyhow!(
-                    "{} found without a preceding v{:0>3} version cql file",
+                    "`{}` found without a preceding v{:0>3} version cql file",
                     cql_file.filename,
                     expected_version
                 ))
@@ -186,30 +187,24 @@ pub(crate) fn files_from_dir(cql_dir: &PathBuf) -> Result<Vec<CqlFile>> {
 }
 
 fn read_cql_file_paths(cql_dir: &PathBuf) -> Result<Vec<PathBuf>> {
-    let dir_read = match fs::read_dir(cql_dir) {
-        Err(_) => {
-            return Err(anyhow!(
-                "could not find directory '{}'",
-                cql_dir.to_string_lossy()
-            ));
-        }
-        Ok(dir_read) => dir_read,
-    };
+    let dir_read = fs::read_dir(cql_dir)
+        .map_err(|_| anyhow!("could not find directory '{}'", cql_dir.to_string_lossy()))?;
     let mut cql_file_paths = Vec::new();
-    for dir_entry in dir_read {
-        let path = dir_entry?.path();
+    for dir_entry in dir_read.flatten() {
+        let path = dir_entry.path();
         if is_inclusive_cql_filename(&path) {
             cql_file_paths.push(path);
         }
     }
-    cql_file_paths.sort();
     if cql_file_paths.is_empty() {
-        return Err(anyhow!(
+        Err(anyhow!(
             "no cql files found in directory '{}'",
             cql_dir.to_string_lossy()
-        ));
+        ))
+    } else {
+        cql_file_paths.sort();
+        Ok(cql_file_paths)
     }
-    Ok(cql_file_paths)
 }
 
 fn is_inclusive_cql_filename(path: &Path) -> bool {
@@ -486,7 +481,7 @@ mod tests {
         match files_from_dir(&temp_dir_path) {
             Ok(_) => panic!(),
             Err(err) => {
-                assert_eq!(err.to_string(), "foo.cql is not a valid cql file name");
+                assert_eq!(err.to_string(), "`foo.cql` is not a valid cql file name");
             }
         }
     }
@@ -524,7 +519,7 @@ mod tests {
             Err(err) => {
                 assert_eq!(
                     err.to_string(),
-                    "v004-foo.cql found without a preceding v003 version cql file"
+                    "`v004-foo.cql` found without a preceding v003 version cql file"
                 );
             }
         }
@@ -543,7 +538,7 @@ mod tests {
             Err(err) => {
                 assert_eq!(
                     err.to_string(),
-                    "v001-bar.cql and v001-foo.cql repeat versions instead of incrementing to v002"
+                    "`v001-bar.cql` and `v001-foo.cql` repeat versions instead of incrementing to v002"
                 );
             }
         }

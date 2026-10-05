@@ -8,19 +8,14 @@ use util::*;
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    println!(
-        "before running this example, you must start the example's docker service:\n\n    `docker compose up password_auth -d --wait`\n\n"
-    );
-
-    let cql_dir = example_cql_dir();
-    let cqlshrc = cql_dir.parent().unwrap().join("cqlshrc_password_auth.ini");
+    ensure_local_db_running(MigrateExample::PasswordAuth);
 
     let opts = MigrateOpts {
         connection_init: Some(ConnectionInit::Cqlshrc(CqlshrcOpts {
-            path: Some(cqlshrc),
+            path: Some(example_dir_path("cqlshrc_password_auth.ini")),
             overrides: ConnectionOpts::default(),
         })),
-        cql_dir,
+        cql_dir: example_cql_dir(),
         history_keyspace: None,
         history_table: None,
     };

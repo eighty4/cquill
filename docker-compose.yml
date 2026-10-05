@@ -1,9 +1,13 @@
 ---
 
-# admin utilities
-#  docker exec -it cquill-scylladb cqlsh
-#  docker exec -it cquill-scylladb nodetool
+# run one of the cassandra_ or scylla_ containers
+# for running the cquill crate's tests
 
+# admin utilities
+#  docker exec -it $CONTAINER cqlsh
+#  docker exec -it $CONTAINER nodetool
+
+# docs https://hub.docker.com/r/_/cassandra
 # docs https://hub.docker.com/r/scylladb/scylla
 
 services:
@@ -14,13 +18,21 @@ services:
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
-      interval: 2s
-      timeout: 5s
+      start_interval: 2s
+      interval: 5s
+      timeout: 2s
       retries: 30
     ports:
       - "9042:9042"   # CQL protocol
     environment:
       - CASSANDRA_BROADCAST_ADDRESS=127.0.0.1
+      - MAX_HEAP_SIZE=1536m
+      - HEAP_NEWSIZE=384m
+    deploy:
+      resources:
+        limits:
+          cpus: 2
+          memory: 3g
 
   cassandra_4:
     container_name: cassandra_4
@@ -28,37 +40,54 @@ services:
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
-      interval: 2s
-      timeout: 5s
+      start_interval: 2s
+      interval: 5s
+      timeout: 2s
       retries: 30
     ports:
       - "9042:9042"   # CQL protocol
     environment:
       - CASSANDRA_BROADCAST_ADDRESS=127.0.0.1
+      - MAX_HEAP_SIZE=1536m
+      - HEAP_NEWSIZE=384m
+    deploy:
+      resources:
+        limits:
+          cpus: 2
+          memory: 3g
 
   cassandra_5:
     container_name: cassandra_5
     image: cassandra:5.0
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
-      start_period: 30s
-      interval: 2s
-      timeout: 5s
+      start_period: 60s
+      start_interval: 2s
+      interval: 5s
+      timeout: 2s
       retries: 30
     ports:
       - "9042:9042"   # CQL protocol
     environment:
       - CASSANDRA_BROADCAST_ADDRESS=127.0.0.1
+      - MAX_HEAP_SIZE=1536m
+      - HEAP_NEWSIZE=384m
+    deploy:
+      resources:
+        limits:
+          cpus: 2
+          memory: 3g
 
-  scylladb_2026:
-    container_name: scylladb_2026
+  scylla_2026:
+    container_name: scylla_2026
     image: scylladb/scylla:2026.1
     command: --broadcast-rpc-address 127.0.0.1
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
-      interval: 2s
-      timeout: 5s
+      start_interval: 2s
+      interval: 5s
+      timeout: 2s
       retries: 30
     ports:
       - "7001:7001"   # inter-node gossip
@@ -66,15 +95,16 @@ services:
       - "9180:9180"   # Prometheus metrics
       - "10000:10000" # ScyllaDB API
 
-  scylladb_2025:
-    container_name: scylladb_2025
+  scylla_2025:
+    container_name: scylla_2025
     image: scylladb/scylla:2025.1
     command: --broadcast-rpc-address 127.0.0.1
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
-      interval: 2s
-      timeout: 5s
+      start_interval: 2s
+      interval: 5s
+      timeout: 2s
       retries: 30
     ports:
       - "7001:7001"   # inter-node gossip
@@ -82,15 +112,16 @@ services:
       - "9180:9180"   # Prometheus metrics
       - "10000:10000" # ScyllaDB API
 
-  scylladb_6:
-    container_name: scylladb_6
+  scylla_6:
+    container_name: scylla_6
     image: scylladb/scylla:6.2
     command: --broadcast-rpc-address 127.0.0.1
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
-      interval: 2s
-      timeout: 5s
+      start_interval: 2s
+      interval: 5s
+      timeout: 2s
       retries: 30
     ports:
       - "7001:7001"   # inter-node gossip
@@ -98,15 +129,16 @@ services:
       - "9180:9180"   # Prometheus metrics
       - "10000:10000" # ScyllaDB API
 
-  scylladb_5:
-    container_name: scylladb_5
+  scylla_5:
+    container_name: scylla_5
     image: scylladb/scylla:5.4
     command: --broadcast-rpc-address 127.0.0.1
     healthcheck:
       test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
       start_period: 30s
-      interval: 2s
-      timeout: 5s
+      start_interval: 2s
+      interval: 5s
+      timeout: 2s
       retries: 30
     ports:
       - "7001:7001"   # inter-node gossip
@@ -116,13 +148,14 @@ services:
 
   password_auth:
     container_name: password_auth
-    image: scylladb/scylla:6.2
+    image: scylladb/scylla:2026.1
     command: --broadcast-rpc-address 127.0.0.1 --authenticator PasswordAuthenticator
     healthcheck:
       test: [ "CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "describe cluster" ]
       start_period: 30s
-      interval: 2s
-      timeout: 5s
+      start_interval: 2s
+      interval: 5s
+      timeout: 2s
       retries: 30
     ports:
       - "7001:7001"   # inter-node gossip

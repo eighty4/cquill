@@ -8,11 +8,14 @@ use crate::cql_file::{CqlFile, CqlStatement};
 use crate::queries;
 use crate::queries::QueryError;
 use crate::queries::keyspace::CreateKeyspaceError;
+use crate::session::CreateSessionError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum MigrateError {
     #[error("error reading {filename} from disk: {error}")]
     CqlFileReadError { filename: String, error: String },
+    #[error("{0}")]
+    CreateSession(#[from] CreateSessionError),
     #[error("cql query error: {source}")]
     CqlQueryError {
         #[from]
@@ -36,7 +39,7 @@ pub enum MigrateError {
     PartialMigration { error_state: Box<MigrateErrorState> },
     #[error(transparent)]
     PrepareKeyspaceError(#[from] CreateKeyspaceError),
-    #[error("{source}")]
+    #[error("{source:#}")]
     Other {
         #[from]
         source: anyhow::Error,

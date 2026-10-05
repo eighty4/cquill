@@ -9,6 +9,8 @@ use util::*;
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    ensure_local_db_running(MigrateExample::Default);
+
     let session = SessionBuilder::new()
         .known_node("127.0.0.1")
         .build()

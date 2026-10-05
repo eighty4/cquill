@@ -27,16 +27,18 @@ enum CquillCommand {
 struct MigrateCliArgs {
     #[clap(short = 'd', long, value_name = "CQL_DIR", default_value = "./cql")]
     cql_dir: PathBuf,
-    /// [default: ~/.cassandra/cqlshrc]
+    /// Explicit opt-in [default: ~/.cassandra/cqlshrc]
     #[clap(long, num_args(0..=1), value_name = "CQLSHRC_PATH", default_value = None)]
     cqlshrc: Option<Option<PathBuf>>,
-    #[clap(long, value_name = "CONNECTION_TIMEOUT")]
+    /// [default: 5]
+    #[clap(long, value_name = "SECONDS")]
     connection_timeout: Option<u16>,
-    #[clap(long, value_name = "HISTORY_KEYSPACE", default_value = cquill::KEYSPACE, value_parser = validate_keyspace)]
+    #[clap(long, value_name = "KEYSPACE", default_value = cquill::KEYSPACE, value_parser = validate_keyspace)]
     history_keyspace: String,
-    #[clap(long, value_name = "HISTORY_REPLICATION", default_value = cquill::keyspace::REPLICATION)]
-    history_replication: String,
-    #[clap(long, value_name = "HISTORY_TABLE", default_value = cquill::TABLE, value_parser = validate_table)]
+    /// [default: {'class':'SimpleStrategy','factor':1}]
+    #[clap(long, value_name = "REPLICATION", value_parser = parse_replication)]
+    history_replication: Option<ReplicationFactor>,
+    #[clap(long, value_name = "TABLE", default_value = cquill::TABLE, value_parser = validate_table)]
     history_table: String,
     /// [default: 127.0.0.1:9042]
     #[clap(short = 'a', long, value_name = "ADDRESS", value_parser = validate_address)]
@@ -45,6 +47,27 @@ struct MigrateCliArgs {
     username: Option<String>,
     #[clap(short = 'p', long, value_name = "PASSWORD")]
     password: Option<String>,
+    /// Explicit opt-in required for SSL [default: false]
+    #[clap(long = "ssl", default_value_t = false)]
+    ssl: bool,
+    /// [default: true (or value from cqlshrc)]
+    #[clap(
+        long = "ssl-validate",
+        value_name = "true|false",
+        hide_possible_values = true
+    )]
+    ssl_validate: Option<bool>,
+    #[clap(long, value_name = "CERTFILE")]
+    ssl_cert: Option<PathBuf>,
+    #[clap(long, value_name = "USERCERT")]
+    ssl_usercert: Option<PathBuf>,
+    #[clap(long, value_name = "USERKEY")]
+    ssl_userkey: Option<PathBuf>,
+}
+
+fn parse_replication(s: &str) -> Result<ReplicationFactor, String> {
+    s.parse::<ReplicationFactor>()
+        .map_err(|err| err.to_string())
 }
 
 fn validate_address(s: &str) -> Result<String, String> {
@@ -97,14 +120,8 @@ fn validate_username(s: &str) -> Result<String, String> {
     }
 }
 
-impl TryFrom<MigrateCliArgs> for MigrateOpts {
-    type Error = MigrateError;
-
-    fn try_from(cli_args: MigrateCliArgs) -> Result<Self, Self::Error> {
-        let replication_factor = match cli_args.history_replication.parse::<ReplicationFactor>() {
-            Ok(replication_factor) => replication_factor,
-            Err(err) => return Err(MigrateError::from(err)),
-        };
+impl From<MigrateCliArgs> for MigrateOpts {
+    fn from(cli_args: MigrateCliArgs) -> Self {
         let (hostname, port) = match cli_args.address {
             None => (None, None),
             Some(address) => match address.split_once(':') {
@@ -118,23 +135,28 @@ impl TryFrom<MigrateCliArgs> for MigrateOpts {
             connection_timeout: cli_args.connection_timeout,
             username: cli_args.username,
             password: cli_args.password,
+            ssl_certfile: cli_args.ssl_cert,
+            ssl_usercert: cli_args.ssl_usercert,
+            ssl_userkey: cli_args.ssl_userkey,
+            use_ssl: cli_args.ssl,
+            validate_ssl: cli_args.ssl_validate,
         };
         let connection_init = Some(match cli_args.cqlshrc {
-            None => ConnectionInit::SimpleTcp(Some(connection_opts)),
+            None => ConnectionInit::NewSession(Some(connection_opts)),
             Some(cqlshrc) => ConnectionInit::Cqlshrc(CqlshrcOpts {
                 path: cqlshrc,
                 overrides: connection_opts,
             }),
         });
-        Ok(MigrateOpts {
+        MigrateOpts {
             connection_init,
             cql_dir: cli_args.cql_dir,
             history_keyspace: Some(KeyspaceOpts {
                 name: cli_args.history_keyspace,
-                replication: Some(replication_factor),
+                replication: cli_args.history_replication.unwrap_or_default(),
             }),
             history_table: Some(cli_args.history_table),
-        })
+        }
     }
 }
 
@@ -147,13 +169,12 @@ async fn main() {
 }
 
 async fn migrate(args: MigrateCliArgs) {
-    let opts = match MigrateOpts::try_from(args) {
-        Ok(opts) => opts,
-        Err(err) => error_exit(err),
-    };
-    let version = env!("CARGO_PKG_VERSION");
-    let cql_dir = opts.cql_dir.to_string_lossy();
-    println!("CQuill {version}\nMigrating CQL files from {cql_dir}");
+    let opts = MigrateOpts::from(args);
+    println!(
+        "cquill {}\nmigrating CQL files from directory `{}`",
+        env!("CARGO_PKG_VERSION"),
+        opts.cql_dir.to_string_lossy()
+    );
     match migrate_cql(opts).await {
         Ok(migrated_cql) => print_migrated_cql(&migrated_cql),
         Err(err) => match err {
@@ -182,11 +203,19 @@ fn print_migrated_cql(migrated_cql: &[CqlFile]) {
 }
 
 fn error_prefix() -> String {
+    red_bold("error:")
+}
+
+fn exclamation_prefix() -> String {
+    red_bold("!")
+}
+
+fn red_bold(s: &str) -> String {
     // hex \x1b -> octal \033
     //        0 -> reset
     //       31 -> red foreground
     //        1 -> bold
-    "\x1b[0;31;1merror:\x1b[0m".to_string()
+    format!("\x1b[0;31;1m{s}\x1b[0m")
 }
 
 fn history_update_failed_exit(
@@ -198,13 +227,13 @@ fn history_update_failed_exit(
         print_migrated_cql(&error_state.migrated);
     }
     println!(
-        "\nUpdating CQuill's migration history table failed after executing the CQL from {}.",
+        "\nUpdating CQuill's migration history table failed after executing the CQL from `{}`.",
         error_state.failed_file
     );
     println!("{} {}", error_prefix(), error_state.error);
     println!("\n===IMPORTANT===");
     println!(
-        "`cquill migrate` must not be run until {} is added to the {}.{} history table.",
+        "`cquill migrate` must not be run until `{}` is added to the `{}.{}` history table.",
         error_state.failed_file, cquill_keyspace, cquill_table,
     );
     println!("===============");
@@ -218,7 +247,7 @@ fn partial_migrate_error_exit(error_state: &MigrateErrorState) {
         None => println!("Migrate failed during {}", error_state.failed_file),
         Some(failed_cql) => {
             println!(
-                "\nMigrate failed during {} ({}) on the CQL statement:\n    {}",
+                "\nMigrate failed during `{}` ({}) on the CQL statement:\n    {}",
                 error_state.failed_file,
                 if failed_cql.lines.0 == failed_cql.lines.1 {
                     format!("line {}", failed_cql.lines.0)
@@ -234,11 +263,11 @@ fn partial_migrate_error_exit(error_state: &MigrateErrorState) {
     println!("{} {}", error_prefix(), error_state.error);
     println!("\n===IMPORTANT===");
     println!(
-        "CQL statements before this statement in {} were successfully executed.",
+        "CQL statements before this statement in `{}` were successfully executed.",
         error_state.failed_file
     );
     println!(
-        "The remaining statements will need to be manually executed and {} must be added to CQuill's history table with the CQL file's content hash.",
+        "The remaining statements will need to be manually executed and `{}` must be added to CQuill's history table with the CQL file's content hash.",
         error_state.failed_file
     );
     println!("===============");
@@ -246,7 +275,18 @@ fn partial_migrate_error_exit(error_state: &MigrateErrorState) {
 }
 
 fn error_exit(err: MigrateError) -> ! {
-    println!("{} {err}", error_prefix());
+    if let MigrateError::Other { source } = err {
+        println!("{} {source}", error_prefix());
+        if source.chain().count() > 1 {
+            println!();
+            for cause in source.chain().skip(1) {
+                println!("     {} {cause}", exclamation_prefix());
+            }
+            println!();
+        }
+    } else {
+        println!("{} {err:#}", error_prefix());
+    }
     std::process::exit(1);
 }
 
@@ -376,17 +416,22 @@ mod tests {
 
     #[test]
     fn test_cli_parse_history_replication() {
-        assert_eq!(
+        assert!(
             MigrateCliArgs::try_parse_from(["migrate"])
                 .unwrap()
-                .history_replication,
-            String::from("{ 'class': 'SimpleStrategy', 'replication_factor': 1 }")
+                .history_replication
+                .is_none()
         );
-        assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate", "--history-replication", "{}"])
-                .unwrap()
-                .history_replication,
-            PathBuf::from("{}")
+        assert!(
+            MigrateCliArgs::try_parse_from(["migrate", "--history-replication", "{}"]).is_err()
+        );
+        assert!(
+            MigrateCliArgs::try_parse_from([
+                "migrate",
+                "--history-replication",
+                "{'class':'SimpleStrategy', 'replication_factor': 1}"
+            ])
+            .is_ok()
         );
     }
 
@@ -422,11 +467,9 @@ mod tests {
     #[test]
     fn test_cli_args_into_migrate_ops_without_address() {
         let connection_init =
-            MigrateOpts::try_from(MigrateCliArgs::try_parse_from(["migrate"]).unwrap())
-                .unwrap()
-                .connection_init;
+            MigrateOpts::from(MigrateCliArgs::try_parse_from(["migrate"]).unwrap()).connection_init;
         match connection_init {
-            Some(ConnectionInit::SimpleTcp(Some(connection_opts))) => {
+            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
                 assert!(connection_opts.hostname.is_none());
                 assert!(connection_opts.port.is_none());
             }
@@ -436,13 +479,12 @@ mod tests {
 
     #[test]
     fn test_cli_args_into_migrate_ops_with_hostname() {
-        let connection_init = MigrateOpts::try_from(
+        let connection_init = MigrateOpts::from(
             MigrateCliArgs::try_parse_from(["migrate", "-a", "swissfjord"]).unwrap(),
         )
-        .unwrap()
         .connection_init;
         match connection_init {
-            Some(ConnectionInit::SimpleTcp(Some(connection_opts))) => {
+            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
                 assert_eq!(connection_opts.hostname, Some("swissfjord".into()));
                 assert!(connection_opts.port.is_none());
             }
@@ -452,13 +494,12 @@ mod tests {
 
     #[test]
     fn test_cli_args_into_migrate_ops_with_hostname_and_port() {
-        let connection_init = MigrateOpts::try_from(
+        let connection_init = MigrateOpts::from(
             MigrateCliArgs::try_parse_from(["migrate", "-a", "swissfjord:31735"]).unwrap(),
         )
-        .unwrap()
         .connection_init;
         match connection_init {
-            Some(ConnectionInit::SimpleTcp(Some(connection_opts))) => {
+            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
                 assert_eq!(connection_opts.hostname, Some("swissfjord".into()));
                 assert_eq!(connection_opts.port, Some(31735));
             }
@@ -468,13 +509,12 @@ mod tests {
 
     #[test]
     fn test_cli_args_into_migrate_ops_with_connection_timeout() {
-        let connection_init = MigrateOpts::try_from(
+        let connection_init = MigrateOpts::from(
             MigrateCliArgs::try_parse_from(["migrate", "--connection-timeout", "4"]).unwrap(),
         )
-        .unwrap()
         .connection_init;
         match connection_init {
-            Some(ConnectionInit::SimpleTcp(Some(connection_opts))) => {
+            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
                 assert_eq!(connection_opts.connection_timeout, Some(4));
             }
             _ => panic!(),
@@ -482,35 +522,106 @@ mod tests {
     }
 
     #[test]
-    fn test_cli_args_into_migrate_ops_invalid_replication_errors() {
-        assert!(
-            MigrateOpts::try_from(
-                MigrateCliArgs::try_parse_from([
-                    "migrate",
-                    "--history-replication",
-                    "baldwinBrothers"
-                ])
-                .unwrap()
-            )
-            .is_err()
-        );
+    fn test_cli_args_into_migrate_ops_with_ssl_opts() {
+        let connection_init = MigrateOpts::from(
+            MigrateCliArgs::try_parse_from([
+                "migrate",
+                "--ssl",
+                "--ssl-cert",
+                "/certfile",
+                "--ssl-usercert",
+                "/usercert",
+                "--ssl-userkey",
+                "/userkey",
+            ])
+            .unwrap(),
+        )
+        .connection_init;
+        match connection_init {
+            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
+                assert!(connection_opts.use_ssl);
+                assert_eq!(connection_opts.validate_ssl, None);
+                assert_eq!(connection_opts.ssl_certfile, Some("/certfile".into()));
+                assert_eq!(connection_opts.ssl_usercert, Some("/usercert".into()));
+                assert_eq!(connection_opts.ssl_userkey, Some("/userkey".into()));
+            }
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_cli_args_into_migrate_ops_with_ssl_no_validate() {
+        let connection_init = MigrateOpts::from(
+            MigrateCliArgs::try_parse_from([
+                "migrate",
+                "--ssl",
+                "--ssl-validate",
+                "false",
+                "--ssl-cert",
+                "/certfile",
+                "--ssl-usercert",
+                "/usercert",
+                "--ssl-userkey",
+                "/userkey",
+            ])
+            .unwrap(),
+        )
+        .connection_init;
+        match connection_init {
+            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
+                assert!(connection_opts.use_ssl);
+                assert_eq!(connection_opts.validate_ssl, Some(false));
+                assert_eq!(connection_opts.ssl_certfile, Some("/certfile".into()));
+                assert_eq!(connection_opts.ssl_usercert, Some("/usercert".into()));
+                assert_eq!(connection_opts.ssl_userkey, Some("/userkey".into()));
+            }
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_cli_args_into_migrate_ops_with_explicit_ssl_validate() {
+        let connection_init = MigrateOpts::from(
+            MigrateCliArgs::try_parse_from([
+                "migrate",
+                "--ssl",
+                "--ssl-validate",
+                "true",
+                "--ssl-cert",
+                "/certfile",
+                "--ssl-usercert",
+                "/usercert",
+                "--ssl-userkey",
+                "/userkey",
+            ])
+            .unwrap(),
+        )
+        .connection_init;
+        match connection_init {
+            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
+                assert!(connection_opts.use_ssl);
+                assert_eq!(connection_opts.validate_ssl, Some(true));
+                assert_eq!(connection_opts.ssl_certfile, Some("/certfile".into()));
+                assert_eq!(connection_opts.ssl_usercert, Some("/usercert".into()));
+                assert_eq!(connection_opts.ssl_userkey, Some("/userkey".into()));
+            }
+            _ => panic!(),
+        };
     }
 
     #[test]
     fn test_cli_args_into_migrate_ops_transforms_simple_replication() {
-        match MigrateOpts::try_from(
+        match MigrateOpts::from(
             MigrateCliArgs::try_parse_from([
                 "migrate",
                 "--history-replication",
-                cquill::keyspace::REPLICATION,
+                "{'class':'SimpleStrategy','replication_factor':1}",
             ])
             .unwrap(),
         )
-        .unwrap()
         .history_keyspace
         .unwrap()
         .replication
-        .unwrap()
         {
             ReplicationFactor::SimpleStrategy { factor: 1 } => (),
             _ => panic!(),
@@ -519,7 +630,7 @@ mod tests {
 
     #[test]
     fn test_cli_args_into_migrate_ops_transforms_datacenter_replication() {
-        match MigrateOpts::try_from(
+        match MigrateOpts::from(
             MigrateCliArgs::try_parse_from([
                 "migrate",
                 "--history-replication",
@@ -527,11 +638,9 @@ mod tests {
             ])
             .unwrap(),
         )
-        .unwrap()
         .history_keyspace
         .unwrap()
         .replication
-        .unwrap()
         {
             ReplicationFactor::NetworkTopologyStrategy { datacenter_factors } => {
                 assert_eq!(
