@@ -1,35 +1,75 @@
-![CI](https://img.shields.io/github/actions/workflow/status/eighty4/cquill/ci_verify.yml)
+[![CI](https://github.com/eighty4/cquill/actions/workflows/ci_verify.yml/badge.svg)](https://github.com/eighty4/cquill/actions/workflows/ci_verify.yml)
 
-# Versioned CQL migrations for Cassandra and ScyllaDB
+# Versioning & migrating CQL schemas for Cassandra & ScyllaDB
 
-Create a directory with CQL files. Develop with Cquill locally. Then version, package and release with Cquill to your database deployment.
+> "VC interest is welcome."
 
-VC interest is welcome.
+## The `what`
 
-## Migrate command
+`cquill` is a CLI for versioned CQL migrations for Cassandra & ScyllaDB databases.
 
-`cquill migrate` performs a migration using cql sources from the `./cql` directory.
+#### Develop your product with predictable & automated schema migrations.
 
-CQL files are versioned with a 3 digit version prefix specified `v001` or `V001` and must be sequentially versioned.
-`v001-create-api-keyspace.cql` is valid while `v8.cql` is not valid.
+#### Version, package, and release your schema evolution the same way you version and package your services' code.
 
-On the event of a CQL statement error, Cquill will stop executing statements from the file and report which statement failed.
-Remediation at this point is a manual process and guidance is included with the error message from Cassandra.
+#### Tested on Linux, MacOS & Windows systems.
 
-Migration history is stored in a table named `cquill.migrated_cql` with a md5 hash record for every completed CQL file.
-Future migrations will validate previously migrated CQL files against the md5 hashes.
-This step ensures correctness and prevents a migration that could cause data integrity problems.
+#### Containerized releases ready for DevOps workflows.
 
-Use `cquill help migrate` for parameters.
-The migration history table's keyspace, name and replication can be configured with the migrate command's parameters.
+## The `why`
+
+Software systems evolve: data schemas changing *is* data.
+
+`cquill` enhances your migrations with conventions *for developer efficiency*, integrity & validation checks *for release safety*, and is built for **modern software delivery**.
+
+`cquill` is ready to add value & improve velocity whether your project is greenfield or legacy.
+
+## The `where`
+
+`cquill` works with Cassandra & ScyllaDB and serverless platforms like Amazon Keyspaces, DataStax Astra DB, Azure Cosmos DB & ScyllaDB Cloud.
+
+## The `who`
+
+Every organization should practice the paradigms `cquill` was built for.
+
+## The `when`
+
+`cquill` helps delivery teams during development & release orchestration.
+
+## The `how`
+
+`cquill` has been built [The Apache Way](https://www.apache.org/#software-for-the-public-good) & on the ingenuity of [the ScyllaDB folks](https://rust-driver.docs.scylladb.com/stable/).
+
+# Using `cquill`
+
+## `cquill migrate`
+
+```bash
+cquill migrate -d ./cql
+
+# for all migrate options
+cquill migrate -h
+```
+
+CQL sources reside in the `./cql` directory by default and can be overriden with `--cql-dir` or `-d`.
+
+CQL files are versioned with a 3 digit version prefix specified `v001` or `V001` and must be sequentially versioned. `v001-create-api-keyspace.cql` is a valid example.
+
+Migration history is stored in a table named `cquill.migrated_cql` with a md5 hash record for every completed CQL file. Future migrations will validate previously migrated CQL files against the md5 hashes. This step ensures correctness and prevents a migration that could cause data integrity problems.
+
+Use `cquill help migrate` for parameters. The database connection options and the migration history table's keyspace, name & replication can be configured with the `migrate` command's parameters.
+
+On the event of a CQL statement error, `cquill` will stop executing statements from the file and report which statement failed. Remediation at this point is a manual process and guidance is included with the failed migration report.
 
 ## Getting started
 
-Cquill can be used as a local binary built with Cargo/Rust, a Docker image, or as a Rust library.
+Prebuilt binaries are available in the [latest GitHub release](https://github.com/eighty4/cquill/releases/latest).
+
+`cquill` can also be built with Cargo/Rust, run as a Docker image, or used as a Rust library.
 
 ### Install locally with Cargo
 
-Cargo will build the latest published version of Cquill with install:
+Cargo will build the latest published version of `cquill` with install:
 
 ```bash
 cargo install cquill
@@ -39,9 +79,9 @@ Versions published with Cargo are detailed on [crates.io/crates/cquill](https://
 
 ### Run a migration with local CQL sources in a Docker container
 
-Image `84tech/cquill` will migrate CQL sources in its `/cquill/cql` directory (documented in Cquill's [Dockerfile](cquill.install.Dockerfile)).
+Image `84tech/cquill` will migrate CQL sources in its `/cquill/cql` directory (documented in the `cquill` [Dockerfile](./cquill.install.Dockerfile)).
 
-This approach requires specifying the `CASSANDRA_NODE` env variable to match Cassandra's hostname and the Docker network:
+This approach requires specifying the `CASSANDRA_NODE` env variable to match Cassandra's hostname & the Docker network:
 
 ```bash
 docker run -it --rm -v $(pwd)/cql:/cquill/cql:ro -e CASSANDRA_NODE=cassandra --network my_network 84tech/cquill migrate
@@ -49,8 +89,9 @@ docker run -it --rm -v $(pwd)/cql:/cquill/cql:ro -e CASSANDRA_NODE=cassandra --n
 
 ### Create a Docker image of versioned CQL sources
 
-In a containerized environment using CI/CD automation, versioning CQL to distribute with  release is ideal for workflow
-automation. Copy the release's CQL sources `./cql` relative to the `WORKDIR`:
+Versioning CQL to distribute with a service release is ideal for automation in a containerized environment using CI/CD automation & container orchestrators.
+
+Copy the release's CQL sources `./cql` relative to the `WORKDIR`:
 
 ```dockerfile
 FROM 84tech/cquill
@@ -58,46 +99,31 @@ WORKDIR /
 COPY cql cql
 ```
 
-Given a `./cql` directory and a `cql.Dockerfile` build manifest, Docker build a versioned image to be deployed in coordination with the API:
+Given a `./cql` directory and a `cql.Dockerfile` build manifest, `docker build` a versioned image to be deployed in coordination with the API:
 
 ```bash
 docker build -t my-api-cql:0.0.1 -f cql.Dockerfile .
 ```
 
-### Using Cquill as a library
+Now this CQL can be scheduled by your orchestrator to migrate to your service environemnt as part of your release pipeline:
 
-Rust projects can embed the Cquill crate into their project to keep an environment's CQL up-to-date as new versions of a
-project is deployed or run Cquill from unit tests.
+```bash
+docker run my-api-cql:0.0.1 migrate
+```
 
-The examples show the [cquill::migrate_cql](/src/lib.rs) API that can be used directly from your Rust project. Check it
-out at [./examples/migrate.rs](/examples/migrate.rs) and run with `cargo run --example migrate`
+### Using `cquill` as a library
+
+Rust projects can embed the `cquill` crate into their project to keep an environment's CQL up-to-date as new versions of a project is deployed or run `cquill` from unit tests.
+
+The examples show the [cquill::migrate_cql](./cquill/src/lib.rs) API that can be used directly from your Rust project. Check them out in the [./examples directory](./cquill/examples).
 
 ## Contributing
 
-[Rust](https://rustup.rs/) and [Docker](https://www.docker.com/get-started/) are Cquill's only development dependencies.
-
-Use `docker compose` to launch a Cassandra or ScyllaDB instance for running `cargo test`. Each supported database
-version is configured in `docker-compose.yml` and the compose service name must be included in the `docker compose up`
-command:
-
-```shell
-docker compose up cassandra_4_1 -d --wait
-```
-
-CI checks on pull requests are detailed in the [verify.yml](.github/workflows/verify.yml) workflow. This workflow runs:
-
-```bash
-cargo fmt
-cargo clippy -- -D warnings
-cargo test
-cargo build --release
-```
-
-The script `ci_verify.sh` will run all of these CI checks.
+See [docs/CONTRIBUTING.md] for guidelines on contributing to `cquill`.
 
 ## Roadmap
-
-This is a list of nice-to-have features that I will hope to add in the future:
+  
+This is a list of features that I hope to add in the future:
 
 - `cquill verify` command validates CQL file names, CQL connection, and the md5 hashes of previously migrated CQL files
 - `cquill doctor` command corrects migration history and md5 hashes

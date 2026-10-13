@@ -10,13 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `MigrateOpts` improved with `ConnectionInfo` variants `Cqlshrc`, `Session`
-  & `SimpleTcp`. `Cqlshrc` inits the connection from a user's
+  & `NewSession`. `Cqlshrc` inits the connection from a user's
   `cqlshrc` connection config, `Session` allows providing a custom
-  connection using `SessionBuilder` from the `scylla` crate, and `SimpleTcp`
-  creates a connection with optional node address and password
-  authentication configs. This upgrade provides support for mTLS, password
-  authentication, and compatible serverless platforms like Amazon Keyspaces,
-  Astra DB & ScyllaDB Cloud.
+  connection using `SessionBuilder` from the `scylla` crate, and `NewSession`
+  creates a connection from a `ConnectionOpts` struct with node address,
+  authentication and TLS/mTLS options.
 - The `CASSANDRA_NODE` env var is no longer used to override the `127.0.0.1:9042`
   default value.
 

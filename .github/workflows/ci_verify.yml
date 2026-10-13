@@ -3,6 +3,13 @@ name: CI
 on:
   push:
     branches: [ main ]
+    paths:
+      - .github/workflows/ci_verify.yml
+      - cquill/**
+      - cquill_ast/**
+      - dev/**
+      - Cargo.lock
+      - docker-compose.yml
   pull_request:
     branches: [ main ]
   workflow_call:

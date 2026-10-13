@@ -1,14 +1,16 @@
 ---
 
 # run one of the cassandra_ or scylla_ containers
-# for running the cquill crate's tests
+# for running the `cquill` crate tests
+#   docker compose up scylla_2026 -d --wait
 
 # admin utilities
-#  docker exec -it $CONTAINER cqlsh
-#  docker exec -it $CONTAINER nodetool
+#   docker exec -it $CONTAINER cqlsh
+#   docker exec -it $CONTAINER nodetool
 
-# docs https://hub.docker.com/r/_/cassandra
-# docs https://hub.docker.com/r/scylladb/scylla
+# container docs
+#   https://hub.docker.com/r/_/cassandra
+#   https://hub.docker.com/r/scylladb/scylla
 
 services:
 
