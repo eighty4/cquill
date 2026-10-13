@@ -78,6 +78,28 @@ services:
           cpus: 2
           memory: 3g
 
+  cassandra_6:
+    container_name: cassandra_6
+    image: cassandra:6.0
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-e", "describe cluster" ]
+      start_period: 60s
+      start_interval: 2s
+      interval: 5s
+      timeout: 2s
+      retries: 30
+    ports:
+      - "9042:9042"   # CQL protocol
+    environment:
+      - CASSANDRA_BROADCAST_ADDRESS=127.0.0.1
+      - MAX_HEAP_SIZE=1536m
+      - HEAP_NEWSIZE=384m
+    deploy:
+      resources:
+        limits:
+          cpus: 2
+          memory: 3g
+
   scylla_2026:
     container_name: scylla_2026
     image: scylladb/scylla:2026.1
