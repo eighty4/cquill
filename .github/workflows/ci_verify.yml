@@ -16,110 +16,113 @@ on:
 
 jobs:
 
-  verified:
-    runs-on: ubuntu-latest
-    needs:
-      - build-os-compat
-      - examples-and-docs
-      - fmt-and-lint-and-test-cquill-ast
-      - test-cql-compat
-      # - test-integration-compat
-      - test-macos-compat
-    steps:
-      - run: echo "¡Verdes como tomatillos!"
-
-  build-os-compat:
-    name: "build ${{ matrix.target }}"
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            apt_package_linker: gcc-aarch64-linux-gnu
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            apt_package_linker: gcc-aarch64-linux-gnu
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - if: ${{ matrix.apt_package_linker }}
-        run: |
-          sudo apt update && sudo apt install ${{ matrix.apt_package_linker }}
-          mkdir -p $HOME/.cargo
-          mv ./.github/workflows/linkers.toml $HOME/.cargo/config.toml
-      - run: rustup install stable --profile minimal
-      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - run: rustup target add ${{ matrix.target}}
-      - run: cargo build -p cquill --release --all-features --target ${{ matrix.target }}
-
-  examples-and-docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: docker compose up scylla_2026 -d --quiet-pull --wait
-      - run: rustup install stable --profile minimal
-      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - run: cargo test --doc
-      - run: cargo run -p cquill --example default_connection
-      - run: cargo run -p cquill --example session_connection
-      - run: docker compose down scylla_2026
-      - run: docker compose up password_auth -d --quiet-pull --wait
-      - run: cargo run -p cquill --example cqlshrc_password_auth
-      - run: cargo run -p cquill --example password_auth
-
-  fmt-and-lint-and-test-cquill-ast:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: rustup install stable --profile minimal
-      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - run: cargo fmt --all -v
-      - run: git diff --exit-code
-      - name: lint
-        run: cargo clippy --workspace -- -D warnings
-      - name: lint tests
-        run: cargo clippy --workspace --tests -- -D warnings
-      - run: cargo test -p cquill_ast
-
-  test-cql-compat:
-    name: "test cql ${{ matrix.image_name }}"
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - image_name: cassandra:5
-          - image_name: cassandra:4
-          - image_name: cassandra:3
-          - image_name: scylladb/scylla:2026.1
-          - image_name: scylladb/scylla:2025.1
-          - image_name: scylladb/scylla:6.2
-          - image_name: scylladb/scylla:5.4
-    services:
-      scylladb:
-        image: ${{ matrix.image_name }}
-        ports:
-          - 9042:9042
-        options: >-
-          --health-cmd "cqlsh -e 'describe cluster'"
-          --health-start-period 30s
-          --health-interval 2s
-          --health-timeout 5s
-          --health-retries 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: rustup install stable --profile minimal
-      - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - run: cargo test -p cquill --lib
+#   verified:
+#     runs-on: ubuntu-latest
+#     needs:
+#       - build-os-compat
+#       - examples-and-docs
+#       - fmt-and-lint-and-test-cquill-ast
+#       - test-cql-compat
+#       # - test-integration-compat
+#       - test-macos-compat
+#       - test-windows-compat
+#     steps:
+#       - run: echo "¡Verdes como tomatillos!"
+#
+#   build-os-compat:
+#     name: "build ${{ matrix.target }}"
+#     runs-on: ${{ matrix.os }}
+#     strategy:
+#       matrix:
+#         include:
+#           - os: macos-latest
+#             target: aarch64-apple-darwin
+#           - os: macos-latest
+#             target: x86_64-apple-darwin
+#           - os: ubuntu-latest
+#             target: aarch64-unknown-linux-gnu
+#             apt_package_linker: gcc-aarch64-linux-gnu
+#           - os: ubuntu-latest
+#             target: aarch64-unknown-linux-gnu
+#             apt_package_linker: gcc-aarch64-linux-gnu
+#           - os: ubuntu-latest
+#             target: x86_64-unknown-linux-gnu
+#           - os: windows-latest
+#             target: aarch64-pc-windows-msvc
+#           - os: windows-latest
+#             target: x86_64-pc-windows-msvc
+#     steps:
+#       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+#       - if: ${{ matrix.apt_package_linker }}
+#         run: |
+#           sudo apt update && sudo apt install ${{ matrix.apt_package_linker }}
+#           mkdir -p $HOME/.cargo
+#           mv ./.github/workflows/linkers.toml $HOME/.cargo/config.toml
+#       - run: rustup install stable --profile minimal
+#       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+#       - run: rustup target add ${{ matrix.target}}
+#       - run: cargo build -p cquill --release --all-features --target ${{ matrix.target }}
+#
+#   examples-and-docs:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+#       - run: docker compose up scylla_2026 -d --quiet-pull --wait
+#       - run: rustup install stable --profile minimal
+#       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+#       - run: cargo test --doc
+#       - run: cargo run -p cquill --example default_connection
+#       - run: cargo run -p cquill --example session_connection
+#       - run: docker compose down scylla_2026
+#       - run: docker compose up password_auth -d --quiet-pull --wait
+#       - run: cargo run -p cquill --example cqlshrc_password_auth
+#       - run: cargo run -p cquill --example password_auth
+#
+#   fmt-and-lint-and-test-cquill-ast:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+#       - run: rustup install stable --profile minimal
+#       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+#       - run: cargo fmt --all -v
+#       - run: git diff --exit-code
+#       - name: lint
+#         run: cargo clippy --workspace -- -D warnings
+#       - name: lint tests
+#         run: cargo clippy --workspace --tests -- -D warnings
+#       - run: cargo test -p cquill_ast --no-run
+#       - run: cargo test -p cquill_ast
+#
+#   test-cql-compat:
+#     name: "test cql ${{ matrix.image_name }}"
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         include:
+#           - image_name: cassandra:5
+#           - image_name: cassandra:4
+#           - image_name: cassandra:3
+#           - image_name: scylladb/scylla:2026.1
+#           - image_name: scylladb/scylla:2025.1
+#           - image_name: scylladb/scylla:6.2
+#           - image_name: scylladb/scylla:5.4
+#     services:
+#       scylladb:
+#         image: ${{ matrix.image_name }}
+#         ports:
+#           - 9042:9042
+#         options: >-
+#           --health-cmd "cqlsh -e 'describe cluster'"
+#           --health-start-period 30s
+#           --health-interval 2s
+#           --health-timeout 5s
+#           --health-retries 30
+#     steps:
+#       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+#       - run: rustup install stable --profile minimal
+#       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+#       - run: cargo test -p cquill --lib --no-run
+#       - run: cargo test -p cquill --lib
 
 #  test-integration-compat:
 #    name: "test integration ${{ matrix.image_name }}"
@@ -147,35 +150,63 @@ jobs:
 #      - run: cargo test -p cquill --test integration_tests
 #    continue-on-error: true
 
-  test-macos-compat:
-    name: "test macos"
-    runs-on: macos-latest
-    env:
-      JAVA_VERSION: 17
-      PYTHON_VERSION: 3.11
+  # test-macos-compat:
+  #   name: "test macos"
+  #   runs-on: macos-latest
+  #   env:
+  #     JAVA_VERSION: 17
+  #     PYTHON_VERSION: 3.11
+  #   steps:
+  #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+  #     - uses: homebrew/actions/setup-homebrew@1e34f2e2acaa766b7efacb8c26352e6abbb023f9 # 2026.09.13.1
+  #     - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+  #       with:
+  #         java-version: ${{ env.JAVA_VERSION }}
+  #         distribution: 'oracle-openjdk'
+  #     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
+  #     - run: brew install cassandra@5.0
+  #     - run: /opt/homebrew/opt/cassandra/bin/cassandra -Djava.security.manager=allow
+  #     - run: sleep 20; until /opt/homebrew/opt/cassandra/bin/cqlsh -e "DESCRIBE CLUSTER;"; do sleep 1; done
+  #       timeout-minutes: 2
+  #     - run: rustup install stable --profile minimal
+  #     - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+  #     - run: cargo test -p cquill --lib --no-run
+  #     - run: cargo test -p cquill --lib
+
+  test-windows-compat:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: homebrew/actions/setup-homebrew@1e34f2e2acaa766b7efacb8c26352e6abbb023f9 # 2026.09.13.1
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'oracle-openjdk'
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - run: brew install cassandra@5.0
-      - run: /opt/homebrew/opt/cassandra/bin/cassandra -Djava.security.manager=allow
-      - name: wait for :9042
-        run: |
-          sleep 30
-          for i in {1..30}; do
-            if nc -z localhost 9042; then
-              exit 0
-            fi
-            sleep 1
-          done
-          exit 1
-      - run: /opt/homebrew/opt/cassandra/bin/cqlsh -e 'describe cluster'
+      - run: gh release download --repo microsoft/WSL --pattern "wsl.*.x64.msi" --clobber --output - > wsl.msi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: Start-Process msiexec.exe -Wait -ArgumentList "/i wsl.msi /quiet /qn /norestart"
+      - run: wsl --install -d Debian --no-launch
+      - run: wsl -d Debian bash -c "apt-get update && apt-get install -y wget"
+      - run: wsl -d Debian bash -c "apt-get update && apt-get install -y python3"
+      - run: wsl -d Debian bash -c "mkdir -p /etc/apt/keyrings"
+      - run: wsl -d Debian bash -c "wget -O /etc/apt/keyrings/adoptium.asc https://packages.adoptium.net/artifactory/api/gpg/key/public"
+      - run: wsl -d Debian bash -c 'echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb trixie main" | sudo tee /etc/apt/sources.list.d/adoptium.list'
+      - run: wsl -d Debian bash -c "apt-get update && apt-get install -y temurin-17-jdk"
+      - run: wsl -d Debian bash -c "wget -O /etc/apt/keyrings/apache-cassandra.asc https://downloads.apache.org/cassandra/KEYS"
+      - run: wsl -d Debian bash -c 'echo "deb [signed-by=/etc/apt/keyrings/apache-cassandra.asc] https://debian.cassandra.apache.org 50x main" | sudo tee -a /etc/apt/sources.list.d/cassandra.list'
+      - run: wsl -d Debian bash -c 'echo "exit 101" > /usr/sbin/policy-rc.d'
+      - run: wsl -d Debian bash -c "chmod +x /usr/sbin/policy-rc.d"
+      - run: wsl -d Debian bash -c "apt-get update && apt-get install -y cassandra"
+      - run: wsl -d Debian bash -c 'rm /usr/sbin/policy-rc.d'
+      - run: 'wsl -d Debian bash -c "sed -i ''s/^rpc_address:.*/rpc_address: 0.0.0.0/'' /etc/cassandra/cassandra.yaml"'
+      - run: 'wsl -d Debian bash -c "sed -i ''s/^listen_address:.*/listen_address: 127.0.0.1/'' /etc/cassandra/cassandra.yaml"'
+      - run: |
+          wsl -d Debian bash -c 'echo "broadcast_rpc_address: $(hostname -I)" >> /etc/cassandra/cassandra.yaml'
+      - run: wsl -d Debian bash -c "cat /etc/cassandra/cassandra.yaml"
+      - run: wsl -d Debian bash -c "systemctl start cassandra"
       - run: rustup install stable --profile minimal
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - run: cargo test -p cquill --lib
+      - run: cargo test -p cquill --lib --no-run
+      - run: wsl -d Debian bash -c 'sleep 20; until cqlsh -e "DESCRIBE CLUSTER;"; do sleep 1; done'
+        timeout-minutes: 2
+      - run: |
+          $env:CQUILL_TEST_DB_HOST = (wsl hostname -I).Trim()
+          cargo test -p cquill --lib

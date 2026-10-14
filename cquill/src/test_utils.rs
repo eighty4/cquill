@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::fs;
+use std::env::var;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -11,10 +12,10 @@ use temp_dir::TempDir;
 use crate::cql_file::CqlFile;
 use crate::keyspace::KeyspaceOpts;
 use crate::migrate::MigrateArgs;
-use crate::{ConnectionInit, TABLE, cql_file, queries};
+use crate::{ConnectionInit, ConnectionOpts, TABLE, cql_file, queries};
 
 pub(crate) fn make_file(path: PathBuf, content: &str) {
-    let mut f = fs::OpenOptions::new()
+    let mut f = OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
@@ -25,10 +26,15 @@ pub(crate) fn make_file(path: PathBuf, content: &str) {
 }
 
 pub(crate) async fn cql_session() -> Arc<Session> {
-    ConnectionInit::default()
-        .session()
-        .await
-        .expect("cql session")
+    let hostname = var("CQUILL_TEST_DB_HOST").ok();
+    dbg!(&hostname);
+    ConnectionInit::NewSession(Some(ConnectionOpts {
+        hostname,
+        ..Default::default()
+    }))
+    .session()
+    .await
+    .expect("cql session")
 }
 
 pub(crate) async fn create_keyspace(session: &Session) -> KeyspaceOpts {
