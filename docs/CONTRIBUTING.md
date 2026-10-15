@@ -23,6 +23,6 @@ All of the services are bound to `:9042`. Only one service is meant to run for `
 
 ## `./int_tests.sh`
 
-All connection options are tested with the `cquill` crate's integration tests. Testing authentication and SSL configurations separate from functional tests is a huge time savings!
+All connection options are tested with the `cquill` crate's integration tests. Testing authentication and TLS configurations separate from functional tests is a huge time savings!
 
 `int_tests.sh` runs each scenario without parallelism due to hardware constraints (vs running up to 35 database containers).

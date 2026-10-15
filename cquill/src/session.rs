@@ -16,11 +16,11 @@ pub struct SessionInputs {
     pub connection_timeout: Option<u16>,
     pub username: Option<String>,
     pub password: Option<String>,
-    pub ssl_certfile: Option<PathBuf>,
-    pub ssl_usercert: Option<PathBuf>,
-    pub ssl_userkey: Option<PathBuf>,
-    pub use_ssl: bool,
-    pub validate_ssl: Option<bool>,
+    pub tls_certfile: Option<PathBuf>,
+    pub tls_usercert: Option<PathBuf>,
+    pub tls_userkey: Option<PathBuf>,
+    pub use_tls: bool,
+    pub validate_tls: Option<bool>,
 }
 
 #[derive(Error, Debug)]
@@ -47,8 +47,8 @@ pub async fn create(inputs: SessionInputs) -> Result<Arc<Session>, CreateSession
 }
 
 impl SessionInputs {
-    fn validate_ssl(&self) -> bool {
-        self.validate_ssl.unwrap_or(true)
+    fn validate_tls(&self) -> bool {
+        self.validate_tls.unwrap_or(true)
     }
 }
 
@@ -69,11 +69,11 @@ impl From<&ConnectionOpts> for SessionInputs {
             connection_timeout: other.connection_timeout,
             username: other.username.clone(),
             password: other.password.clone(),
-            ssl_certfile: other.ssl_certfile.clone(),
-            ssl_usercert: other.ssl_usercert.clone(),
-            ssl_userkey: other.ssl_userkey.clone(),
-            use_ssl: other.use_ssl,
-            validate_ssl: other.validate_ssl,
+            tls_certfile: other.tls_certfile.clone(),
+            tls_usercert: other.tls_usercert.clone(),
+            tls_userkey: other.tls_userkey.clone(),
+            use_tls: other.use_tls,
+            validate_tls: other.validate_tls,
         }
     }
 }
@@ -89,7 +89,7 @@ impl TryFrom<SessionInputs> for SessionBuilder {
         );
         let builder = SessionBuilder::new()
             .known_node(&address)
-            .tls_context(match inputs.use_ssl {
+            .tls_context(match inputs.use_tls {
                 true => Some(tls::build_config(&inputs)?),
                 false => None,
             })
@@ -129,17 +129,17 @@ mod tls {
         SCHEMES.get_or_init(|| {
             rustls::crypto::ring::default_provider()
                 .install_default()
-                .expect("init tls system");
+                .expect("init TLS");
         });
-        let builder = if inputs.validate_ssl() {
-            ClientConfig::builder().with_root_certificates(build_root_store(&inputs.ssl_certfile)?)
+        let builder = if inputs.validate_tls() {
+            ClientConfig::builder().with_root_certificates(build_root_store(&inputs.tls_certfile)?)
         } else {
             ClientConfig::builder()
                 .dangerous()
                 .with_custom_certificate_verifier(create_no_verifier())
         };
         let config =
-            if let (Some(usercert), Some(userkey)) = (&inputs.ssl_usercert, &inputs.ssl_userkey) {
+            if let (Some(usercert), Some(userkey)) = (&inputs.tls_usercert, &inputs.tls_userkey) {
                 builder
                     .with_client_auth_cert(
                         read_certs(usercert).context("reading mTLS user certs")?,
@@ -252,11 +252,11 @@ mod tests {
             connection_timeout: Some(5),
             password: Some("tahini".into()),
             username: Some("hoyle".into()),
-            ssl_certfile: Some("/certfile".into()),
-            ssl_usercert: Some("/usercert".into()),
-            ssl_userkey: Some("/userkey".into()),
-            use_ssl: true,
-            validate_ssl: Some(true),
+            tls_certfile: Some("/certfile".into()),
+            tls_usercert: Some("/usercert".into()),
+            tls_userkey: Some("/userkey".into()),
+            use_tls: true,
+            validate_tls: Some(true),
         };
         let expected = SessionInputs {
             hostname: connection_opts.hostname.clone(),
@@ -264,11 +264,11 @@ mod tests {
             connection_timeout: connection_opts.connection_timeout,
             password: connection_opts.password.clone(),
             username: connection_opts.username.clone(),
-            ssl_certfile: Some("/certfile".into()),
-            ssl_usercert: Some("/usercert".into()),
-            ssl_userkey: Some("/userkey".into()),
-            use_ssl: true,
-            validate_ssl: Some(true),
+            tls_certfile: Some("/certfile".into()),
+            tls_usercert: Some("/usercert".into()),
+            tls_userkey: Some("/userkey".into()),
+            use_tls: true,
+            validate_tls: Some(true),
         };
         assert_inputs_eq(SessionInputs::from(&connection_opts), &expected);
         assert_inputs_eq(SessionInputs::from(&Some(connection_opts)), &expected);
@@ -284,11 +284,11 @@ mod tests {
             connection_timeout: Some(5),
             password: Some("tahini".into()),
             username: Some("hoyle".into()),
-            ssl_certfile: Some(certs.ca_cert.clone()),
-            ssl_usercert: None,
-            ssl_userkey: None,
-            use_ssl: true,
-            validate_ssl: Some(true),
+            tls_certfile: Some(certs.ca_cert.clone()),
+            tls_usercert: None,
+            tls_userkey: None,
+            use_tls: true,
+            validate_tls: Some(true),
         })
         .unwrap();
         let expected = KnownNode::Hostname("144.21.21.8:4044".into());
@@ -327,11 +327,11 @@ mod tests {
             connection_timeout: Some(5),
             password: Some("tahini".into()),
             username: Some("hoyle".into()),
-            ssl_certfile: Some(certs.ca_cert.clone()),
-            ssl_usercert: Some(certs.client_cert.clone()),
-            ssl_userkey: Some(certs.client_key.clone()),
-            use_ssl: true,
-            validate_ssl: Some(true),
+            tls_certfile: Some(certs.ca_cert.clone()),
+            tls_usercert: Some(certs.client_cert.clone()),
+            tls_userkey: Some(certs.client_key.clone()),
+            use_tls: true,
+            validate_tls: Some(true),
         })
         .unwrap();
         let expected = KnownNode::Hostname("144.21.21.8:4044".into());

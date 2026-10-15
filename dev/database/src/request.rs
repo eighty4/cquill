@@ -6,7 +6,7 @@ pub enum DatabaseSecurity {
 }
 
 impl DatabaseSecurity {
-    pub fn uses_ssl(&self) -> bool {
+    pub fn uses_tls(&self) -> bool {
         matches!(self, DatabaseSecurity::Tls { .. } | DatabaseSecurity::Mtls)
     }
 }

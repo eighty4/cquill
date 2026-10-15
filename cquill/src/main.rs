@@ -47,22 +47,22 @@ struct MigrateCliArgs {
     username: Option<String>,
     #[clap(short = 'p', long, value_name = "PASSWORD")]
     password: Option<String>,
-    /// Explicit opt-in required for SSL [default: false]
-    #[clap(long = "ssl", default_value_t = false)]
-    ssl: bool,
+    /// Explicit opt-in required for TLS [default: false]
+    #[clap(long = "tls", default_value_t = false)]
+    tls: bool,
     /// [default: true (or value from cqlshrc)]
     #[clap(
-        long = "ssl-validate",
+        long = "tls-validate",
         value_name = "true|false",
         hide_possible_values = true
     )]
-    ssl_validate: Option<bool>,
+    tls_validate: Option<bool>,
     #[clap(long, value_name = "CERTFILE")]
-    ssl_cert: Option<PathBuf>,
+    tls_cert: Option<PathBuf>,
     #[clap(long, value_name = "USERCERT")]
-    ssl_usercert: Option<PathBuf>,
+    tls_usercert: Option<PathBuf>,
     #[clap(long, value_name = "USERKEY")]
-    ssl_userkey: Option<PathBuf>,
+    tls_userkey: Option<PathBuf>,
 }
 
 fn parse_replication(s: &str) -> Result<ReplicationFactor, String> {
@@ -135,11 +135,11 @@ impl From<MigrateCliArgs> for MigrateOpts {
             connection_timeout: cli_args.connection_timeout,
             username: cli_args.username,
             password: cli_args.password,
-            ssl_certfile: cli_args.ssl_cert,
-            ssl_usercert: cli_args.ssl_usercert,
-            ssl_userkey: cli_args.ssl_userkey,
-            use_ssl: cli_args.ssl,
-            validate_ssl: cli_args.ssl_validate,
+            tls_certfile: cli_args.tls_cert,
+            tls_usercert: cli_args.tls_usercert,
+            tls_userkey: cli_args.tls_userkey,
+            use_tls: cli_args.tls,
+            validate_tls: cli_args.tls_validate,
         };
         let connection_init = Some(match cli_args.cqlshrc {
             None => ConnectionInit::NewSession(Some(connection_opts)),
@@ -522,16 +522,16 @@ mod tests {
     }
 
     #[test]
-    fn test_cli_args_into_migrate_ops_with_ssl_opts() {
+    fn test_cli_args_into_migrate_ops_with_tls_opts() {
         let connection_init = MigrateOpts::from(
             MigrateCliArgs::try_parse_from([
                 "migrate",
-                "--ssl",
-                "--ssl-cert",
+                "--tls",
+                "--tls-cert",
                 "/certfile",
-                "--ssl-usercert",
+                "--tls-usercert",
                 "/usercert",
-                "--ssl-userkey",
+                "--tls-userkey",
                 "/userkey",
             ])
             .unwrap(),
@@ -539,29 +539,29 @@ mod tests {
         .connection_init;
         match connection_init {
             Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert!(connection_opts.use_ssl);
-                assert_eq!(connection_opts.validate_ssl, None);
-                assert_eq!(connection_opts.ssl_certfile, Some("/certfile".into()));
-                assert_eq!(connection_opts.ssl_usercert, Some("/usercert".into()));
-                assert_eq!(connection_opts.ssl_userkey, Some("/userkey".into()));
+                assert!(connection_opts.use_tls);
+                assert_eq!(connection_opts.validate_tls, None);
+                assert_eq!(connection_opts.tls_certfile, Some("/certfile".into()));
+                assert_eq!(connection_opts.tls_usercert, Some("/usercert".into()));
+                assert_eq!(connection_opts.tls_userkey, Some("/userkey".into()));
             }
             _ => panic!(),
         };
     }
 
     #[test]
-    fn test_cli_args_into_migrate_ops_with_ssl_no_validate() {
+    fn test_cli_args_into_migrate_ops_with_tls_no_validate() {
         let connection_init = MigrateOpts::from(
             MigrateCliArgs::try_parse_from([
                 "migrate",
-                "--ssl",
-                "--ssl-validate",
+                "--tls",
+                "--tls-validate",
                 "false",
-                "--ssl-cert",
+                "--tls-cert",
                 "/certfile",
-                "--ssl-usercert",
+                "--tls-usercert",
                 "/usercert",
-                "--ssl-userkey",
+                "--tls-userkey",
                 "/userkey",
             ])
             .unwrap(),
@@ -569,29 +569,29 @@ mod tests {
         .connection_init;
         match connection_init {
             Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert!(connection_opts.use_ssl);
-                assert_eq!(connection_opts.validate_ssl, Some(false));
-                assert_eq!(connection_opts.ssl_certfile, Some("/certfile".into()));
-                assert_eq!(connection_opts.ssl_usercert, Some("/usercert".into()));
-                assert_eq!(connection_opts.ssl_userkey, Some("/userkey".into()));
+                assert!(connection_opts.use_tls);
+                assert_eq!(connection_opts.validate_tls, Some(false));
+                assert_eq!(connection_opts.tls_certfile, Some("/certfile".into()));
+                assert_eq!(connection_opts.tls_usercert, Some("/usercert".into()));
+                assert_eq!(connection_opts.tls_userkey, Some("/userkey".into()));
             }
             _ => panic!(),
         };
     }
 
     #[test]
-    fn test_cli_args_into_migrate_ops_with_explicit_ssl_validate() {
+    fn test_cli_args_into_migrate_ops_with_explicit_tls_validate() {
         let connection_init = MigrateOpts::from(
             MigrateCliArgs::try_parse_from([
                 "migrate",
-                "--ssl",
-                "--ssl-validate",
+                "--tls",
+                "--tls-validate",
                 "true",
-                "--ssl-cert",
+                "--tls-cert",
                 "/certfile",
-                "--ssl-usercert",
+                "--tls-usercert",
                 "/usercert",
-                "--ssl-userkey",
+                "--tls-userkey",
                 "/userkey",
             ])
             .unwrap(),
@@ -599,11 +599,11 @@ mod tests {
         .connection_init;
         match connection_init {
             Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert!(connection_opts.use_ssl);
-                assert_eq!(connection_opts.validate_ssl, Some(true));
-                assert_eq!(connection_opts.ssl_certfile, Some("/certfile".into()));
-                assert_eq!(connection_opts.ssl_usercert, Some("/usercert".into()));
-                assert_eq!(connection_opts.ssl_userkey, Some("/userkey".into()));
+                assert!(connection_opts.use_tls);
+                assert_eq!(connection_opts.validate_tls, Some(true));
+                assert_eq!(connection_opts.tls_certfile, Some("/certfile".into()));
+                assert_eq!(connection_opts.tls_usercert, Some("/usercert".into()));
+                assert_eq!(connection_opts.tls_userkey, Some("/userkey".into()));
             }
             _ => panic!(),
         };

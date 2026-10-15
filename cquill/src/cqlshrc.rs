@@ -86,17 +86,17 @@ impl SessionInputs {
         if self.password.is_none() {
             self.password = cqlshrc.get("authentication", "password");
         }
-        if self.ssl_certfile.is_none() {
-            self.ssl_certfile = cqlshrc.get("ssl", "certfile").map(PathBuf::from);
+        if self.tls_certfile.is_none() {
+            self.tls_certfile = cqlshrc.get("ssl", "certfile").map(PathBuf::from);
         }
-        if self.ssl_usercert.is_none() {
-            self.ssl_usercert = cqlshrc.get("ssl", "usercert").map(PathBuf::from);
+        if self.tls_usercert.is_none() {
+            self.tls_usercert = cqlshrc.get("ssl", "usercert").map(PathBuf::from);
         }
-        if self.ssl_userkey.is_none() {
-            self.ssl_userkey = cqlshrc.get("ssl", "userkey").map(PathBuf::from);
+        if self.tls_userkey.is_none() {
+            self.tls_userkey = cqlshrc.get("ssl", "userkey").map(PathBuf::from);
         }
-        if self.validate_ssl.is_none() {
-            self.validate_ssl = match cqlshrc.get("ssl", "validate").as_deref() {
+        if self.validate_tls.is_none() {
+            self.validate_tls = match cqlshrc.get("ssl", "validate").as_deref() {
                 Some("true") => Some(true),
                 Some("false") => Some(false),
                 Some(bogus) => {
@@ -139,11 +139,11 @@ mod tests {
             connection_timeout: Some(5),
             password: Some("tahini".into()),
             username: Some("hoyle".into()),
-            ssl_certfile: Some(PathBuf::from("/certfile")),
-            ssl_usercert: Some(PathBuf::from("/usercert")),
-            ssl_userkey: Some(PathBuf::from("/userkey")),
-            use_ssl: true,
-            validate_ssl: Some(true),
+            tls_certfile: Some(PathBuf::from("/certfile")),
+            tls_usercert: Some(PathBuf::from("/usercert")),
+            tls_userkey: Some(PathBuf::from("/userkey")),
+            use_tls: true,
+            validate_tls: Some(true),
         };
         let mut cqlshrc = Ini::new();
         cqlshrc.set("connection", "hostname", Some("8.21.21.144".into()));
@@ -161,11 +161,11 @@ mod tests {
         assert_eq!(inputs.connection_timeout, Some(5));
         assert_eq!(inputs.password, Some("tahini".into()));
         assert_eq!(inputs.username, Some("hoyle".into()));
-        assert_eq!(inputs.ssl_certfile, Some(PathBuf::from("/certfile")));
-        assert_eq!(inputs.ssl_usercert, Some(PathBuf::from("/usercert")));
-        assert_eq!(inputs.ssl_userkey, Some(PathBuf::from("/userkey")));
-        assert!(inputs.use_ssl);
-        assert_eq!(inputs.validate_ssl, Some(true));
+        assert_eq!(inputs.tls_certfile, Some(PathBuf::from("/certfile")));
+        assert_eq!(inputs.tls_usercert, Some(PathBuf::from("/usercert")));
+        assert_eq!(inputs.tls_userkey, Some(PathBuf::from("/userkey")));
+        assert!(inputs.use_tls);
+        assert_eq!(inputs.validate_tls, Some(true));
     }
 
     #[test]
@@ -187,10 +187,10 @@ mod tests {
         assert_eq!(inputs.connection_timeout, Some(3));
         assert_eq!(inputs.password, Some("hallOfFamer".into()));
         assert_eq!(inputs.username, Some("champion".into()));
-        assert_eq!(inputs.ssl_certfile, Some(PathBuf::from("/certfile")));
-        assert_eq!(inputs.ssl_usercert, Some(PathBuf::from("/usercert")));
-        assert_eq!(inputs.ssl_userkey, Some(PathBuf::from("/userkey")));
-        assert!(!inputs.use_ssl);
-        assert_eq!(inputs.validate_ssl, Some(true));
+        assert_eq!(inputs.tls_certfile, Some(PathBuf::from("/certfile")));
+        assert_eq!(inputs.tls_usercert, Some(PathBuf::from("/usercert")));
+        assert_eq!(inputs.tls_userkey, Some(PathBuf::from("/userkey")));
+        assert!(!inputs.use_tls);
+        assert_eq!(inputs.validate_tls, Some(true));
     }
 }

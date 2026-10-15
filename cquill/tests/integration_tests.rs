@@ -91,9 +91,9 @@ async fn test_migrate_tls_no_password() {
             cql_dir: example_cql_dir(),
             connection_init: Some(ConnectionInit::NewSession(Some(ConnectionOpts {
                 port: Some(details.port()),
-                ssl_certfile: Some(ca_cert),
-                use_ssl: true,
-                validate_ssl: Some(true),
+                tls_certfile: Some(ca_cert),
+                use_tls: true,
+                validate_tls: Some(true),
                 ..Default::default()
             }))),
             ..Default::default()
@@ -124,9 +124,9 @@ async fn test_migrate_tls_password_auth() {
             cql_dir: example_cql_dir(),
             connection_init: Some(ConnectionInit::NewSession(Some(ConnectionOpts {
                 port: Some(details.port()),
-                ssl_certfile: Some(ca_cert.clone()),
-                use_ssl: true,
-                validate_ssl: Some(true),
+                tls_certfile: Some(ca_cert.clone()),
+                use_tls: true,
+                validate_tls: Some(true),
                 ..Default::default()
             }))),
             ..Default::default()
@@ -142,9 +142,9 @@ async fn test_migrate_tls_password_auth() {
                 port: Some(details.port()),
                 username: Some("cassandra".into()),
                 password: Some("cassandra".into()),
-                ssl_certfile: Some(ca_cert),
-                use_ssl: true,
-                validate_ssl: Some(true),
+                tls_certfile: Some(ca_cert),
+                use_tls: true,
+                validate_tls: Some(true),
                 ..Default::default()
             }))),
             ..Default::default()
@@ -169,9 +169,9 @@ async fn test_migrate_mtls() {
                 if let Some(DatabaseCerts::MutualTls(mtls_certs)) = details.certs() {
                     ConnectionOpts {
                         port: Some(details.port()),
-                        ssl_certfile: Some(mtls_certs.ca_cert.clone()),
-                        use_ssl: true,
-                        validate_ssl: Some(true),
+                        tls_certfile: Some(mtls_certs.ca_cert.clone()),
+                        use_tls: true,
+                        validate_tls: Some(true),
                         ..Default::default()
                     }
                 } else {
@@ -191,11 +191,11 @@ async fn test_migrate_mtls() {
                 if let Some(DatabaseCerts::MutualTls(mtls_certs)) = details.certs() {
                     ConnectionOpts {
                         port: Some(details.port()),
-                        ssl_certfile: Some(mtls_certs.ca_cert.clone()),
-                        ssl_usercert: Some(mtls_certs.client_cert.clone()),
-                        ssl_userkey: Some(mtls_certs.client_key.clone()),
-                        use_ssl: true,
-                        validate_ssl: Some(true),
+                        tls_certfile: Some(mtls_certs.ca_cert.clone()),
+                        tls_usercert: Some(mtls_certs.client_cert.clone()),
+                        tls_userkey: Some(mtls_certs.client_key.clone()),
+                        use_tls: true,
+                        validate_tls: Some(true),
                         ..Default::default()
                     }
                 } else {

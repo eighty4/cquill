@@ -50,11 +50,11 @@ pub struct ConnectionOpts {
     pub connection_timeout: Option<u16>,
     pub username: Option<String>,
     pub password: Option<String>,
-    pub ssl_certfile: Option<PathBuf>,
-    pub ssl_usercert: Option<PathBuf>,
-    pub ssl_userkey: Option<PathBuf>,
-    pub use_ssl: bool,
-    pub validate_ssl: Option<bool>,
+    pub tls_certfile: Option<PathBuf>,
+    pub tls_usercert: Option<PathBuf>,
+    pub tls_userkey: Option<PathBuf>,
+    pub use_tls: bool,
+    pub validate_tls: Option<bool>,
 }
 
 #[derive(Default, Debug)]
@@ -89,11 +89,11 @@ pub enum ConnectionInit {
     ///     connection_timeout: None,
     ///     username: Some("bjarne".into()),
     ///     password: Some("definedBehavior".into()),
-    ///     ssl_certfile: None,
-    ///     ssl_usercert: None,
-    ///     ssl_userkey: None,
-    ///     use_ssl: false,
-    ///     validate_ssl: None,
+    ///     tls_certfile: None,
+    ///     tls_usercert: None,
+    ///     tls_userkey: None,
+    ///     use_tls: false,
+    ///     validate_tls: None,
     /// }));
     /// ```
     NewSession(Option<ConnectionOpts>),

@@ -114,12 +114,12 @@ fn healthcheck(req: &DatabaseRequest) -> HealthConfig {
     if req.use_password_auth() {
         test.append(&mut vec_of_strings!["-u", "cassandra", "-p", "cassandra"]);
     }
-    let ssl_cqlshrc = match req.security {
+    let tls_cqlshrc = match req.security {
         Some(DatabaseSecurity::Tls { .. }) => Some(CQLSHRC_TLS),
         Some(DatabaseSecurity::Mtls) => Some(CQLSHRC_MTLS),
         _ => None,
     };
-    if let Some(cqlshrc) = ssl_cqlshrc {
+    if let Some(cqlshrc) = tls_cqlshrc {
         test.append(&mut vec_of_strings!["--ssl", "--cqlshrc", cqlshrc]);
     };
     test.append(&mut vec_of_strings!["-e", "describe cluster"]);
@@ -260,7 +260,7 @@ mod scylla {
                 "PasswordAuthenticator",
             ]);
         }
-        if req.security.as_ref().is_some_and(|s| s.uses_ssl()) {
+        if req.security.as_ref().is_some_and(|s| s.uses_tls()) {
             scylla_flags.append(&mut vec_of_strings!["--native-transport-port-ssl", "9042",]);
         }
         if let Some(DatabaseSecurity::Tls { .. }) = req.security {
