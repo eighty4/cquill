@@ -79,7 +79,7 @@ Versions published with Cargo are detailed on [crates.io/crates/cquill](https://
 
 ### Run a migration with local CQL sources in a Docker container
 
-Image `84tech/cquill` will migrate CQL sources in its `/cquill/cql` directory (documented in the `cquill` [Dockerfile](./cquill.install.Dockerfile)).
+Image `84tech/cquill` will migrate CQL sources in its `/cquill/cql` directory (documented in the `cquill` [Dockerfile](/cquill.install.Dockerfile)).
 
 This approach requires specifying the `CASSANDRA_NODE` env variable to match Cassandra's hostname & the Docker network:
 
@@ -115,7 +115,7 @@ docker run my-api-cql:0.0.1 migrate
 
 Rust projects can embed the `cquill` crate into their project to keep an environment's CQL up-to-date as new versions of a project is deployed or run `cquill` from unit tests.
 
-The examples show the [cquill::migrate_cql](./cquill/src/lib.rs) API that can be used directly from your Rust project. Check them out in the [./examples directory](./cquill/examples).
+The examples show the [cquill::migrate_cql](/cquill/src/lib.rs) API that can be used directly from your Rust project. Check them out in the [examples directory](/cquill/examples).
 
 ## Contributing
 
