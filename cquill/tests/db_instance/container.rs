@@ -7,7 +7,8 @@ use std::{
 use bollard::plugin::{ContainerCreateBody, HealthConfig, HostConfig, PortBinding};
 
 use crate::{
-    DatabaseCerts, DatabaseEngine, DatabaseRequest, DatabaseSecurity, macros::vec_of_strings,
+    DatabaseCerts, DatabaseEngine, DatabaseRequest, DatabaseSecurity,
+    db_instance::macros::vec_of_strings,
 };
 
 pub const CQL_PORT: &str = "9042/tcp";

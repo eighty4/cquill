@@ -1,3 +1,5 @@
+pub(crate) mod gen_certs;
+
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write;

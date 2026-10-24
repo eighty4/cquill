@@ -14,7 +14,6 @@ use bollard::{
     plugin::{ContainerCreateBody, HealthStatusEnum, HostConfig},
     query_parameters::CreateImageOptions,
 };
-use cquill_dev_gen_certs::{MutualTlsCerts, StandardTlsCerts, gen_mtls_certs, gen_tls_certs};
 use dtor::dtor;
 use futures_util::TryStreamExt;
 use tokio::{
@@ -24,10 +23,11 @@ use tokio::{
 
 pub use request::*;
 
-use crate::{
+use crate::db_instance::{
     container::{CQL_PORT, make_container_create_body},
     macros::vec_of_strings,
 };
+use crate::gen_certs::{MutualTlsCerts, StandardTlsCerts, gen_mtls_certs, gen_tls_certs};
 
 struct RunningContainer {
     id: String,

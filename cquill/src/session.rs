@@ -232,7 +232,7 @@ mod tls {
 
 #[cfg(test)]
 mod tests {
-    use cquill_dev_gen_certs::{gen_mtls_certs, gen_tls_certs};
+    use crate::test_utils::gen_certs::{gen_mtls_certs, gen_tls_certs};
 
     use super::*;
 

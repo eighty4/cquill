@@ -31,7 +31,9 @@ tokio = { workspace = true }
 uuid = { workspace = true }
 
 [dev-dependencies]
-cquill-dev-database = { path = "../dev/database" }
-cquill-dev-gen-certs = { path = "../dev/gen_certs" }
+bollard = { workspace = true }
+dtor = { workspace = true }
+futures-util = { workspace = true }
 rand = { workspace = true }
+rcgen = { workspace = true }
 temp-dir = { workspace = true }

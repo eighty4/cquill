@@ -1,10 +1,15 @@
+mod db_instance;
+#[path = "../src/test_utils/gen_certs.rs"]
+mod gen_certs;
+
 use std::{
     env::{VarError, var},
     path::PathBuf,
 };
 
 use cquill::{ConnectionInit, ConnectionOpts, MigrateOpts, migrate_cql};
-use cquill_dev_database::{
+
+use crate::db_instance::{
     CassandraVersion, DatabaseCerts, DatabaseEngine, DatabaseRequest, DatabaseSecurity,
     ScyllaVersion, request_container,
 };

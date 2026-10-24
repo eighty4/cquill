@@ -1,5 +1,5 @@
 [workspace]
-members = ["cquill", "cquill_ast", "dev/database", "dev/gen_certs"]
+members = ["cquill", "cquill_ast"]
 resolver = "2"
 
 [workspace.package]
@@ -11,11 +11,15 @@ homepage = "https://github.com/eighty4/cquill"
 
 [workspace.dependencies]
 anyhow = "1.0.104"
+bollard = "0.21.1"
 clap = { version = "4.5.53", features = ["derive"] }
 configparser = "3.3.0"
+dtor = "1.0.6"
+futures-util = "0.3.34"
 md5 = "0.8.1"
 pretty_assertions = "1.4.1"
 rand = "0.10.2"
+rcgen = "0.14.10"
 regex = "1.13.1"
 rustls = { version = "0.23.45", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-pki-types = "1.15.1"

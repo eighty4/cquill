@@ -8,6 +8,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::path::PathBuf;
 use temp_dir::TempDir;
 
+#[allow(unused)]
 #[derive(Debug)]
 pub struct StandardTlsCerts {
     pub server_cert: PathBuf,
@@ -17,6 +18,7 @@ pub struct StandardTlsCerts {
     pub temp_dir: TempDir,
 }
 
+#[allow(unused)]
 #[derive(Debug)]
 pub struct MutualTlsCerts {
     pub server_cert: PathBuf,

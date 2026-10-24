@@ -18,7 +18,7 @@ mod migrate;
 mod queries;
 mod session;
 #[cfg(test)]
-pub(crate) mod test_utils;
+mod test_utils;
 
 pub const KEYSPACE: &str = "cquill";
 
