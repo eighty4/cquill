@@ -1,119 +1,129 @@
 name: Release
+run-name: ${{ contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump) && 'Prer' || 'R'}}eleasing ${{ inputs.semver-bump }} on ${{ inputs.commit-sha || 'HEAD' }}${{ inputs.dry-run && ' (dry run)' || '' }}${{ inputs.latest && ' (latest)' || '' }}
 
 on:
   workflow_dispatch:
     inputs:
+      commit-sha:
+        description: Commit SHA to tag and release
+        required: false
+        type: string
       semver-bump:
         description: Semver bump release type
         required: true
         type: choice
-        default: patch
+        default: alpha
         options:
           - major
           - minor
           - patch
+          - release
+          - rc
+          - beta
+          - alpha
+      dry-run:
+        description: Perform release dry run
+        required: true
+        type: boolean
+        default: true
+      latest:
+        description: Promote to latest release
+        required: true
+        type: boolean
+        default: false
 
 concurrency: release
 
 env:
+  NODE_V: 26
   RUST_V: 1.98.1
 
 jobs:
 
-  verified:
-    uses: ./.github/workflows/verify.yml
-
-  check-changelog:
+  check-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: ./.github/workflows/changelog_check.sh CHANGELOG.md
+        with:
+          ref: ${{ inputs.commit-sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_V }}
+      - run: npm i -g @eighty4/changelog
+      - name: check changelog
+        run: changelog check --changelog-file cquill/CHANGELOG.md
+      - name: check latest
+        if: inputs.latest && contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump)
+        run: exit 1
+      - name: check commit sha
+        if: inputs.commit-sha == '' && !inputs.dry-run
+        run: exit 1
+
+  verified:
+    needs: [ check-build ]
+    uses: ./.github/workflows/ci_verify.yml
 
   publish-cargo-crate:
-    needs: [ verified, check-changelog ]
+    needs: [ verified, check-build ]
     runs-on: ubuntu-latest
+    environment:
+      name: release
+      deployment: false
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit-sha }}
       - run: rustup install $RUST_V --profile minimal
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - run: cargo install cargo-release
-      - run: cargo release --no-confirm --execute $SEMVER_BUMP
+      - name: install binstall
+        run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+      - name: install cargo-release
+        run: cargo binstall --no-confirm cargo-release
+      - uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
+        id: auth
+      - name: git user config
+        run: |
+          git config --global user.name "Adam McKee"
+          git config --global user.email "adam.be.g84d@gmail.com"
+      - name: cargo release
         env:
-          CARGO_REGISTRY_TOKEN: ${{secrets.CRATES_IO_API_TOKEN}}
-          SEMVER_BUMP: ${{github.event.inputs.semver-bump}}
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+          SEMVER_BUMP: ${{ github.event.inputs.semver-bump }}
+          TO_RUN_OR_NOT_TO_RUN: ${{ !inputs.dry-run && ' -x' || '' }}
+        run: cargo release -p cquill --no-confirm$TO_RUN_OR_NOT_TO_RUN $SEMVER_BUMP
+      - id: semver-bump-dry-run
+        if: ${{ inputs.dry-run }}
+        run: cargo release version -p cquill --no-confirm --execute ${{ inputs.semver-bump }}
       - id: semver
         run: |
-          VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/[\"]/, "", $2); printf("%s",$2) }' Cargo.toml)
+          VERSION=$(awk -F ' = ' '$1 ~ /version/ { gsub(/[\"]/, "", $2); printf("%s",$2) }' cquill/Cargo.toml)
+          test -n "$VERSION"
+          echo "tag_name=cquill-v$VERSION" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag_name=v$VERSION" >> "$GITHUB_OUTPUT"
     outputs:
-      version: ${{steps.semver.outputs.version}}
-      tag_name: ${{steps.semver.outputs.tag_name}}
-
-  push-docker-image:
-    needs: publish-cargo-crate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          username: 84tech
-          password: ${{secrets.DOCKERHUB_TOKEN}}
-      - name: docker
-        run: |
-          docker build -t 84tech/cquill --build-arg CQUILL_VERSION=$VERSION -f cquill.install.Dockerfile .
-          docker tag 84tech/cquill 84tech/cquill:$VERSION
-          docker push -a 84tech/cquill
-        env:
-          VERSION: ${{needs.publish-cargo-crate.outputs.version}}
+      tag_name: ${{ steps.semver.outputs.tag_name }}
+      version: ${{ steps.semver.outputs.version }}
 
   create-gh-release:
-    runs-on: ubuntu-22.04
     needs: publish-cargo-crate
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.publish-cargo-crate.outputs.version }}
-      - name: Create release
-        id: create
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ needs.publish-cargo-crate.outputs.version }}
-          VERSION: ${{ needs.publish-cargo-crate.outputs.version }}
-        run: |
-          CHANGELOG=$(./.github/workflows/changelog_get.sh CHANGELOG.md $VERSION)
-          CRATES_URL="https://crates.io/crates/cquill/$VERSION"
-          RELEASE_NOTES="[Published on crates.io]($CRATES_URL)\r\n\r\n### Release notes\r\n\r\n$CHANGELOG"
-          CREATED_RELEASE=$(echo "$RELEASE_NOTES" | gh api \
-            --method POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            /repos/eighty4/l3/releases \
-            -f tag_name="$TAG_NAME" \
-            -f name="CLI v$VERSION" \
-            -F body=@- \
-            -F draft=false \
-            -F prerelease=false \
-            -F generate_release_notes=false)
-          echo "release_id=$(echo $CREATED_RELEASE | jq '.id')" >> "$GITHUB_OUTPUT"
-          echo "upload_hostname=$(echo $CREATED_RELEASE | jq '.upload_url' | cut -d'/' -f3)" >> "$GITHUB_OUTPUT"
-    outputs:
-      release_id: ${{ steps.create.outputs.release_id }}
-      tag_name: ${{ needs.publish-cargo-crate.outputs.tag_name }}
-      upload_hostname: ${{ steps.create.outputs.upload_hostname }}
-
-  publish-linux-and-mac:
-    needs: create-gh-release
-    uses: ./.github/workflows/publish.yml
+    permissions:
+      contents: write
+    secrets: inherit
+    uses: ./.github/workflows/gh_release.yml
     with:
-      release_id: ${{ needs.create-gh-release.outputs.release_id }}
-      tag_name: ${{ needs.create-gh-release.outputs.tag_name }}
-      upload_hostname: ${{ needs.create-gh-release.outputs.upload_hostname }}
+      dry-run: ${{ inputs.dry-run }}
+      latest: ${{ inputs.latest }}
+      prerelease: ${{ contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump) }}
+      tag: ${{ needs.publish-cargo-crate.outputs.tag_name }}
+      version: ${{ needs.publish-cargo-crate.outputs.version }}
 
-  publish-windows:
-    needs: create-gh-release
-    uses: ./.github/workflows/publish_windows.yml
+  docker-publish:
+    needs: publish-cargo-crate
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    uses: ./.github/workflows/docker_push.yml
     with:
-      release_id: ${{ needs.create-gh-release.outputs.release_id }}
-      tag_name: ${{ needs.create-gh-release.outputs.tag_name }}
-      upload_hostname: ${{ needs.create-gh-release.outputs.upload_hostname }}
+      dry-run: ${{ inputs.dry-run }}
+      version: ${{ needs.publish-cargo-crate.outputs.version }}
