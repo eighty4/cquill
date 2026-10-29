@@ -5,7 +5,11 @@ tag-name = "v{{version}}"
 pre-release-commit-message = "cargo release"
 
 pre-release-replacements = [
-    { file = "CHANGELOG.md", search = "## Unreleased", replace = "## Unreleased\n\n## {{version}} - {{date}}", exactly = 1 },
-    { file = "CHANGELOG.md", search = "\\.\\.\\.HEAD", replace = "...{{tag_name}}", exactly = 1 },
-    { file = "CHANGELOG.md", search = "\\[Unreleased\\]", replace = "[Unreleased]: https://github.com/eighty4/cquill/compare/{{tag_name}}...HEAD\n[{{version}}]", exactly = 1 },
+    { file = "CHANGELOG.md", search = "^## \\[Unreleased\\]", replace = "## [Unreleased]\n\n## [{{tag_name}}] - {{date}}", exactly = 1,  prerelease = false },
+
+    # for subsequent releases
+    { file = "CHANGELOG.md", search = "\\.\\.\\.HEAD", replace = "...{{tag_name}}", min = 0, max = 1,  prerelease = false },
+
+    # for initial and subsequent releases
+    { file = "CHANGELOG.md", search = "^\\[Unreleased\\]", replace = "[Unreleased]: {{repository}}/compare/{{tag_name}}...HEAD\n[{{version}}]", exactly = 1,  prerelease = false },
 ]
