@@ -1,5 +1,6 @@
 [package]
 name = "cquill_ast"
+publish = false
 version = "0.0.0"
 description = "AST parser & validator for Cassandra Query Language"
 authors = { workspace = true }
@@ -7,6 +8,9 @@ edition = { workspace = true }
 homepage = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
+
+[package.metadata.release]
+release = false
 
 [dependencies]
 anyhow = { workspace = true }
