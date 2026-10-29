@@ -405,7 +405,7 @@ dependencies = [
 
 [[package]]
 name = "cquill_ast"
-version = "0.0.1"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "pretty_assertions",
