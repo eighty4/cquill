@@ -1,13 +1,9 @@
 name: Release
-run-name: ${{ contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump) && 'Prer' || 'R'}}eleasing ${{ inputs.semver-bump }} on ${{ inputs.commit-sha || 'HEAD' }}${{ inputs.dry-run && ' (dry run)' || '' }}${{ inputs.latest && ' (latest)' || '' }}
+run-name: ${{ contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump) && 'Prer' || 'R'}}eleasing ${{ inputs.semver-bump }} ${{ inputs.dry-run && ' (dry run)' || '' }}${{ inputs.latest && ' (latest)' || '' }}
 
 on:
   workflow_dispatch:
     inputs:
-      commit-sha:
-        description: Commit SHA to tag and release
-        required: false
-        type: string
       semver-bump:
         description: Semver bump release type
         required: true
@@ -44,8 +40,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.commit-sha }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_V }}
@@ -54,9 +48,6 @@ jobs:
         run: changelog check --changelog-file cquill/CHANGELOG.md
       - name: check latest
         if: inputs.latest && contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump)
-        run: exit 1
-      - name: check commit sha
-        if: inputs.commit-sha == '' && !inputs.dry-run
         run: exit 1
 
   verified:
@@ -70,11 +61,10 @@ jobs:
       name: release
       deployment: false
     permissions:
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.commit-sha }}
       - run: rustup install $RUST_V --profile minimal
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: install binstall
