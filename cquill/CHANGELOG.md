@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.0.10] - 2026-10-31
+
 ### Changed
 
 - `MigrateOpts` improved with `ConnectionInfo` variants `Cqlshrc`, `Session`
@@ -20,5 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.9] - 2024-04-15
 
-[Unreleased]: https://github.com/eighty4/cquill/compare/0.0.9...HEAD
+[Unreleased]: https://github.com/eighty4/cquill/compare/v0.0.10...HEAD
+[0.0.10]: https://github.com/eighty4/cquill/compare/0.0.9...v0.0.10
 [0.0.9]: https://github.com/eighty4/cquill/releases/tag/0.0.9
