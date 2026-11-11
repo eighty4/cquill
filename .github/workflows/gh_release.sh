@@ -32,13 +32,13 @@ if ! command -v "gh" &> /dev/null; then
 fi
 
 case "$PRERELEASE" in
-    true) _changelog_tag="Unreleased" ;;
-    false) _changelog_tag="v$VERSION" ;;
+    true) _changelog_tag="Unreleased"; _install_tag="@$VERSION" ;;
+    false) _changelog_tag="v$VERSION"; _install_tag="" ;;
 esac
 
 _changelog=$(changelog get "$_changelog_tag" --changelog-file cquill/CHANGELOG.md)
 _crates_url="https://crates.io/crates/cquill/$VERSION"
-_release_notes="[Published on crates.io]($_crates_url)\r\n\r\n## Release notes\r\n\r\n$_changelog"
+_release_notes="#### Published on crates.io as [cquill]($_crates_url)\r\n\r\n\`\`\`\r\n\r\ncargo install cquill$_install_tag\r\n\r\n\`\`\`\r\n\r\n## Release notes\r\n\r\n$_changelog"
 _created_release=$(echo "$_release_notes" | gh api \
   --method POST \
   -H "Accept: application/vnd.github+json" \
