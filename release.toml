@@ -1,7 +1,7 @@
 # config for https://github.com/crate-ci/cargo-release
 
 tag-message = "cargo release {{tag_name}}"
-tag-name = "v{{version}}"
+tag-name = "{{crate_name}}-v{{version}}"
 pre-release-commit-message = "cargo release"
 
 pre-release-replacements = [
