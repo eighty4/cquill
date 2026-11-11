@@ -43,9 +43,11 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_V }}
-      - run: npm i -g @eighty4/changelog
       - name: check changelog
-        run: changelog check --changelog-file cquill/CHANGELOG.md
+        if: inputs.semver-bump != 'alpha'
+        run: |
+            npm i -g @eighty4/changelog
+            changelog check --changelog-file cquill/CHANGELOG.md
       - name: check latest
         if: inputs.latest && contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump)
         run: exit 1
