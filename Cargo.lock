@@ -382,7 +382,7 @@ dependencies = [
 
 [[package]]
 name = "cquill"
-version = "0.0.11-alpha.2"
+version = "0.0.11-alpha.3"
 dependencies = [
  "anyhow",
  "bollard",

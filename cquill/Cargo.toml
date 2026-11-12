@@ -1,6 +1,6 @@
 [package]
 name = "cquill"
-version = "0.0.11-alpha.2"
+version = "0.0.11-alpha.3"
 description = "Versioned CQL migrations for Cassandra and ScyllaDB"
 authors = { workspace = true }
 edition = { workspace = true }
