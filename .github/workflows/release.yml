@@ -1,5 +1,5 @@
 name: Release
-run-name: ${{ contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump) && 'Prer' || 'R'}}eleasing ${{ inputs.semver-bump }} ${{ inputs.dry-run && ' (dry run)' || '' }}${{ inputs.latest && ' (latest)' || '' }}
+run-name: ${{ contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump) && 'Prer' || 'R'}}eleasing ${{ inputs.semver-bump }}${{ inputs.dry-run && (inputs.dry-run-clean && ' (dry run)' || ' (zombie dry run)') || '' }}${{ inputs.latest && ' (latest)' || '' }}
 
 on:
   workflow_dispatch:
@@ -19,6 +19,11 @@ on:
           - alpha
       dry-run:
         description: Perform release dry run
+        required: true
+        type: boolean
+        default: true
+      dry-run-clean:
+        description: If release is a dry run, remove GitHub Release & git tag after dry run
         required: true
         type: boolean
         default: true
@@ -56,8 +61,22 @@ jobs:
     needs: [ check-build ]
     uses: ./.github/workflows/ci_verify.yml
 
+  verify-gh-release:
+    needs: [ verified ]
+    permissions:
+      contents: write
+    secrets: inherit
+    uses: ./.github/workflows/gh_release.yml
+    with:
+      dry-run: true
+      dry-run-verify: true
+      latest: ${{ inputs.latest }}
+      prerelease: ${{ contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump) }}
+      tag: v0.0.0
+      version: 0.0.0
+
   publish-cargo-crate:
-    needs: [ verified, check-build ]
+    needs: [ verified, verify-gh-release, check-build ]
     runs-on: ubuntu-latest
     environment:
       name: release
@@ -106,6 +125,7 @@ jobs:
     uses: ./.github/workflows/gh_release.yml
     with:
       dry-run: ${{ inputs.dry-run }}
+      dry-run-clean: ${{ inputs.dry-run-clean }}
       latest: ${{ inputs.latest }}
       prerelease: ${{ contains(fromJSON('["alpha", "beta", "rc"]'), inputs.semver-bump) }}
       tag: ${{ needs.publish-cargo-crate.outputs.tag_name }}

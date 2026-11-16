@@ -2,7 +2,7 @@
 
 tag-message = "cargo release {{tag_name}}"
 tag-name = "{{crate_name}}-v{{version}}"
-pre-release-commit-message = "cargo release"
+pre-release-commit-message = "releasing {{version}} of {{crate_name}}"
 
 pre-release-replacements = [
     { file = "CHANGELOG.md", search = "^## \\[Unreleased\\]", replace = "## [Unreleased]\n\n## [{{tag_name}}] - {{date}}", exactly = 1,  prerelease = false },
