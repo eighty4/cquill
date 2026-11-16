@@ -1,5 +1,5 @@
 name: GH Release
-run-name: GH Release ${{ inputs.tag }}${{ inputs.dry-run && ' (dry run)' || '' }}
+run-name: GH Release ${{ inputs.tag }}${{ inputs.dry-run && (inputs.dry-run-clean && ' (dry run)' || ' (zombie dry run)') || '' }}
 
 on:
   workflow_call:
@@ -7,6 +7,12 @@ on:
       dry-run:
         type: boolean
         required: true
+      dry-run-clean:
+        type: boolean
+        default: true
+      dry-run-verify:
+        type: boolean
+        default: false
       latest:
         type: boolean
         required: true
@@ -22,6 +28,8 @@ on:
 
 env:
   NODE_V: 26
+  RELEASE_NAME: ${{ format('{1}v{0}', inputs.version, inputs.dry-run && 'dry-run-' || '') }}
+  TAG_NAME: ${{ inputs.dry-run && format('dry-run-{0}', inputs.tag) || inputs.tag }}
 
 jobs:
   create-gh-release:
@@ -38,11 +46,11 @@ jobs:
       - run: npm i -g @eighty4/changelog
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          merge-multiple: true
           path: bins
       - name: gh_release.sh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ inputs.tag }}
           VERSION: ${{ inputs.version }}
           PRERELEASE: ${{ inputs.prerelease }}
           LATEST: ${{ inputs.latest }}
@@ -50,11 +58,11 @@ jobs:
 
   cleanup-gh-release:
     needs: [ create-gh-release ]
-    if: ${{ always() && inputs.dry-run }}
+    if: ${{ always() && inputs.dry-run && (inputs.dry-run-clean || inputs.dry-run-verify) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - run: gh release delete --repo ${{ github.repository }} "${{ inputs.tag }}" --cleanup-tag --yes
+      - run: gh release delete --repo ${{ github.repository }} "$TAG_NAME" --cleanup-tag --yes
