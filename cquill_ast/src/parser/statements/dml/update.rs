@@ -6,6 +6,7 @@ use crate::parser::iter::*;
 
 use std::{iter::Peekable, slice::Iter, sync::Arc};
 
+/// https://cassandra.apache.org/doc/5.0.9/cassandra/developing/cql/dml.html#update-statement
 pub fn parse_update_statement(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
@@ -27,13 +28,13 @@ pub fn parse_update_statement(
 fn parse_assignments(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
-) -> ParseResult<Vec<Assignment>> {
-    let mut assignments: Vec<Assignment> = Vec::new();
+) -> ParseResult<Vec<UpdateAssignment>> {
+    let mut assignments: Vec<UpdateAssignment> = Vec::new();
     loop {
         let selection = parse_assignment_selection(cql, iter)?;
         pop_next_match(iter, Equal)?;
         let expr_term = parse_expression_term(cql, iter)?;
-        assignments.push(Assignment {
+        assignments.push(UpdateAssignment {
             selection,
             expr_term,
         });
@@ -48,7 +49,7 @@ fn parse_assignments(
 fn parse_assignment_selection(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
-) -> ParseResult<AssignmentSelection> {
+) -> ParseResult<UpdateAssignmentSelection> {
     dbg!(iter.peek());
     let column_name = TokenView::new(cql, pop_next_match(iter, Identifier)?);
     match iter.peek() {
@@ -59,19 +60,19 @@ fn parse_assignment_selection(
             pop_next(iter)?;
             let expr_term = parse_expression_term(cql, iter)?;
             pop_next_match(iter, RightSquareBracket)?;
-            Ok(AssignmentSelection::ColumnAccess {
+            Ok(UpdateAssignmentSelection::ColumnAccess {
                 column_name,
                 expr_term,
             })
         }
         Some(Token { name: Dot, .. }) => {
             pop_next(iter)?;
-            Ok(AssignmentSelection::ColumnField {
+            Ok(UpdateAssignmentSelection::ColumnField {
                 column_name,
                 field_name: TokenView::new(cql, pop_next_match(iter, Identifier)?),
             })
         }
-        _ => Ok(AssignmentSelection::Column { column_name }),
+        _ => Ok(UpdateAssignmentSelection::Column { column_name }),
     }
 }
 
@@ -79,8 +80,8 @@ fn parse_assignment_selection(
 fn parse_where_clause(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
-) -> ParseResult<WhereClause> {
-    let mut relations: Vec<WhereClauseRelation> = Vec::new();
+) -> ParseResult<UpdateWhereClause> {
+    let mut relations: Vec<UpdateWhereClauseRelation> = Vec::new();
     loop {
         let identifier = pop_next_match(iter, Identifier)?;
         let column_name = TokenView {
@@ -89,7 +90,7 @@ fn parse_where_clause(
         };
         parse_comparison_operator(iter)?;
         let expr_term = parse_expression_term(cql, iter)?;
-        relations.push(WhereClauseRelation {
+        relations.push(UpdateWhereClauseRelation {
             column_name,
             // operator,
             expr_term,
@@ -98,19 +99,19 @@ fn parse_where_clause(
             break;
         }
     }
-    Ok(WhereClause { relations })
+    Ok(UpdateWhereClause { relations })
 }
 
 // todo fn calls
 fn parse_expression_term(
     cql: &Arc<String>,
     iter: &mut Peekable<Iter<Token>>,
-) -> ParseResult<ExpressionTerm> {
+) -> ParseResult<UpdateExpressionTerm> {
     match iter.peek() {
         None => todo!("parse error"),
         Some(token) => match token.name {
-            StringLiteral(_) => Ok(ExpressionTerm::String(pop_string_literal(cql, iter)?)),
-            NumberLiteral => Ok(ExpressionTerm::Number(pop_number_literal(cql, iter)?)),
+            StringLiteral(_) => Ok(UpdateExpressionTerm::String(pop_string_literal(cql, iter)?)),
+            NumberLiteral => Ok(UpdateExpressionTerm::Number(pop_number_literal(cql, iter)?)),
             _ => todo!("parse error on {:?}", token.name),
         },
     }

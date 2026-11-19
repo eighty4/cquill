@@ -1,11 +1,16 @@
 use crate::ParseResult;
 use crate::ast::CqlCollectionType::List;
 use crate::ast::{
-    CqlDataType, CqlDataType::*, CqlNativeType, CqlNativeType::*, CqlValueType::*, StringView,
-    TokenView,
+    ColumnDefinition,
+    CqlDataType::{self, *},
+    CqlNativeType::{self, *},
+    CqlValueType::*,
+    StringView, TokenView,
 };
+use crate::ast::{ColumnDefinitionAttribute, PrimaryKeyDefinition};
 use crate::lex::TokenName::*;
 use crate::lex::{Token, TokenName};
+use std::collections::HashMap;
 use std::iter::Peekable;
 use std::slice::Iter;
 use std::sync::Arc;
@@ -261,4 +266,156 @@ pub fn pop_comma_separated_identifiers(
         }
     }
     Ok(identifiers)
+}
+
+pub fn pop_map_config(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<HashMap<String, MapConfigLiteral>> {
+    pop_next_match(iter, LeftCurvedBracket)?;
+    let mut map_config = HashMap::new();
+    loop {
+        let key = pop_string_literal(cql, iter)?.value();
+        pop_next_match(iter, Colon)?;
+        let value = {
+            let popped = pop_next(iter)?;
+            match &popped.name {
+                StringLiteral(style) => MapConfigLiteral::String(
+                    StringView {
+                        cql: cql.clone(),
+                        range: popped.range.clone(),
+                        style: style.clone(),
+                    }
+                    .value(),
+                ),
+                NumberLiteral => MapConfigLiteral::Integer(
+                    popped.to_token_view(cql).value().parse().expect("integer"),
+                ),
+                TrueKeyword => MapConfigLiteral::Boolean(true),
+                FalseKeyword => MapConfigLiteral::Boolean(false),
+                _ => todo!("parse error"),
+            }
+        };
+        map_config.insert(key, value);
+        if pop_next_if(iter, Comma).is_none() {
+            break;
+        }
+    }
+    pop_next_match(iter, RightCurvedBracket)?;
+    Ok(map_config)
+}
+
+pub enum MapConfigLiteral {
+    #[allow(unused)]
+    Boolean(bool),
+    Integer(i8),
+    String(String),
+}
+
+/// Parses `(datum1 int, datum2 text)` constructs used by UDTs and function arguments.
+// todo is `()` valid to create a function or UDT with an empty args signature?
+pub fn pop_named_data_types_map(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<Vec<(TokenView, CqlDataType)>> {
+    pop_next_match(iter, LeftParenthesis)?;
+    let mut fields = Vec::new();
+    loop {
+        let field_name = pop_identifier(cql, iter)?;
+        let field_type = pop_cql_data_type(cql, iter)?;
+        fields.push((field_name, field_type));
+        if pop_next_if(iter, Comma).is_none() {
+            break;
+        }
+    }
+    pop_next_match(iter, RightParenthesis)?;
+    Ok(fields)
+}
+
+pub fn pop_table_column_definitions(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<Vec<ColumnDefinition>> {
+    pop_next_match(iter, LeftParenthesis)?;
+    let mut definitions = Vec::new();
+    loop {
+        if pop_next_if(iter, PrimaryKeyword).is_some() {
+            pop_next_match(iter, KeyKeyword)?;
+            pop_next_match(iter, LeftParenthesis)?;
+            definitions.push(ColumnDefinition::PrimaryKey(
+                if pop_next_if(iter, LeftParenthesis).is_some() {
+                    let partition = pop_comma_separated_identifiers(cql, iter)?;
+                    pop_next_match(iter, RightParenthesis)?;
+                    let clustering = if peek_next_match(iter, RightParenthesis)? {
+                        Vec::new()
+                    } else {
+                        pop_next_match(iter, Comma)?;
+                        pop_comma_separated_identifiers(cql, iter)?
+                    };
+                    PrimaryKeyDefinition::CompositePartition {
+                        partition,
+                        clustering,
+                    }
+                } else {
+                    let partition = pop_identifier(cql, iter)?;
+                    if pop_next_if(iter, Comma).is_some() {
+                        PrimaryKeyDefinition::Compound {
+                            partition,
+                            clustering: pop_comma_separated_identifiers(cql, iter)?,
+                        }
+                    } else {
+                        PrimaryKeyDefinition::Single(partition)
+                    }
+                },
+            ));
+            pop_next_match(iter, RightParenthesis)?;
+        } else {
+            let column_name = pop_identifier(cql, iter)?;
+            let data_type = pop_cql_data_type(cql, iter)?;
+            let attribute = match pop_next_if(iter, StaticKeyword) {
+                Some(_) => Some(ColumnDefinitionAttribute::Static),
+                None => match pop_next_if(iter, PrimaryKeyword) {
+                    Some(_) => {
+                        pop_next_match(iter, KeyKeyword)?;
+                        Some(ColumnDefinitionAttribute::PrimaryKey)
+                    }
+                    None => None,
+                },
+            };
+            definitions.push(ColumnDefinition::Column {
+                column_name,
+                data_type,
+                attribute,
+            });
+        }
+        if pop_next_if(iter, Comma).is_none() {
+            break;
+        }
+    }
+    pop_next_match(iter, RightParenthesis)?;
+    Ok(definitions)
+}
+
+pub fn pop_hacky_map_literal(
+    cql: &Arc<String>,
+    iter: &mut Peekable<Iter<Token>>,
+) -> ParseResult<HashMap<StringView, TokenView>> {
+    pop_next_match(iter, LeftCurvedBracket)?;
+    let mut map = HashMap::new();
+    loop {
+        let key = pop_string_literal(cql, iter)?;
+        pop_next_match(iter, Colon)?;
+        let popped = pop_next(iter)?;
+        match popped.name {
+            StringLiteral(_) | UuidLiteral | NumberLiteral | TrueKeyword | FalseKeyword => {}
+            _ => todo!("parse error"),
+        };
+        map.insert(key, popped.to_token_view(cql));
+        match pop_next(iter)?.name {
+            Comma => continue,
+            RightCurvedBracket => break,
+            _ => todo!("parse error"),
+        }
+    }
+    Ok(map)
 }

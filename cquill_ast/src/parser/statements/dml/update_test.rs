@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
-use pretty_assertions::assert_eq;
+use crate::ast::*;
+use crate::parse_cql;
+use crate::parser::testing::*;
+use crate::test_cql::*;
 
-use crate::{
-    ast::*,
-    parse_cql,
-    parser::testing::{find_string_literal, find_token, rfind_token},
-    test_cql::*,
-};
+use pretty_assertions::assert_eq;
 
 #[test]
 fn test_update_single_column() {
@@ -16,19 +14,22 @@ fn test_update_single_column() {
         parse_cql(cql.to_string()).unwrap(),
         vec!(CqlStatement::Update(UpdateStatement {
             table_name: find_token(cql.as_str(), "big_data_table"),
-            assignments: vec!(Assignment {
-                selection: AssignmentSelection::Column {
+            assignments: vec!(UpdateAssignment {
+                selection: UpdateAssignmentSelection::Column {
                     column_name: find_token(cql.as_str(), "int_column"),
                 },
-                expr_term: ExpressionTerm::Number(TokenView {
+                expr_term: UpdateExpressionTerm::Number(TokenView {
                     cql: cql.clone(),
                     range: TokenRange::new(39, 39),
                 }),
             }),
-            where_clause: WhereClause {
-                relations: vec!(WhereClauseRelation {
+            where_clause: UpdateWhereClause {
+                relations: vec!(UpdateWhereClauseRelation {
                     column_name: find_token(cql.as_str(), "text_column"),
-                    expr_term: ExpressionTerm::String(find_string_literal(&cql, "'big data!'")),
+                    expr_term: UpdateExpressionTerm::String(find_string_literal(
+                        &cql,
+                        "'big data!'"
+                    )),
                 }),
             },
             if_behavior: None,
@@ -44,29 +45,32 @@ fn test_update_multiple_columns() {
         vec!(CqlStatement::Update(UpdateStatement {
             table_name: find_token(cql.as_str(), "big_data_table"),
             assignments: vec!(
-                Assignment {
-                    selection: AssignmentSelection::Column {
+                UpdateAssignment {
+                    selection: UpdateAssignmentSelection::Column {
                         column_name: find_token(cql.as_str(), "int_column"),
                     },
-                    expr_term: ExpressionTerm::Number(TokenView {
+                    expr_term: UpdateExpressionTerm::Number(TokenView {
                         cql: cql.clone(),
                         range: TokenRange::new(39, 39),
                     }),
                 },
-                Assignment {
-                    selection: AssignmentSelection::Column {
+                UpdateAssignment {
+                    selection: UpdateAssignmentSelection::Column {
                         column_name: find_token(cql.as_str(), "float_column"),
                     },
-                    expr_term: ExpressionTerm::Number(TokenView {
+                    expr_term: UpdateExpressionTerm::Number(TokenView {
                         cql: cql.clone(),
                         range: TokenRange::new(57, 59),
                     }),
                 }
             ),
-            where_clause: WhereClause {
-                relations: vec!(WhereClauseRelation {
+            where_clause: UpdateWhereClause {
+                relations: vec!(UpdateWhereClauseRelation {
                     column_name: find_token(cql.as_str(), "text_column"),
-                    expr_term: ExpressionTerm::String(find_string_literal(&cql, "'big data!'")),
+                    expr_term: UpdateExpressionTerm::String(find_string_literal(
+                        &cql,
+                        "'big data!'"
+                    )),
                 }),
             },
             if_behavior: None,
@@ -81,19 +85,22 @@ fn test_update_if_exists() {
         parse_cql(cql.to_string()).unwrap(),
         vec!(CqlStatement::Update(UpdateStatement {
             table_name: find_token(cql.as_str(), "big_data_table"),
-            assignments: vec!(Assignment {
-                selection: AssignmentSelection::Column {
+            assignments: vec!(UpdateAssignment {
+                selection: UpdateAssignmentSelection::Column {
                     column_name: find_token(cql.as_str(), "int_column"),
                 },
-                expr_term: ExpressionTerm::Number(TokenView {
+                expr_term: UpdateExpressionTerm::Number(TokenView {
                     cql: cql.clone(),
                     range: TokenRange::new(39, 39),
                 }),
             }),
-            where_clause: WhereClause {
-                relations: vec!(WhereClauseRelation {
+            where_clause: UpdateWhereClause {
+                relations: vec!(UpdateWhereClauseRelation {
                     column_name: find_token(cql.as_str(), "text_column"),
-                    expr_term: ExpressionTerm::String(find_string_literal(&cql, "'big data!'")),
+                    expr_term: UpdateExpressionTerm::String(find_string_literal(
+                        &cql,
+                        "'big data!'"
+                    )),
                 }),
             },
             if_behavior: Some(UpdateIfBehavior::Exists),
@@ -108,26 +115,29 @@ fn test_update_if_single_condition() {
         parse_cql(cql.to_string()).unwrap(),
         vec!(CqlStatement::Update(UpdateStatement {
             table_name: find_token(cql.as_str(), "big_data_table"),
-            assignments: vec!(Assignment {
-                selection: AssignmentSelection::Column {
+            assignments: vec!(UpdateAssignment {
+                selection: UpdateAssignmentSelection::Column {
                     column_name: find_token(cql.as_str(), "int_column"),
                 },
-                expr_term: ExpressionTerm::Number(TokenView {
+                expr_term: UpdateExpressionTerm::Number(TokenView {
                     cql: cql.clone(),
                     range: TokenRange::new(39, 39),
                 }),
             }),
-            where_clause: WhereClause {
-                relations: vec!(WhereClauseRelation {
+            where_clause: UpdateWhereClause {
+                relations: vec!(UpdateWhereClauseRelation {
                     column_name: find_token(cql.as_str(), "text_column"),
-                    expr_term: ExpressionTerm::String(find_string_literal(&cql, "'big data!'")),
+                    expr_term: UpdateExpressionTerm::String(find_string_literal(
+                        &cql,
+                        "'big data!'"
+                    )),
                 }),
             },
             if_behavior: Some(UpdateIfBehavior::Conditional(vec![UpdateIfCondition {
-                selection: AssignmentSelection::Column {
+                selection: UpdateAssignmentSelection::Column {
                     column_name: rfind_token(cql.as_str(), "int_column"),
                 },
-                expr_term: ExpressionTerm::Number(rfind_token(cql.as_str(), "6")),
+                expr_term: UpdateExpressionTerm::Number(rfind_token(cql.as_str(), "6")),
             },])),
         })),
     );
