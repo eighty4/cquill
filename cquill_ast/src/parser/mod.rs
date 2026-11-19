@@ -1,13 +1,6 @@
-mod create;
-mod drop;
+mod ddl;
 mod iter;
 mod update;
-
-#[cfg(test)]
-mod create_test;
-
-#[cfg(test)]
-mod drop_test;
 
 #[cfg(test)]
 mod testing;
@@ -17,8 +10,8 @@ mod update_test;
 
 use crate::ast::*;
 use crate::lex::*;
-use crate::parser::create::parse_create_statement;
-use crate::parser::drop::parse_drop_statement;
+use crate::parser::ddl::create::parse_create_statement;
+use crate::parser::ddl::drop::parse_drop_statement;
 use crate::parser::iter::pop_next_if;
 use crate::parser::update::parse_update_statement;
 use TokenName::*;
