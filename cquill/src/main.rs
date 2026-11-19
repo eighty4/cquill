@@ -1,8 +1,8 @@
 use std::env;
+use std::ffi::OsString;
+use std::iter::Peekable;
 use std::ops::Deref;
 use std::path::PathBuf;
-
-use clap::{Parser, Subcommand};
 
 use cquill::MigrateError::HistoryUpdateFailed;
 use cquill::{
@@ -11,58 +11,318 @@ use cquill::{
 };
 use regex::Regex;
 
-#[derive(Parser)]
-#[command(author, version, about)]
-struct CquillCli {
-    #[command(subcommand)]
-    command: CquillCommand,
-}
+const USAGE: &str = "Usage: cquill <COMMAND> [OPTIONS]\n\nCommands:\n  migrate                 Migrate CQL files\n  help [COMMAND]          Show help\n\nOptions:\n  -h, --help              Show help\n  -V, --version           Show version\n\nRun `cquill migrate --help` for migrate options.";
+const MIGRATE_USAGE: &str = "Usage: cquill migrate [OPTIONS]\n\nOptions:\n  -d, --cql-dir <CQL_DIR>                         CQL directory [default: ./cql]\n      --cqlshrc [<CQLSHRC_PATH>]                  Explicitly use cqlshrc [default: ~/.cassandra/cqlshrc]\n      --connection-timeout <SECONDS>              Connection timeout\n      --history-keyspace <KEYSPACE>               History keyspace [default: cquill]\n      --history-replication <REPLICATION>         History keyspace replication\n      --history-table <TABLE>                     History table [default: migrated_cql]\n  -a, --address <ADDRESS>                         Hostname or IPv4 address, optionally with port\n  -u, --username <USERNAME>                       Username\n  -p, --password <PASSWORD>                       Password\n      --tls                                       Enable TLS\n      --tls-validate <true|false>                  Validate TLS certificates\n      --tls-cert <CERTFILE>                       CA certificate file\n      --tls-usercert <USERCERT>                   Client certificate for mTLS\n      --tls-userkey <USERKEY>                     Client key for mTLS\n  -h, --help                                      Show help\n  -V, --version                                   Show version\n\nEach option can also be set with an environment variable by prefixing its name with CQUILL_\n(e.g. CQUILL_CQL_DIR, CQUILL_TLS, CQUILL_TLS_VALIDATE). Command-line values take precedence.";
 
-#[derive(Subcommand)]
-enum CquillCommand {
-    Migrate(MigrateCliArgs),
-}
-
-#[derive(Parser)]
-struct MigrateCliArgs {
-    #[clap(short = 'd', long, value_name = "CQL_DIR", default_value = "./cql")]
-    cql_dir: PathBuf,
-    /// Explicit opt-in [default: ~/.cassandra/cqlshrc]
-    #[clap(long, num_args(0..=1), value_name = "CQLSHRC_PATH", default_value = None)]
+#[derive(Debug, Default)]
+struct CliValues {
+    cql_dir: Option<PathBuf>,
     cqlshrc: Option<Option<PathBuf>>,
-    /// [default: 5]
-    #[clap(long, value_name = "SECONDS")]
     connection_timeout: Option<u16>,
-    #[clap(long, value_name = "KEYSPACE", default_value = cquill::KEYSPACE, value_parser = validate_keyspace)]
-    history_keyspace: String,
-    /// [default: {'class':'SimpleStrategy','factor':1}]
-    #[clap(long, value_name = "REPLICATION", value_parser = parse_replication)]
+    history_keyspace: Option<String>,
     history_replication: Option<ReplicationFactor>,
-    #[clap(long, value_name = "TABLE", default_value = cquill::TABLE, value_parser = validate_table)]
-    history_table: String,
-    /// [default: 127.0.0.1:9042]
-    #[clap(short = 'a', long, value_name = "ADDRESS", value_parser = validate_address)]
+    history_table: Option<String>,
     address: Option<String>,
-    #[clap(short = 'u', long, value_name = "USERNAME", value_parser = validate_username)]
     username: Option<String>,
-    #[clap(short = 'p', long, value_name = "PASSWORD")]
     password: Option<String>,
-    /// Explicit opt-in required for TLS [default: false]
-    #[clap(long = "tls", default_value_t = false)]
-    tls: bool,
-    /// [default: true (or value from cqlshrc)]
-    #[clap(
-        long = "tls-validate",
-        value_name = "true|false",
-        hide_possible_values = true
-    )]
+    tls: Option<bool>,
     tls_validate: Option<bool>,
-    #[clap(long, value_name = "CERTFILE")]
     tls_cert: Option<PathBuf>,
-    #[clap(long, value_name = "USERCERT")]
     tls_usercert: Option<PathBuf>,
-    #[clap(long, value_name = "USERKEY")]
     tls_userkey: Option<PathBuf>,
+}
+
+struct MigrateCliArgs {
+    cql_dir: PathBuf,
+    cqlshrc: Option<Option<PathBuf>>,
+    connection_timeout: Option<u16>,
+    history_keyspace: String,
+    history_replication: Option<ReplicationFactor>,
+    history_table: String,
+    address: Option<String>,
+    username: Option<String>,
+    password: Option<String>,
+    tls: bool,
+    tls_validate: Option<bool>,
+    tls_cert: Option<PathBuf>,
+    tls_usercert: Option<PathBuf>,
+    tls_userkey: Option<PathBuf>,
+}
+
+enum CliAction {
+    Migrate(MigrateCliArgs),
+    Help(bool),
+    Version,
+}
+
+#[tokio::main]
+async fn main() {
+    match parse_cli(env::args_os().skip(1), |name| env::var_os(name)) {
+        Ok(CliAction::Migrate(args)) => migrate(args).await,
+        Ok(CliAction::Help(migrate)) => println!("{}", if migrate { MIGRATE_USAGE } else { USAGE }),
+        Ok(CliAction::Version) => println!("cquill {}", env!("CARGO_PKG_VERSION")),
+        Err(error) => {
+            eprintln!("{error}\n\n{MIGRATE_USAGE}");
+            std::process::exit(2);
+        }
+    }
+}
+
+fn parse_cli<I, F>(args: I, mut get_env: F) -> Result<CliAction, String>
+where
+    I: IntoIterator<Item = OsString>,
+    F: FnMut(&str) -> Option<OsString>,
+{
+    let mut args = args.into_iter().peekable();
+    let command = match args.next() {
+        None => return Err("a command is required (expected `migrate`)".into()),
+        Some(command) => command
+            .into_string()
+            .map_err(|_| "command must be valid UTF-8".to_string())?,
+    };
+    if is_help(&command) {
+        return Ok(CliAction::Help(false));
+    }
+    if is_version(&command) {
+        return Ok(CliAction::Version);
+    }
+    if command == "help" {
+        return match args.next() {
+            None => Ok(CliAction::Help(false)),
+            Some(subcommand) if subcommand == "migrate" => Ok(CliAction::Help(true)),
+            Some(other) => Err(format!("unknown command `{}`", other.to_string_lossy())),
+        };
+    }
+    if command != "migrate" {
+        return Err(format!("unknown command `{command}` (expected `migrate`)"));
+    }
+
+    let mut values = CliValues::default();
+    while let Some(argument) = args.next() {
+        let argument = argument
+            .into_string()
+            .map_err(|_| "option names must be valid UTF-8".to_string())?;
+        if is_help(&argument) {
+            return Ok(CliAction::Help(true));
+        }
+        if is_version(&argument) {
+            return Ok(CliAction::Version);
+        }
+        let (option, inline_value) = split_option(&argument);
+        match option {
+            "-d" | "--cql-dir" => {
+                values.cql_dir = Some(PathBuf::from(required_value(option, inline_value, &mut args)?));
+            }
+            "--cqlshrc" => {
+                let path = match inline_value {
+                    Some(value) => Some(PathBuf::from(value)),
+                    None => match args.peek() {
+                        Some(next) if !next.to_string_lossy().starts_with('-') => {
+                            Some(PathBuf::from(args.next().expect("peeked argument")))
+                        }
+                        _ => None,
+                    },
+                };
+                values.cqlshrc = Some(path);
+            }
+            "--connection-timeout" => {
+                values.connection_timeout = Some(parse_value(option, inline_value, &mut args)?);
+            }
+            "--history-keyspace" => {
+                values.history_keyspace = Some(parse_value(option, inline_value, &mut args)?);
+            }
+            "--history-replication" => {
+                let value: String = parse_value(option, inline_value, &mut args)?;
+                values.history_replication = Some(parse_replication(&value)?);
+            }
+            "--history-table" => {
+                values.history_table = Some(parse_value(option, inline_value, &mut args)?);
+            }
+            "-a" | "--address" => {
+                values.address = Some(parse_value(option, inline_value, &mut args)?);
+            }
+            "-u" | "--username" => {
+                values.username = Some(parse_value(option, inline_value, &mut args)?);
+            }
+            "-p" | "--password" => {
+                values.password = Some(parse_value(option, inline_value, &mut args)?);
+            }
+            "--tls" if inline_value.is_none() => values.tls = Some(true),
+            "--tls-validate" => {
+                values.tls_validate = Some(parse_value(option, inline_value, &mut args)?);
+            }
+            "--tls-cert" => {
+                values.tls_cert = Some(PathBuf::from(required_value(option, inline_value, &mut args)?));
+            }
+            "--tls-usercert" => {
+                values.tls_usercert = Some(PathBuf::from(required_value(option, inline_value, &mut args)?));
+            }
+            "--tls-userkey" => {
+                values.tls_userkey = Some(PathBuf::from(required_value(option, inline_value, &mut args)?));
+            }
+            _ => return Err(format!("unknown or invalid option `{argument}`")),
+        }
+    }
+
+    apply_environment(&mut values, &mut get_env)?;
+    let cql_dir = values.cql_dir.unwrap_or_else(|| PathBuf::from("./cql"));
+    let history_keyspace = values
+        .history_keyspace
+        .unwrap_or_else(|| cquill::KEYSPACE.to_string());
+    let history_keyspace = validate_keyspace(&history_keyspace)?;
+    let history_table = values
+        .history_table
+        .unwrap_or_else(|| cquill::TABLE.to_string());
+    let history_table = validate_table(&history_table)?;
+    let address = values.address.map(|address| validate_address(&address)).transpose()?;
+    let username = values.username.map(|username| validate_username(&username)).transpose()?;
+
+    Ok(CliAction::Migrate(MigrateCliArgs {
+        cql_dir,
+        cqlshrc: values.cqlshrc,
+        connection_timeout: values.connection_timeout,
+        history_keyspace,
+        history_replication: values.history_replication,
+        history_table,
+        address,
+        username,
+        password: values.password,
+        tls: values.tls.unwrap_or(false),
+        tls_validate: values.tls_validate,
+        tls_cert: values.tls_cert,
+        tls_usercert: values.tls_usercert,
+        tls_userkey: values.tls_userkey,
+    }))
+}
+
+fn is_help(argument: &str) -> bool {
+    matches!(argument, "-h" | "--help")
+}
+
+fn is_version(argument: &str) -> bool {
+    matches!(argument, "-V" | "--version")
+}
+
+fn split_option(argument: &str) -> (&str, Option<&str>) {
+    if let Some((option, value)) = argument.split_once('=') {
+        return (option, Some(value));
+    }
+    if argument.len() > 2 && argument.starts_with('-') && !argument.starts_with("--") {
+        return (&argument[..2], Some(&argument[2..]));
+    }
+    (argument, None)
+}
+
+fn required_value<I>(
+    option: &str,
+    inline_value: Option<&str>,
+    args: &mut Peekable<I>,
+) -> Result<OsString, String>
+where
+    I: Iterator<Item = OsString>,
+{
+    match inline_value {
+        Some(value) => Ok(OsString::from(value)),
+        None => args
+            .next()
+            .ok_or_else(|| format!("option `{option}` requires a value")),
+    }
+}
+
+fn parse_value<T, I>(
+    option: &str,
+    inline_value: Option<&str>,
+    args: &mut Peekable<I>,
+) -> Result<T, String>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+    I: Iterator<Item = OsString>,
+{
+    let value = required_value(option, inline_value, args)?;
+    let value = value
+        .into_string()
+        .map_err(|_| format!("value for `{option}` must be valid UTF-8"))?;
+    value
+        .parse::<T>()
+        .map_err(|error| format!("invalid value `{value}` for `{option}`: {error}"))
+}
+
+fn env_string<F>(get_env: &mut F, name: &str) -> Result<Option<String>, String>
+where
+    F: FnMut(&str) -> Option<OsString>,
+{
+    get_env(name)
+        .map(|value| {
+            value
+                .into_string()
+                .map_err(|_| format!("environment variable {name} must be valid UTF-8"))
+        })
+        .transpose()
+}
+
+fn apply_environment<F>(values: &mut CliValues, get_env: &mut F) -> Result<(), String>
+where
+    F: FnMut(&str) -> Option<OsString>,
+{
+    macro_rules! env_option {
+        ($field:ident, $name:literal, $ty:ty) => {
+            if values.$field.is_none() {
+                values.$field = env_string(get_env, concat!("CQUILL_", $name))?
+                    .map(|value| {
+                        value.parse::<$ty>().map_err(|error| {
+                            format!("invalid value for CQUILL_{}: {error}", $name)
+                        })
+                    })
+                    .transpose()?;
+            }
+        };
+    }
+    macro_rules! env_path {
+        ($field:ident, $name:literal) => {
+            if values.$field.is_none() {
+                values.$field = get_env(concat!("CQUILL_", $name)).map(PathBuf::from);
+            }
+        };
+    }
+
+    env_path!(cql_dir, "CQL_DIR");
+    if values.cqlshrc.is_none() {
+        values.cqlshrc = get_env("CQUILL_CQLSHRC").map(|value| {
+            if value.is_empty() {
+                None
+            } else {
+                Some(PathBuf::from(value))
+            }
+        });
+    }
+    env_option!(connection_timeout, "CONNECTION_TIMEOUT", u16);
+    if values.history_keyspace.is_none() {
+        values.history_keyspace = env_string(get_env, "CQUILL_HISTORY_KEYSPACE")?;
+    }
+    if values.history_replication.is_none() {
+        if let Some(value) = env_string(get_env, "CQUILL_HISTORY_REPLICATION")? {
+            values.history_replication = Some(parse_replication(&value)?);
+        }
+    }
+    if values.history_table.is_none() {
+        values.history_table = env_string(get_env, "CQUILL_HISTORY_TABLE")?;
+    }
+    if values.address.is_none() {
+        values.address = env_string(get_env, "CQUILL_ADDRESS")?;
+    }
+    if values.username.is_none() {
+        values.username = env_string(get_env, "CQUILL_USERNAME")?;
+    }
+    if values.password.is_none() {
+        values.password = env_string(get_env, "CQUILL_PASSWORD")?;
+    }
+    env_option!(tls, "TLS", bool);
+    env_option!(tls_validate, "TLS_VALIDATE", bool);
+    env_path!(tls_cert, "TLS_CERT");
+    env_path!(tls_usercert, "TLS_USERCERT");
+    env_path!(tls_userkey, "TLS_USERKEY");
+    Ok(())
 }
 
 fn parse_replication(s: &str) -> Result<ReplicationFactor, String> {
@@ -158,14 +418,6 @@ impl From<MigrateCliArgs> for MigrateOpts {
             history_table: Some(cli_args.history_table),
         }
     }
-}
-
-#[tokio::main]
-async fn main() {
-    let cquill_cli = CquillCli::parse();
-    match cquill_cli.command {
-        CquillCommand::Migrate(args) => migrate(args).await,
-    };
 }
 
 async fn migrate(args: MigrateCliArgs) {
@@ -293,382 +545,176 @@ fn error_exit(err: MigrateError) -> ! {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::ffi::OsString;
     use std::iter::repeat_n;
 
     use super::*;
 
-    #[test]
-    fn test_cli_parse_cql_dir() {
-        assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate"]).unwrap().cql_dir,
-            PathBuf::from("./cql")
-        );
-        assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate", "--cql-dir", "/da/root/cql"])
-                .unwrap()
-                .cql_dir,
-            PathBuf::from("/da/root/cql")
-        );
+    fn parse(arguments: &[&str]) -> Result<CliAction, String> {
+        parse_cli(
+            arguments.iter().map(OsString::from),
+            |_| None,
+        )
     }
 
-    #[test]
-    fn test_cli_parse_history_keyspace() {
-        assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate"])
-                .unwrap()
-                .history_keyspace,
-            String::from("cquill")
-        );
-        assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate", "--history-keyspace", "o"])
-                .unwrap()
-                .history_keyspace,
-            String::from("o")
-        );
-        assert!(
-            MigrateCliArgs::try_parse_from(["migrate", "--history-keyspace", "_emperor_of_mexico"])
-                .is_err()
-        );
-        assert_eq!(
-            MigrateCliArgs::try_parse_from([
-                "migrate",
-                "--history-keyspace",
-                r#""EmperorOfMexico""#
-            ])
-            .unwrap()
-            .history_keyspace,
-            String::from(r#""EmperorOfMexico""#)
-        );
-        assert!(
-            MigrateCliArgs::try_parse_from([
-                "migrate",
-                "--history-keyspace",
-                r#""_EmperorOfMexico""#
-            ])
-            .is_err()
-        );
-    }
-
-    #[test]
-    fn test_cli_parse_username() {
-        for valid in [
-            "'$'",
-            r#""2_Chainz""#,
-            "2_chainz",
-            &repeat_n('x', 256).collect::<String>(),
-            &format!("\"{}\"", repeat_n('X', 256).collect::<String>()),
-            &format!("'{}'", repeat_n('$', 256).collect::<String>()),
-        ] {
-            assert_eq!(
-                MigrateCliArgs::try_parse_from(["migrate", "-u", valid])
-                    .unwrap()
-                    .username,
-                Some(String::from(valid))
-            );
-        }
-        for error in [
-            "$",
-            "2_Chainz",
-            "_2_chainz",
-            "2_Chain$",
-            r#""_2_chainz""#,
-            r#""_2_chain$""#,
-            &repeat_n('x', 257).collect::<String>(),
-            &format!("\"{}\"", repeat_n('X', 257).collect::<String>()),
-            &format!("'{}'", repeat_n('$', 257).collect::<String>()),
-        ] {
-            assert!(MigrateCliArgs::try_parse_from(["migrate", "-u", error]).is_err());
+    fn migrate_args(arguments: &[&str]) -> MigrateCliArgs {
+        match parse(arguments).expect("CLI args should parse") {
+            CliAction::Migrate(args) => args,
+            _ => panic!("expected migrate command"),
         }
     }
 
     #[test]
-    fn test_cli_parse_history_table() {
+    fn defaults_and_subcommand() {
+        let args = migrate_args(&["migrate"]);
+        assert_eq!(args.cql_dir, PathBuf::from("./cql"));
+        assert_eq!(args.history_keyspace, cquill::KEYSPACE);
+        assert_eq!(args.history_table, cquill::TABLE);
+        assert!(!args.tls);
+        assert!(args.connection_timeout.is_none());
+        assert!(args.cqlshrc.is_none());
+    }
+
+    #[test]
+    fn parses_short_long_and_equals_forms() {
+        let args = migrate_args(&[
+            "migrate", "-d", "/tmp/cql", "--history-table=events", "-a", "db.example:9042",
+            "-u", "alice", "-psecret", "--tls", "--tls-validate=false", "--tls-cert", "/ca.pem",
+            "--tls-usercert=/client.pem", "--tls-userkey", "/client.key",
+        ]);
+        assert_eq!(args.cql_dir, PathBuf::from("/tmp/cql"));
+        assert_eq!(args.history_table, "events");
+        assert_eq!(args.address.as_deref(), Some("db.example:9042"));
+        assert_eq!(args.username.as_deref(), Some("alice"));
+        assert_eq!(args.password.as_deref(), Some("secret"));
+        assert!(args.tls);
+        assert_eq!(args.tls_validate, Some(false));
+        assert_eq!(args.tls_cert, Some(PathBuf::from("/ca.pem")));
+        assert_eq!(args.tls_usercert, Some(PathBuf::from("/client.pem")));
+        assert_eq!(args.tls_userkey, Some(PathBuf::from("/client.key")));
+    }
+
+    #[test]
+    fn cqlshrc_is_an_optional_argument_and_can_be_explicitly_empty() {
+        assert!(migrate_args(&["migrate", "--cqlshrc"]).cqlshrc == Some(None));
         assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate"])
-                .unwrap()
-                .history_table,
-            String::from("migrated_cql")
+            migrate_args(&["migrate", "--cqlshrc", "/tmp/cqlshrc"]).cqlshrc,
+            Some(Some(PathBuf::from("/tmp/cqlshrc")))
         );
-        for valid in [
-            "black_mesa",
-            r#""blackMesa""#,
-            &repeat_n('x', 222).collect::<String>(),
-            &format!("\"{}\"", repeat_n('X', 222).collect::<String>()),
-        ] {
-            assert_eq!(
-                MigrateCliArgs::try_parse_from(["migrate", "--history-table", valid])
-                    .unwrap()
-                    .history_table,
-                String::from(valid)
-            );
+        assert_eq!(
+            migrate_args(&["migrate", "--cqlshrc=/tmp/cqlshrc"]).cqlshrc,
+            Some(Some(PathBuf::from("/tmp/cqlshrc")))
+        );
+        assert!(migrate_args(&["migrate", "--cqlshrc", "--tls"]).tls);
+    }
+
+    #[test]
+    fn environment_values_are_used_and_cli_values_win() {
+        let args = parse_cli(
+            ["migrate", "--cql-dir", "/cli"].map(OsString::from),
+            |name| match name {
+                "CQUILL_CQL_DIR" => Some("/env".into()),
+                "CQUILL_HISTORY_KEYSPACE" => Some("envks".into()),
+                "CQUILL_TLS" => Some("true".into()),
+                "CQUILL_TLS_VALIDATE" => Some("false".into()),
+                "CQUILL_CQLSHRC" => Some("".into()),
+                _ => None,
+            },
+        )
+        .expect("env values should parse");
+        let CliAction::Migrate(args) = args else { panic!("expected migrate command") };
+        assert_eq!(args.cql_dir, PathBuf::from("/cli"));
+        assert_eq!(args.history_keyspace, "envks");
+        assert!(args.tls);
+        assert_eq!(args.tls_validate, Some(false));
+        assert_eq!(args.cqlshrc, Some(None));
+    }
+
+    #[test]
+    fn environment_supports_all_option_names() {
+        let args = parse_cli(["migrate"].map(OsString::from), |name| {
+            let value = match name {
+                "CQUILL_CQL_DIR" => "/env/cql",
+                "CQUILL_CQLSHRC" => "/env/cqlshrc",
+                "CQUILL_CONNECTION_TIMEOUT" => "4",
+                "CQUILL_HISTORY_KEYSPACE" => "envks",
+                "CQUILL_HISTORY_REPLICATION" => "{'class':'SimpleStrategy','replication_factor':2}",
+                "CQUILL_HISTORY_TABLE" => "env_table",
+                "CQUILL_ADDRESS" => "db.example:9042",
+                "CQUILL_USERNAME" => "alice",
+                "CQUILL_PASSWORD" => "secret",
+                "CQUILL_TLS" => "true",
+                "CQUILL_TLS_VALIDATE" => "false",
+                "CQUILL_TLS_CERT" => "/env/ca.pem",
+                "CQUILL_TLS_USERCERT" => "/env/client.pem",
+                "CQUILL_TLS_USERKEY" => "/env/client.key",
+                _ => return None,
+            };
+            Some(OsString::from(value))
+        })
+        .expect("all supported env vars should parse");
+        let CliAction::Migrate(args) = args else { panic!("expected migrate command") };
+        assert_eq!(args.cql_dir, PathBuf::from("/env/cql"));
+        assert_eq!(args.cqlshrc, Some(Some(PathBuf::from("/env/cqlshrc"))));
+        assert_eq!(args.connection_timeout, Some(4));
+        assert_eq!(args.history_keyspace, "envks");
+        assert_eq!(args.history_table, "env_table");
+        assert_eq!(args.address.as_deref(), Some("db.example:9042"));
+        assert_eq!(args.username.as_deref(), Some("alice"));
+        assert_eq!(args.password.as_deref(), Some("secret"));
+        assert!(args.tls);
+        assert_eq!(args.tls_validate, Some(false));
+        assert_eq!(args.tls_cert, Some(PathBuf::from("/env/ca.pem")));
+        assert_eq!(args.tls_usercert, Some(PathBuf::from("/env/client.pem")));
+        assert_eq!(args.tls_userkey, Some(PathBuf::from("/env/client.key")));
+        match args.history_replication.expect("replication should be set") {
+            ReplicationFactor::SimpleStrategy { factor } => assert_eq!(factor, 2),
+            _ => panic!("expected simple strategy"),
         }
-        for error in [
-            "black mesa",
-            "blackMesa",
-            "_black_mesa",
-            r#""black_me$a""#,
-            &repeat_n('x', 223).collect::<String>(),
-            &format!("\"{}\"", repeat_n('X', 223).collect::<String>()),
-        ] {
-            assert!(MigrateCliArgs::try_parse_from(["migrate", "--history-table", error]).is_err());
-        }
     }
 
     #[test]
-    fn test_cli_parse_history_replication() {
-        assert!(
-            MigrateCliArgs::try_parse_from(["migrate"])
-                .unwrap()
-                .history_replication
-                .is_none()
-        );
-        assert!(
-            MigrateCliArgs::try_parse_from(["migrate", "--history-replication", "{}"]).is_err()
-        );
-        assert!(
-            MigrateCliArgs::try_parse_from([
-                "migrate",
-                "--history-replication",
-                "{'class':'SimpleStrategy', 'replication_factor': 1}"
-            ])
-            .is_ok()
-        );
+    fn cli_validation_rejects_bad_values() {
+        assert!(parse(&["migrate", "--connection-timeout", "not-a-number"]).is_err());
+        assert!(parse(&["migrate", "--history-keyspace", "_invalid"]).is_err());
+        assert!(parse(&["migrate", "--history-table", "UpperCase"]).is_err());
+        assert!(parse(&["migrate", "--username", "bad name"]).is_err());
+        assert!(parse(&["migrate", "--address", "host:port"]).is_err());
+        assert!(parse(&["migrate", "--tls"]).is_ok());
+        assert!(parse(&["migrate", "--unknown"]).is_err());
+        assert!(parse(&["migrate", "--history-replication", "{}"]).is_err());
     }
 
     #[test]
-    fn test_cli_parse_address() {
-        assert!(
-            MigrateCliArgs::try_parse_from(["migrate", "-a", "127.0.0.1:benedictCumberbatch"])
-                .is_err()
-        );
-        assert!(MigrateCliArgs::try_parse_from(["migrate", "-a", "127.0.0.1:9042"]).is_ok());
-    }
-
-    #[test]
-    fn test_cli_parse_cqlshrc_path() {
-        assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate"]).unwrap().cqlshrc,
-            None
-        );
-        assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate", "--cqlshrc"])
-                .unwrap()
-                .cqlshrc,
-            Some(None)
-        );
-        assert_eq!(
-            MigrateCliArgs::try_parse_from(["migrate", "--cqlshrc", "/da/root/cqlshrc"])
-                .unwrap()
-                .cqlshrc,
-            Some(Some("/da/root/cqlshrc".into()))
-        );
-    }
-
-    #[test]
-    fn test_cli_args_into_migrate_ops_without_address() {
-        let connection_init =
-            MigrateOpts::from(MigrateCliArgs::try_parse_from(["migrate"]).unwrap()).connection_init;
-        match connection_init {
-            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert!(connection_opts.hostname.is_none());
-                assert!(connection_opts.port.is_none());
-            }
-            _ => panic!(),
-        };
-    }
-
-    #[test]
-    fn test_cli_args_into_migrate_ops_with_hostname() {
-        let connection_init = MigrateOpts::from(
-            MigrateCliArgs::try_parse_from(["migrate", "-a", "swissfjord"]).unwrap(),
+    fn environment_validation_rejects_invalid_values_but_cli_overrides_them() {
+        let invalid_env = |name| (name == "CQUILL_TLS").then(|| OsString::from("yes"));
+        assert!(parse_cli(["migrate"].map(OsString::from), invalid_env).is_err());
+        let valid_cli = parse_cli(
+            ["migrate", "--tls"].map(OsString::from),
+            |name| (name == "CQUILL_TLS").then(|| OsString::from("yes")),
         )
-        .connection_init;
-        match connection_init {
-            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert_eq!(connection_opts.hostname, Some("swissfjord".into()));
-                assert!(connection_opts.port.is_none());
-            }
-            _ => panic!(),
-        };
+        .expect("CLI flag should take precedence over invalid env value");
+        assert!(matches!(valid_cli, CliAction::Migrate(args) if args.tls));
     }
 
     #[test]
-    fn test_cli_args_into_migrate_ops_with_hostname_and_port() {
-        let connection_init = MigrateOpts::from(
-            MigrateCliArgs::try_parse_from(["migrate", "-a", "swissfjord:31735"]).unwrap(),
-        )
-        .connection_init;
-        match connection_init {
-            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert_eq!(connection_opts.hostname, Some("swissfjord".into()));
-                assert_eq!(connection_opts.port, Some(31735));
-            }
-            _ => panic!(),
-        };
+    fn help_and_version_are_available() {
+        assert!(matches!(parse(&["--help"]), Ok(CliAction::Help(false))));
+        assert!(matches!(parse(&["help", "migrate"]), Ok(CliAction::Help(true))));
+        assert!(matches!(parse(&["migrate", "--help"]), Ok(CliAction::Help(true))));
+        assert!(matches!(parse(&["--version"]), Ok(CliAction::Version)));
     }
 
     #[test]
-    fn test_cli_args_into_migrate_ops_with_connection_timeout() {
-        let connection_init = MigrateOpts::from(
-            MigrateCliArgs::try_parse_from(["migrate", "--connection-timeout", "4"]).unwrap(),
-        )
-        .connection_init;
-        match connection_init {
-            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert_eq!(connection_opts.connection_timeout, Some(4));
-            }
-            _ => panic!(),
-        };
-    }
-
-    #[test]
-    fn test_cli_args_into_migrate_ops_with_tls_opts() {
-        let connection_init = MigrateOpts::from(
-            MigrateCliArgs::try_parse_from([
-                "migrate",
-                "--tls",
-                "--tls-cert",
-                "/certfile",
-                "--tls-usercert",
-                "/usercert",
-                "--tls-userkey",
-                "/userkey",
-            ])
-            .unwrap(),
-        )
-        .connection_init;
-        match connection_init {
-            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert!(connection_opts.use_tls);
-                assert_eq!(connection_opts.validate_tls, None);
-                assert_eq!(connection_opts.tls_certfile, Some("/certfile".into()));
-                assert_eq!(connection_opts.tls_usercert, Some("/usercert".into()));
-                assert_eq!(connection_opts.tls_userkey, Some("/userkey".into()));
-            }
-            _ => panic!(),
-        };
-    }
-
-    #[test]
-    fn test_cli_args_into_migrate_ops_with_tls_no_validate() {
-        let connection_init = MigrateOpts::from(
-            MigrateCliArgs::try_parse_from([
-                "migrate",
-                "--tls",
-                "--tls-validate",
-                "false",
-                "--tls-cert",
-                "/certfile",
-                "--tls-usercert",
-                "/usercert",
-                "--tls-userkey",
-                "/userkey",
-            ])
-            .unwrap(),
-        )
-        .connection_init;
-        match connection_init {
-            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert!(connection_opts.use_tls);
-                assert_eq!(connection_opts.validate_tls, Some(false));
-                assert_eq!(connection_opts.tls_certfile, Some("/certfile".into()));
-                assert_eq!(connection_opts.tls_usercert, Some("/usercert".into()));
-                assert_eq!(connection_opts.tls_userkey, Some("/userkey".into()));
-            }
-            _ => panic!(),
-        };
-    }
-
-    #[test]
-    fn test_cli_args_into_migrate_ops_with_explicit_tls_validate() {
-        let connection_init = MigrateOpts::from(
-            MigrateCliArgs::try_parse_from([
-                "migrate",
-                "--tls",
-                "--tls-validate",
-                "true",
-                "--tls-cert",
-                "/certfile",
-                "--tls-usercert",
-                "/usercert",
-                "--tls-userkey",
-                "/userkey",
-            ])
-            .unwrap(),
-        )
-        .connection_init;
-        match connection_init {
-            Some(ConnectionInit::NewSession(Some(connection_opts))) => {
-                assert!(connection_opts.use_tls);
-                assert_eq!(connection_opts.validate_tls, Some(true));
-                assert_eq!(connection_opts.tls_certfile, Some("/certfile".into()));
-                assert_eq!(connection_opts.tls_usercert, Some("/usercert".into()));
-                assert_eq!(connection_opts.tls_userkey, Some("/userkey".into()));
-            }
-            _ => panic!(),
-        };
-    }
-
-    #[test]
-    fn test_cli_args_into_migrate_ops_transforms_simple_replication() {
-        match MigrateOpts::from(
-            MigrateCliArgs::try_parse_from([
-                "migrate",
-                "--history-replication",
-                "{'class':'SimpleStrategy','replication_factor':1}",
-            ])
-            .unwrap(),
-        )
-        .history_keyspace
-        .unwrap()
-        .replication
-        {
-            ReplicationFactor::SimpleStrategy { factor: 1 } => (),
-            _ => panic!(),
-        };
-    }
-
-    #[test]
-    fn test_cli_args_into_migrate_ops_transforms_datacenter_replication() {
-        match MigrateOpts::from(
-            MigrateCliArgs::try_parse_from([
-                "migrate",
-                "--history-replication",
-                "{'class': 'NetworkTopologyStrategy', 'dc1': 2, 'dc2': 3}",
-            ])
-            .unwrap(),
-        )
-        .history_keyspace
-        .unwrap()
-        .replication
-        {
-            ReplicationFactor::NetworkTopologyStrategy { datacenter_factors } => {
-                assert_eq!(
-                    datacenter_factors,
-                    HashMap::from([("dc1".into(), 2), ("dc2".into(), 3)])
-                );
-            }
-            _ => panic!(),
-        };
-    }
-
-    #[test]
-    fn test_validate_address_returns_valid() {
-        assert_eq!(validate_address("127.0.0.1"), Ok("127.0.0.1".into()));
-    }
-
-    #[test]
-    fn test_validate_address_address_port() {
-        assert!(validate_address("127.0.0.1:90kevinBacon").is_err());
-        assert!(validate_address("127.0.0.1:9042").is_ok());
-        assert!(validate_address("127.0.0.1").is_ok());
-    }
-
-    #[test]
-    fn test_validate_address_dns_hostname_address() {
-        assert!(validate_address("us-east-1.test.scylla.swissfjord").is_ok());
-        assert!(validate_address("us-east-1.test.scylla.swissfjord:9042").is_ok());
-        assert!(validate_address("swissfjord").is_ok());
-        assert!(validate_address("swissfjord:9042").is_ok());
+    fn validation_limits_and_replication_parsing() {
+        assert!(validate_address("us-east-1.scylla.example:9042").is_ok());
+        assert!(validate_address("host:benedictCumberbatch").is_err());
+        assert!(validate_keyspace(&format!("\"{}\"", repeat_n('X', 48).collect::<String>())).is_ok());
+        assert!(validate_keyspace(&format!("\"{}\"", repeat_n('X', 49).collect::<String>())).is_err());
+        assert!(validate_table(&format!("\"{}\"", repeat_n('X', 222).collect::<String>())).is_ok());
+        assert!(validate_table(&format!("\"{}\"", repeat_n('X', 223).collect::<String>())).is_err());
+        assert!(validate_username(&format!("'{}'", repeat_n('$', 256).collect::<String>())).is_ok());
+        assert!(validate_username(&format!("'{}'", repeat_n('$', 257).collect::<String>())).is_err());
+        assert!(parse_replication("{'class':'SimpleStrategy', 'replication_factor':1}").is_ok());
     }
 }
